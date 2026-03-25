@@ -46,7 +46,7 @@ jobs:
           name: Release v${{ steps.package_version.outputs.VERSION }}
           generate_release_notes: true
           body: |
-            # Athena ${{ steps.package_version.outputs.VERSION }}
+            # Athena v${{ steps.package_version.outputs.VERSION }}
 
             ## Installation
             - Download the suitable file for your operating system.
