@@ -61,7 +61,9 @@ jobs:
             Alternatively, make a pull request
 
             ---
-            Note that Athena is just a hobby side project, so don't expect much.
+
+            *Note that Athena is just a hobby side project, so don't expect much.*
+
             ---
           files: |
             out/make/**/*.exe
