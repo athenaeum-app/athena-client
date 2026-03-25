@@ -1,6 +1,6 @@
 # Athena
 
-A simple, fast, and very opinionated library of moments. Essentially acting as a personal mini-blog application, Athena focuses on capturing bite-sized and extensively filterable momnets.
+A simple, fast, and intuitive library of moments. Acting as a personal mini-blog application, Athena focuses on capturing bite-sized and extensively filterable moments.
 
 ## What's a Moment?
 
