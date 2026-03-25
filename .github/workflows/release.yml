@@ -5,15 +5,20 @@ on:
     branches:
       - master
     tags:
-      - 'v*'
+      - 'v*.*.*'
       
 
 permissions:
   contents: write
 
 jobs:
-  windows-release:
-    runs-on: windows-latest 
+  cross-platform-release:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest] # only tested on my windows pc and fedora laptop, not sure about macos yet.
     
     steps:
       - name: Checkout Code
@@ -23,7 +28,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'npm'
 
       - name: Install All Dependencies
         run: npm install
@@ -39,12 +43,27 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.package_version.outputs.VERSION }}-windows
-          name: Athena Windows Release v${{ steps.package_version.outputs.VERSION }}
+          tag_name: v${{ steps.package_version.outputs.VERSION }}
+          name: Athena Release v${{ steps.package_version.outputs.VERSION }}
+          generate_release_notes: true
           body: |
-            ## Athena Windows Release v${{ steps.package_version.outputs.VERSION }}
-            This is an automated windows build of Athena (formerly Moments).
+            # Athena Release v${{ steps.package_version.outputs.VERSION }}
+
+            ## Installation
+            - Download the suitable file for your operating system.
+            - Open it
+
+            ## Feedback & Support
+            Found a bug or have an idea? Please use the links below:
+            - **[Report a Bug](${{ github.server_url }}/${{ github.repository }}/issues/new?template=bug_report.md)**
+            - **[Request a Feature](${{ github.server_url }}/${{ github.repository }}/issues/new?template=feature_request.md)**
+            - **[General Discussion](${{ github.server_url }}/${{ github.repository }}/issues)**
+            Alternatively, make a pull request
+
+            ---
+            Note that Athena is just a hobby side project, so don't expect much.
           files: |
             out/make/**/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            out/make/**/*.rpm
+            out/make/**/*.deb
+            out/make/**/*.zip
