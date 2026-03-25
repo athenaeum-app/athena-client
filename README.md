@@ -2,15 +2,23 @@
 
 A simple, fast, and intuitive library of moments. Acting as a personal mini-blog application, Athena focuses on capturing bite-sized and extensively filterable moments.
 
+Athena is an app that stores moments (essentially formatted notes), into four layers:
+
+- At the top is the Athenaeum, which contains all of a user's data.
+- Then archives, which are like folders, splitting the user's data into seperate broad sections.
+- Then moments, which are the individual "entries" of user data, like a short blog post.
+
+The layers exist to allow for easy organization and filtering.
+
 ## What's a Moment?
 
-A moment is like a post. It consists of three parts:
+A moment is like a post or formatted note. It consists of three main parts:
 
 - **Title**: A short summary of the body.
 - **Content**: A description of the moment. Could be anything! It's basically a message.
 - **Tags**: This is where Athena shines. Tags are easily accessible and filterable, so use them!
 
-Athena is all about a library of **archives**, which in turn are **libraries of moments**. For example, there may be a school archive, and inside the school archive is a few moments regarding Physics, Math, Science, and any other school related moment. Each moment has their own relevant tags.
+Moments are assigned to the currently selected archive, or none.
 
 ## Core Features
 
