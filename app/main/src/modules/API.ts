@@ -1,4 +1,4 @@
-import type { IPC_API } from '../types/APISchema' // Import the interface
+import type { IPC_API, scrapeData } from '../types/APISchema' // Import the interface
 import { app, BrowserWindow, shell } from 'electron'
 import * as cheerio from 'cheerio'
 import * as fs from 'node:fs'
@@ -25,6 +25,8 @@ class PrefixLogger {
         console.log(`[${this.prefix}]: ${content}`, ...rest)
     }
 }
+
+const sessionCache: Record<string, Promise<scrapeData>> = {}
 
 const getContent = (targetKeywords: Array<string>, c: cheerio.CheerioAPI) => {
     for (const keyword of targetKeywords) {
@@ -71,137 +73,163 @@ export const Api: IPC_API = {
         }
     },
     scrapeWebsiteData: async (url: string) => {
-        const logger = new PrefixLogger(url)
-        logger.log(`Attempting to scrape ${url}`)
-        let targetURL: string = url
-        let UserAgent = navigator.userAgent.replace(ELECTRON_AGENT_REGEX, '')
-
-        // Convert twitter links to bypass login
-        if (targetURL.includes('twitter.com') || targetURL.includes('x.com')) {
-            logger.log('Twitter link! Transforming to alternative')
-            targetURL = url.replace(/twitter\.com|x\.com/, 'vxtwitter.com')
-            UserAgent = 'facebookexternalhit/1.1'
+        url = new URL(url).href
+        if (sessionCache[url] != undefined) {
+            console.log(`Found cached data for ${url}. Skipping scraping.`)
+            return await sessionCache[url]
         }
 
-        let HTML = ''
-        const hostname = new URL(targetURL).hostname
-        const headerOptions = {
-            'User-Agent': UserAgent,
-        }
-
-        // Fetch
-        try {
-            logger.log('Trying normal fetch')
-            const response = await fetch(targetURL, {
-                headers: headerOptions,
-                signal: AbortSignal.timeout(5000),
-            })
-
-            if (response.ok) {
-                const tempHTML = await response.text()
-
-                // Must check to see if it even has data.
-                const _$ = cheerio.load(tempHTML)
-
-                if (
-                    getContent(
-                        [
-                            'og:video:url',
-                            'og:video',
-                            'twitter:player',
-                            'video_src',
-                            'twitter:image',
-                            'og:image',
-                            'image_src',
-                        ],
-                        _$,
-                    ) != ''
-                ) {
-                    HTML = tempHTML
-                    logger.log(`Fetched`)
-                } else {
-                    logger.log('Inital getContent check failed.')
-                }
-            }
-        } catch (error) {
-            logger.log(`Could not fetch ${targetURL}`, error)
-        }
-
-        // Heavy External Window
-        if (HTML == '') {
-            logger.log(
-                `Normal fetch failed for ${targetURL}. Trying via external window.`,
+        const scrapePromise = (async () => {
+            const logger = new PrefixLogger(url)
+            logger.log(`Attempting to scrape ${url}`)
+            let targetURL: string = url
+            let UserAgent = navigator.userAgent.replace(
+                ELECTRON_AGENT_REGEX,
+                '',
             )
-            const tempWindow = new BrowserWindow({
-                show: false,
-                webPreferences: {
-                    offscreen: true,
-                },
-            })
 
+            // Convert twitter links to bypass login
+            if (
+                targetURL.includes('twitter.com') ||
+                targetURL.includes('x.com')
+            ) {
+                logger.log('Twitter link! Transforming to alternative')
+                targetURL = url.replace(/twitter\.com|x\.com/, 'vxtwitter.com')
+                UserAgent = 'facebookexternalhit/1.1'
+            }
+
+            let HTML = ''
+            const hostname = new URL(targetURL).hostname
+            const headerOptions = {
+                'User-Agent': UserAgent,
+            }
+
+            // Fetch
             try {
-                let tempUserAgent = tempWindow.webContents.getUserAgent()
-                tempUserAgent = tempUserAgent.replace(ELECTRON_AGENT_REGEX, '')
-
-                await tempWindow.loadURL(targetURL, {
-                    userAgent: tempUserAgent,
+                logger.log('Trying normal fetch')
+                const response = await fetch(targetURL, {
+                    headers: headerOptions,
+                    signal: AbortSignal.timeout(15000),
                 })
 
-                await new Promise<void>((resolve) =>
-                    setTimeout(() => {
-                        resolve()
-                    }, 5000),
-                )
+                if (response.ok) {
+                    const tempHTML = await response.text()
 
-                HTML = await tempWindow.webContents.executeJavaScript(
-                    'document.documentElement.outerHTML',
-                )
+                    // Must check to see if it even has data.
+                    const _$ = cheerio.load(tempHTML)
+
+                    if (
+                        getContent(
+                            [
+                                'og:video:url',
+                                'og:video',
+                                'twitter:player',
+                                'video_src',
+                                'twitter:image',
+                                'og:image',
+                                'image_src',
+                            ],
+                            _$,
+                        ) != ''
+                    ) {
+                        HTML = tempHTML
+                        logger.log(`Fetched`)
+                    } else {
+                        logger.log('Inital getContent check failed.')
+                    }
+                }
             } catch (error) {
-                logger.log(
-                    `Error while trying to scrape ${targetURL} via an external window:`,
-                    error,
-                )
-            } finally {
-                tempWindow.destroy()
+                logger.log(`Could not fetch ${targetURL}`, error)
             }
-        }
 
-        const $ = cheerio.load(HTML)
+            // Heavy External Window
+            if (HTML == '') {
+                logger.log(
+                    `Normal fetch failed for ${targetURL}. Trying via external window.`,
+                )
+                const tempWindow = new BrowserWindow({
+                    show: false,
+                    webPreferences: {
+                        offscreen: true,
+                    },
+                })
 
-        const title =
-            getContent(['twitter:title', 'og:title'], $) ||
-            $('title').text() ||
-            hostname
+                try {
+                    let tempUserAgent = tempWindow.webContents.getUserAgent()
+                    tempUserAgent = tempUserAgent.replace(
+                        ELECTRON_AGENT_REGEX,
+                        '',
+                    )
 
-        const siteLink = getContent(['og:site_name'], $) || hostname
+                    await tempWindow.loadURL(targetURL, {
+                        userAgent: tempUserAgent,
+                    })
 
-        const description = getContent(
-            ['twitter:description', 'og:description', 'description'],
-            $,
-        )
+                    await new Promise<void>((resolve) =>
+                        setTimeout(() => {
+                            resolve()
+                        }, 5000),
+                    )
 
-        const video = getContent(
-            [
-                'twitter:player:stream',
-                'og:video',
-                'og:video:url',
-                'og:video:secure_url',
-                'twitter:player',
-                'video_src',
-            ],
-            $,
-        )
+                    HTML = await tempWindow.webContents.executeJavaScript(
+                        'document.documentElement.outerHTML',
+                    )
+                } catch (error) {
+                    logger.log(
+                        `Error while trying to scrape ${targetURL} via an external window:`,
+                        error,
+                    )
+                } finally {
+                    tempWindow.destroy()
+                }
+            }
 
-        let image = getContent(['twitter:image', 'og:image', 'image_src'], $)
+            const $ = cheerio.load(HTML)
 
-        logger.log(`Finished scraping data from ${targetURL} (${url})`)
+            const title =
+                getContent(['twitter:title', 'og:title'], $) ||
+                $('title').text() ||
+                hostname
 
-        return {
-            title: title.trim(),
-            description: description.trim(),
-            siteLink: siteLink.trim(),
-            image,
-            video,
-        }
+            const siteLink = getContent(['og:site_name'], $) || hostname
+
+            const description = getContent(
+                ['twitter:description', 'og:description', 'description'],
+                $,
+            )
+
+            const video = getContent(
+                [
+                    'twitter:player:stream',
+                    'og:video',
+                    'og:video:url',
+                    'og:video:secure_url',
+                    'twitter:player',
+                    'video_src',
+                ],
+                $,
+            )
+
+            let image = getContent(
+                ['twitter:image', 'og:image', 'image_src'],
+                $,
+            )
+
+            logger.log(`Finished scraping data from ${targetURL} (${url})`)
+
+            const data = {
+                title: title.trim(),
+                description: description.trim(),
+                siteLink: siteLink.trim(),
+                image,
+                video,
+            }
+
+            return data
+        })()
+
+        sessionCache[url] = scrapePromise
+
+        return scrapePromise
     },
 }

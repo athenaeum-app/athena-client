@@ -20,7 +20,7 @@ import {
     title,
 } from '../../modules/data'
 
-const MonthCreator: Component = () => {
+const MomentCreator: Component = () => {
     const getSuggestableTabs = createMemo(() => {
         // retrieve
         const registeredTags = tags()
@@ -42,6 +42,40 @@ const MonthCreator: Component = () => {
         return sortTags(result)
     })
 
+    const attemptSubmit = () => {
+        if (!title() || !content()) return
+
+        // Update tags
+        const tagsArray: Array<string> = [
+            ...new Set(
+                tagsString()
+                    .toUpperCase()
+                    .split(',')
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag.length > 0),
+            ),
+        ]
+
+        pushMergeTags(tagsArray)
+
+        // Create Moment
+        const date = new Date()
+
+        const newMoment: Moment = {
+            title: title(),
+            content: content(),
+            archive: selectedArchive(),
+            timestamp: date,
+            tags: tagsArray,
+        }
+
+        setTitle('')
+        setContent('')
+        setTagsString('')
+
+        setAllMoments((prev) => [...prev, newMoment])
+    }
+
     return (
         <div class="bg-element-lighter border-element-accent flex w-full flex-col gap-3 rounded-xl border p-4">
             <input
@@ -51,7 +85,7 @@ const MonthCreator: Component = () => {
                 onInput={(e) => setTitle(e.currentTarget.value)}
             />
             <textarea
-                class="h-12 resize-none bg-transparent px-2 py-1 text-sm text-slate-300 placeholder-slate-600 outline-none placeholder:italic"
+                class="field-sizing-content h-auto max-h-96 min-h-12 bg-transparent px-2 py-1 text-sm text-slate-300 placeholder-slate-600 outline-none placeholder:italic"
                 placeholder="Moment description..."
                 value={content()}
                 onInput={(e) => setContent(e.currentTarget.value)}
@@ -62,6 +96,11 @@ const MonthCreator: Component = () => {
                     placeholder="Tags (comma separated)... e.g. GAMES, ENTERTAINMENT, ROMANCE"
                     value={tagsString()}
                     onInput={(e) => setTagsString(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                        if (e.key == 'Enter') {
+                            attemptSubmit()
+                        }
+                    }}
                 />
 
                 <Show
@@ -102,39 +141,7 @@ const MonthCreator: Component = () => {
                         </span>
                     </div>
                     <button
-                        onClick={() => {
-                            if (!title() || !content()) return
-
-                            // Update tags
-                            const tagsArray: Array<string> = [
-                                ...new Set(
-                                    tagsString()
-                                        .toUpperCase()
-                                        .split(',')
-                                        .map((tag) => tag.trim())
-                                        .filter((tag) => tag.length > 0),
-                                ),
-                            ]
-
-                            pushMergeTags(tagsArray)
-
-                            // Create Moment
-                            const date = new Date()
-
-                            const newMoment: Moment = {
-                                title: title(),
-                                content: content(),
-                                archive: selectedArchive(),
-                                timestamp: date,
-                                tags: tagsArray,
-                            }
-
-                            setTitle('')
-                            setContent('')
-                            setTagsString('')
-
-                            setAllMoments((prev) => [...prev, newMoment])
-                        }}
+                        onClick={attemptSubmit}
                         class="hover:bg-highlight-strong hg hover:shadow-highlight-strong bg-highlight hover:border-highlight-strong rounded px-4 py-2 text-xs font-bold tracking-widest transition-all duration-200 hover:scale-105 hover:cursor-pointer hover:shadow-md hover:duration-50 active:scale-95"
                     >
                         COMMIT
@@ -204,7 +211,7 @@ export const Feed: Component = () => {
     return (
         <div class="bg-element pt flex h-full w-full items-center justify-center gap-2 rounded-xl p-2 lg:p-4">
             <div class="flex h-full w-[90%] flex-col items-center gap-4 overflow-y-auto rounded-xl p-2 pt-4 lg:p-4 lg:pt-8">
-                <MonthCreator />
+                <MomentCreator />
                 <For each={getFilteredMoments?.()}>
                     {(each) => {
                         return <Moment {...each} />
