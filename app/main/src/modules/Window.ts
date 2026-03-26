@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { SetChildWindowProperties } from './ChildWindow'
 const __dirname = import.meta.dirname
@@ -15,7 +15,7 @@ export const BrowserWindowOptions: Electron.BrowserWindowConstructorOptions = {
         color: '#00000000',
         symbolColor: '#94a3b8',
     },
-    icon: join(__dirname, '../../../assets/icon.png'),
+    icon: join(__dirname, '../../../../assets/icon.png'),
 }
 
 export const CreateWindow = async () => {

@@ -14,6 +14,7 @@ export default {
             name: '@electron-forge/maker-squirrel',
             config: {
                 name: 'athena',
+                iconUrl: path.join(__dirname, 'assets', 'icon.ico'),
                 setupIcon: path.join(__dirname, 'assets', 'icon.ico'),
             },
         },
@@ -22,6 +23,7 @@ export default {
             platforms: ['darwin'],
             config: {
                 name: 'athena',
+                iconUrl: path.join(__dirname, 'assets', 'icon.ico'),
                 setupIcon: path.join(__dirname, 'assets', 'icon.icon'),
             },
         },
@@ -43,6 +45,9 @@ export default {
             config: {
                 name: 'athena',
                 options: {
+                    name: 'Athena',
+                    genericName: 'Personal Blog Archive and Notes',
+                    categories: ['Utility'],
                     icon: path.join(__dirname, 'assets', 'icon.png'),
                 },
             },
