@@ -45,7 +45,7 @@ export default {
             config: {
                 name: 'athena',
                 options: {
-                    name: 'athena',
+                    name: 'Athena',
                     genericName: 'Personal Blog Archive and Notes',
                     categories: ['Utility'],
                     icon: path.join(__dirname, 'assets', 'icon.png'),
