@@ -22,6 +22,7 @@ import {
 
 const MonthCreator: Component = () => {
     const getSuggestableTabs = createMemo(() => {
+        // retrieve
         const registeredTags = tags()
         const currentTypedTags = tagsString()
             .split(',')
@@ -37,6 +38,37 @@ const MonthCreator: Component = () => {
                 result.push(tag)
             }
         }
+
+        // sort
+        // Most used tags will be suggested first.
+        const currentFilteredMoments = getFilteredMoments()
+        const visibleTags = currentFilteredMoments.flatMap((m) => m.tags)
+        const countMap: Record<string, number> = {}
+
+        for (const tag of visibleTags) {
+            if (!countMap[tag]) {
+                countMap[tag] = 1
+            } else {
+                countMap[tag] += 1
+            }
+        }
+
+        result.sort((a, b) => {
+            const aWeight = countMap[a]
+            const bWeight = countMap[b]
+            if (aWeight && bWeight) {
+                if (aWeight > bWeight) {
+                    return -1
+                } else {
+                    return 1
+                }
+            } else if (aWeight) {
+                return -1
+            } else if (bWeight) {
+                return 1
+            }
+            return 0
+        })
 
         return result
     })
