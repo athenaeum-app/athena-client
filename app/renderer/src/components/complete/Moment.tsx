@@ -71,10 +71,10 @@ export const Moment: Component<MomentProps> = (props) => {
                     setInView(false)
                 }
             },
-            { rootMargin: '500px' },
+            { rootMargin: '4000px' },
         )
         if (containerRef) viewObserver.observe(containerRef)
-        onCleanup(() => viewObserver.disconnect)
+        onCleanup(() => viewObserver.disconnect())
     })
 
     const months = [

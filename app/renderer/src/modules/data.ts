@@ -113,9 +113,7 @@ const loadData = async () => {
     console.log(log_header)
 }
 
-if (!import.meta.env.DEV) {
-    loadData()
-}
+loadData()
 
 // Saving
 const createDebounce = (callback: Function, timeoutDuration: number) => {
