@@ -7,7 +7,8 @@ export const init = () => {
 
     setupApi()
 
-    app.name = 'Athena'
+    app.setName('athena')
+    app.setAppLogsPath()
 
     app.whenReady().then(() => {
         console.log('App ready!')

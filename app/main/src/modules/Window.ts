@@ -15,7 +15,7 @@ export const BrowserWindowOptions: Electron.BrowserWindowConstructorOptions = {
         color: '#00000000',
         symbolColor: '#94a3b8',
     },
-    icon: join(__dirname, '../../../../assets/icon.png'),
+    icon: join(__dirname, 'icon.png'),
 }
 
 export const CreateWindow = async () => {
