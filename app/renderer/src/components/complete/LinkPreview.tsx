@@ -1,6 +1,9 @@
 import {
     createEffect,
     createResource,
+    createSignal,
+    onCleanup,
+    onMount,
     Show,
     type Component,
     type ComponentProps,
@@ -29,8 +32,26 @@ const siteMap: Array<{
 ]
 
 export const LinkPreview: Component<LinkPreviewProps> = (props) => {
+    let containerRef: HTMLDivElement | undefined
+    const [inView, setInView] = createSignal<boolean>(false)
+
+    onMount(() => {
+        const viewObserver = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setInView(true)
+                } else {
+                    setInView(false)
+                }
+            },
+            { rootMargin: '1000px' },
+        )
+        if (containerRef) viewObserver.observe(containerRef)
+        onCleanup(viewObserver.disconnect)
+    })
+
     const [websiteData] = createResource(
-        () => props.url,
+        () => (inView() ? props.url : null),
         async (url) => {
             console.log('Attempting to get data for: ', props.url)
             const cache = linkPreviewCache()
@@ -103,27 +124,32 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
     })
 
     return (
-        <Show
-            when={
-                websiteData() && (websiteData()?.image || websiteData()?.video)
-            }
-            fallback={
-                <div
-                    onClick={() => getApi().openExternalBrowser(props.url)}
-                    class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border-2 p-2 hover:cursor-pointer"
-                >
-                    <div class="flex w-full justify-between">
-                        <span class="text-highlight-strong group font-black">
-                            {websiteData()?.title || props.url}
-                        </span>
-                        <span class="text-element-accent-highlight group font-black">
-                            No Media Data
-                        </span>
-                    </div>
-                </div>
-            }
+        <div
+            ref={containerRef}
+            class="bg-highlight border-sub hover:border-highlight-strongest flex min-h-20 w-full flex-col gap-1 rounded border-2 p-2 transition-all duration-300"
         >
-            <div class="bg-highlight border-sub hover:border-highlight-strongest flex flex-col gap-1 rounded border-2 p-2">
+            <Show
+                when={
+                    websiteData() &&
+                    (websiteData()?.image || websiteData()?.video) &&
+                    inView()
+                }
+                fallback={
+                    <div
+                        onClick={() => getApi().openExternalBrowser(props.url)}
+                        class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border-2 p-2 hover:cursor-pointer"
+                    >
+                        <div class="flex w-full justify-between">
+                            <span class="text-highlight-strong group font-black">
+                                {websiteData()?.title || props.url}
+                            </span>
+                            <span class="text-element-accent-highlight group font-black">
+                                No Media Data
+                            </span>
+                        </div>
+                    </div>
+                }
+            >
                 <div class="flex justify-between">
                     <div class="flex min-w-0 items-center gap-3 pr-2">
                         <img
@@ -182,7 +208,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 <div class="flex justify-between">
                     <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>
                 </div>
-            </div>
-        </Show>
+            </Show>
+        </div>
     )
 }
