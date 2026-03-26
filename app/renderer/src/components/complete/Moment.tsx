@@ -14,7 +14,7 @@ import {
 } from '../../modules/regex'
 import {
     selectedArchive,
-    setAvailableUrlFiltersAndNicknames,
+    setAvailableURLFiltersAndNicknames,
     tagColours,
 } from '../../modules/data'
 
@@ -31,7 +31,10 @@ export type MomentProps = Moment & ComponentProps<'div'>
 export const Moment: Component<MomentProps> = (props) => {
     props.tags = props.tags.map((tag) => tag.toUpperCase())
 
-    const contentParts = () => props.content.split(URL_REGEX)
+    const contentParts = () =>
+        props.content
+            .split(URL_REGEX)
+            .filter((fragment) => fragment.trim() !== '')
 
     const isVisible = () => {
         return (
@@ -50,7 +53,7 @@ export const Moment: Component<MomentProps> = (props) => {
             if (match && match.groups) {
                 const domainName = match.groups.domain
 
-                setAvailableUrlFiltersAndNicknames((prev) => ({
+                setAvailableURLFiltersAndNicknames((prev) => ({
                     ...prev,
                     [match[0].toLowerCase()]: domainName.toUpperCase(),
                 }))
@@ -102,10 +105,10 @@ export const Moment: Component<MomentProps> = (props) => {
                 </div>
                 <span class="tracking text-4xl font-black">{props.title}</span>
             </div>
-            <span class="text-element-accent-highlight flex flex-col gap-4 text-sm whitespace-pre-line">
+            <span class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
                 <For each={contentParts()}>
                     {(text) => {
-                        if (!text.match(URL_REGEX)) return <p>{text}</p>
+                        if (!text.match(URL_REGEX)) return <span>{text}</span>
                         return <LinkPreview url={text} />
                     }}
                 </For>

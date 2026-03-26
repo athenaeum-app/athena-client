@@ -1,4 +1,4 @@
-import { createMemo, For, Show, type Component } from 'solid-js'
+import { createMemo, For, Show, type Accessor, type Component } from 'solid-js'
 import { Line } from '../barebone/Line'
 import { Moment } from './Moment'
 import { pushMergeTags } from './TagBar'
@@ -9,7 +9,7 @@ import {
     defaultArchive,
     selectedArchive,
     selectedTags,
-    selectedUrlFilters,
+    selectedURLFilters,
     setAllMoments,
     setContent,
     setTagsString,
@@ -144,58 +144,64 @@ const MonthCreator: Component = () => {
     )
 }
 
-export const getFilteredMoments = createMemo(() => {
-    const momentsPool = allMoments()
-    return momentsPool.filter((moment) => {
-        // archive
-        const currentArchive = selectedArchive()
-        const momentArchive = moment.archive
-
-        if (currentArchive && momentArchive != currentArchive) {
-            return false
-        }
-
-        // tags
-        const currentSelectedTags = selectedTags()
-        if (currentSelectedTags.length > 0) {
-            for (const selectedTag of currentSelectedTags) {
-                if (!moment.tags.includes(selectedTag)) return false
-            }
-        }
-
-        // timeline
-        const dateFilters = dateFilter()
-        const startTime = dateFilters.start.getTime()
-        const endTime = dateFilters.end.getTime()
-
-        const momentDate = new Date(moment.timestamp)
-        momentDate.setUTCHours(0, 0, 0, 0)
-
-        const momentTime = momentDate.getTime()
-
-        if (!(startTime <= momentTime && momentTime <= endTime)) {
-            return false
-        }
-
-        // Media
-        const targetUrls = selectedUrlFilters()
-        if (targetUrls.length > 0) {
-            const containsUrl = targetUrls.some((url) =>
-                moment.content.toLowerCase().includes(url.toLowerCase()),
-            )
-            if (!containsUrl) return false
-        }
-
-        return true
-    })
-})
+export let getFilteredMoments: Accessor<Moment[]> = () => []
 
 export const Feed: Component = () => {
+    getFilteredMoments = createMemo(() => {
+        const momentsPool = allMoments()
+        return momentsPool
+            .filter((moment) => {
+                // archive
+                const currentArchive = selectedArchive()
+                const momentArchive = moment.archive
+
+                if (currentArchive && momentArchive != currentArchive) {
+                    return false
+                }
+
+                // tags
+                const currentSelectedTags = selectedTags()
+                if (currentSelectedTags.length > 0) {
+                    for (const selectedTag of currentSelectedTags) {
+                        if (!moment.tags.includes(selectedTag)) return false
+                    }
+                }
+
+                // timeline
+                const dateFilters = dateFilter()
+                const startTime = dateFilters.start.getTime()
+                const endTime = dateFilters.end.getTime()
+
+                const momentDate = new Date(moment.timestamp)
+                momentDate.setUTCHours(0, 0, 0, 0)
+
+                const momentTime = momentDate.getTime()
+
+                if (!(startTime <= momentTime && momentTime <= endTime)) {
+                    return false
+                }
+
+                // Media
+                const targetURLs = selectedURLFilters()
+                if (targetURLs.length > 0) {
+                    const containsURL = targetURLs.some((url) =>
+                        moment.content
+                            .toLowerCase()
+                            .includes(url.toLowerCase()),
+                    )
+                    if (!containsURL) return false
+                }
+
+                return true
+            })
+            .reverse()
+    })
+
     return (
         <div class="bg-element pt flex h-full w-full items-center justify-center gap-2 rounded-xl p-2 lg:p-4">
             <div class="flex h-full w-[90%] flex-col items-center gap-4 overflow-y-auto rounded-xl p-2 pt-4 lg:p-4 lg:pt-8">
                 <MonthCreator />
-                <For each={getFilteredMoments()}>
+                <For each={getFilteredMoments?.()}>
                     {(each) => {
                         return <Moment {...each} />
                     }}

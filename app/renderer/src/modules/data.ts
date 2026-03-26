@@ -47,11 +47,11 @@ export const [dateFilter, setDateFilter] = createSignal<{
 
 // url:nickname
 export const [
-    availableUrlFiltersAndNicknames,
-    setAvailableUrlFiltersAndNicknames,
+    availableURLFiltersAndNicknames,
+    setAvailableURLFiltersAndNicknames,
 ] = createSignal<Record<string, string>>({})
 
-export const [selectedUrlFilters, setSelectedUrlFilters] = createSignal<
+export const [selectedURLFilters, setSelectedURLFilters] = createSignal<
     Array<string>
 >([])
 

@@ -9,7 +9,6 @@ export const IpcApi = {
             title: '',
             description: '',
             siteLink: '',
-            isImage: true,
             image: '',
             video: '',
         }
