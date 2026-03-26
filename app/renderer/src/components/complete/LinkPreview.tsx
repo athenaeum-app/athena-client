@@ -47,7 +47,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
             { rootMargin: '1000px' },
         )
         if (containerRef) viewObserver.observe(containerRef)
-        onCleanup(viewObserver.disconnect)
+        onCleanup(() => viewObserver.disconnect)
     })
 
     const [websiteData] = createResource(

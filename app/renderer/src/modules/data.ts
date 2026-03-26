@@ -99,7 +99,7 @@ const loadData = async () => {
         const rawMoments = readData.moments as Array<Moment>
         const moments = []
         for (const moment of rawMoments) {
-            moment.timestamp = new Date(moment.timestamp)
+            moment.timestamp = new Date(new Date(moment.timestamp).getTime())
             moments.push(moment)
         }
         console.log('Loaded moments.')
