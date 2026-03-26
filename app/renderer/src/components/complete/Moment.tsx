@@ -71,7 +71,7 @@ export const Moment: Component<MomentProps> = (props) => {
                     setInView(false)
                 }
             },
-            { rootMargin: '1000px' },
+            { rootMargin: '500px' },
         )
         if (containerRef) viewObserver.observe(containerRef)
         onCleanup(() => viewObserver.disconnect)

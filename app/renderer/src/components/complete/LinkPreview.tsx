@@ -44,7 +44,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                     setInView(false)
                 }
             },
-            { rootMargin: '1000px' },
+            { rootMargin: '500px' },
         )
         if (containerRef) viewObserver.observe(containerRef)
         onCleanup(() => viewObserver.disconnect)
@@ -86,7 +86,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
             return null
         }
 
-        return `https://www.youtube-nocookie.com/embed/${id}`
+        return `https://www.youtube-nocookie.com/embed/${id}?autoplayer=0`
     }
 
     const openDirectImage = (url?: string) => {
@@ -123,21 +123,21 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
         console.log(`Website data for ${props.url}:`, websiteData())
     })
 
+    const hasMediaData = () => {
+        return websiteData() && (websiteData()?.image || websiteData()?.video)
+    }
+
     return (
         <div
             ref={containerRef}
-            class="bg-highlight border-sub hover:border-highlight-strongest flex min-h-20 w-full flex-col gap-1 rounded border-2 p-2 transition-all duration-300"
+            class={`bg-highlight border-sub hover:border-highlight-strongest flex ${hasMediaData() ? 'min-h-20 p-2' : 'p-1'} w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300`}
         >
             <Show
-                when={
-                    websiteData() &&
-                    (websiteData()?.image || websiteData()?.video) &&
-                    inView()
-                }
+                when={hasMediaData() && inView()}
                 fallback={
                     <div
                         onClick={() => getApi().openExternalBrowser(props.url)}
-                        class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border-2 p-2 hover:cursor-pointer"
+                        class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border p-2 hover:cursor-pointer"
                     >
                         <div class="flex w-full justify-between">
                             <span class="text-highlight-strong group font-black">
@@ -194,10 +194,11 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                             console.log(`Displaying ${link()} as iframe.`)
                             return (
                                 <iframe
+                                    loading="lazy"
                                     class="aspect-video h-full w-full"
                                     src={link() as string}
                                     title="YouTube video player"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                     referrerpolicy="no-referrer"
                                     allowfullscreen
                                 ></iframe>
