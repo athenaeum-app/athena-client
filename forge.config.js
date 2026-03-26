@@ -1,8 +1,10 @@
+import path from 'node:path'
+
 export default {
     packagerConfig: {
         name: 'Athena',
         executableName: 'athena',
-        icon: './assets/icon',
+        icon: path.join(__dirname, 'assets', 'icon'),
         asar: true,
     },
     makers: [
@@ -11,7 +13,7 @@ export default {
             name: '@electron-forge/maker-squirrel',
             config: {
                 name: 'athena',
-                setupIcon: './assets/icon.ico',
+                setupIcon: path.join(__dirname, 'assets', 'icon.ico'),
             },
         },
         {
@@ -19,7 +21,7 @@ export default {
             platforms: ['darwin'],
             config: {
                 name: 'athena',
-                setupIcon: './assets/icon.ico',
+                setupIcon: path.join(__dirname, 'assets', 'icon.icon'),
             },
         },
 
@@ -29,7 +31,7 @@ export default {
             config: {
                 name: 'athena',
                 options: {
-                    icon: './assets/icon.png',
+                    icon: path.join(__dirname, 'assets', 'icon.png'),
                 },
             },
         },
@@ -40,7 +42,7 @@ export default {
             config: {
                 name: 'athena',
                 options: {
-                    icon: './assets/icon.png',
+                    icon: path.join(__dirname, 'assets', 'icon.png'),
                 },
             },
         },
