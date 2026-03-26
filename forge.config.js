@@ -3,6 +3,7 @@ export default {
         name: 'Athena',
         executableName: 'athena',
         icon: './assets/icon',
+        asar: true,
     },
     makers: [
         // Windows

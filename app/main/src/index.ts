@@ -3,8 +3,6 @@ import { CreateWindow } from './modules/Window'
 import { handleApi as setupApi } from './modules/IPCHandler'
 
 export const init = () => {
-    if (require('electron-squirrel-startup')) app.quit()
-
     console.log('Waiting for app ready...')
 
     setupApi()

@@ -1,7 +1,12 @@
+import path from 'node:path'
 import { defineConfig } from 'vite'
-import { builtinModules } from 'node:module'
 
 export default defineConfig({
+    resolve: {
+        alias: {
+            '@app': path.resolve(import.meta.dirname, '../'),
+        },
+    },
     build: {
         ssr: true,
         target: 'node23',
