@@ -17,6 +17,7 @@ import {
 } from '../../modules/regex'
 import {
     archives,
+    defaultArchiveId,
     setAvailableURLFiltersAndNicknames,
     tags,
     type MomentData,
@@ -96,7 +97,7 @@ export const Moment: Component<MomentProps> = (props) => {
             <Show when={inView()}>
                 <div class="flex flex-col flex-wrap gap-2">
                     <div class="flex w-full justify-between">
-                        <Show when={data.archiveId}>
+                        <Show when={data.archiveId != defaultArchiveId}>
                             <span class="text-sub text-md w-full pr-1 font-bold tracking-tight">
                                 [{' '}
                                 {

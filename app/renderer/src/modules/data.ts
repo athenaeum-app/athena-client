@@ -34,19 +34,19 @@ export const [allMoments, setAllMoments] = createSignal<
 >({})
 
 // Archives
-export const defaultArchiveId = '_default_archive_'
+export const defaultArchiveId = '_default_archive_' as ArchiveId
+export const defaultArchiveName = 'GENERAL'
 export type ArchiveId = `archive_${string}`
 export interface Archive {
     uuid: ArchiveId
     name: string
-    moments: Array<MomentId>
+    momentsIds: Array<MomentId>
 }
 export const [archives, setArchives] = createSignal<Record<ArchiveId, Archive>>(
     {},
 ) // archiveName: Moment ID array
-export const [selectedArchive, setSelectedArchive] = createSignal<
-    ArchiveId | undefined
->()
+export const [selectedArchiveId, setSelectedArchive] =
+    createSignal<ArchiveId>(defaultArchiveId)
 
 // Tags
 export type Tags = Record<TagId, Tag>
@@ -180,46 +180,99 @@ createRoot(() => {
 
 // Data operations
 // Archives
-export const createArchive = (newArchiveName: string) => {
+export const createArchive = (archiveName: string) => {
     const allArchives = { ...archives() }
     for (const [_, archiveData] of Object.entries(allArchives)) {
-        if (newArchiveName == archiveData.name) {
+        if (archiveName == archiveData.name) {
             return
         }
     }
     const newArchiveId: ArchiveId = `archive_${window.crypto.randomUUID()}`
     const newArchive: Archive = {
-        name: newArchiveName,
+        name: archiveName,
         uuid: newArchiveId,
-        moments: [],
+        momentsIds: [],
     }
     allArchives[newArchiveId] = newArchive
     setArchives(allArchives)
     return true
 }
 
+export const updateArchive = (
+    archiveId: ArchiveId,
+    changes: Partial<Omit<Archive, 'uuid'>>,
+) => {
+    setArchives((prev) => ({
+        ...prev,
+        [archiveId]: {
+            ...prev[archiveId],
+            ...changes,
+        },
+    }))
+}
+
+export const deleteArchive = (archiveId: ArchiveId) => {
+    batch(() => {
+        if (selectedArchiveId() == archiveId) {
+            setSelectedArchive(defaultArchiveId)
+        }
+
+        const allArchives = { ...archives() }
+        const _allMoments = { ...allMoments() }
+        const archiveData = allArchives[archiveId]
+        const momentIds = archiveData.momentsIds
+
+        for (const momentId of momentIds) {
+            console.log(momentId, 'DUDE')
+            const newMomentData = {
+                ..._allMoments[momentId],
+                archiveId: defaultArchiveId,
+            }
+            _allMoments[momentId] = newMomentData
+        }
+
+        delete allArchives[archiveId]
+
+        setArchives(allArchives)
+        setAllMoments(_allMoments)
+    })
+}
+
 // Moments
 export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
-    const newId = window.crypto.randomUUID()
+    const newMomentId = window.crypto.randomUUID()
     const newMoment: MomentData = {
         ...data,
-        uuid: newId,
+        uuid: newMomentId,
     }
+    const targetArchiveId = data.archiveId || defaultArchiveId
 
-    setAllMoments((prev) => ({
-        ...prev,
-        [newId]: newMoment,
-    }))
-
-    const archiveName = data.archiveId || defaultArchiveId
-    data.archiveId ||
-        setArchives((prev) => ({
+    batch(() => {
+        setAllMoments((prev) => ({
             ...prev,
-            [archiveName]: [
-                ...(prev[archiveName as any]?.moments || []),
-                newId,
-            ],
+            [newMomentId]: newMoment,
         }))
+
+        setArchives((prev) => {
+            const targetArchiveData = prev[targetArchiveId]
+            if (targetArchiveId == defaultArchiveId) {
+                return prev
+            }
+
+            const newMomentIds = [
+                ...(targetArchiveData?.momentsIds || []),
+                newMomentId,
+            ]
+
+            return {
+                ...prev,
+                [targetArchiveId]: {
+                    ...targetArchiveData,
+                    momentsIds: newMomentIds,
+                },
+            }
+        })
+    })
     return true
 }
 
@@ -254,7 +307,7 @@ export const deleteMoment = (uuid: MomentId) => {
     setArchives((prev) => {
         const result = { ...prev }
         if (archiveId) {
-            result[archiveId].moments = result[archiveId].moments.filter(
+            result[archiveId].momentsIds = result[archiveId].momentsIds.filter(
                 (momentId) => momentId != uuid,
             )
         }

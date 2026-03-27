@@ -4,8 +4,9 @@ import {
     archives,
     content,
     createMoment,
+    defaultArchiveName,
     registerTags,
-    selectedArchive,
+    selectedArchiveId,
     setContent,
     setTagsString,
     setTitle,
@@ -59,7 +60,7 @@ export const MomentCreator: Component = () => {
         createMoment({
             title: title(),
             content: content(),
-            archiveId: selectedArchive(),
+            archiveId: selectedArchiveId(),
             timestamp: date,
             tagIds: registerTags(tagNameArray),
         })
@@ -129,8 +130,9 @@ export const MomentCreator: Component = () => {
                     <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
                         <span>DESTINATION:</span>
                         <span class="rounded bg-slate-800 px-2 py-1 text-cyan-400">
-                            {archives()[selectedArchive() || ('' as ArchiveId)]
-                                ?.name || ''}
+                            {archives()[
+                                selectedArchiveId() || ('' as ArchiveId)
+                            ]?.name || defaultArchiveName}
                         </span>
                     </div>
                     <button

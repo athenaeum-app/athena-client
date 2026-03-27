@@ -9,8 +9,11 @@ import {
 } from 'solid-js'
 import {
     archives,
-    selectedArchive,
+    defaultArchiveId,
+    deleteArchive,
+    selectedArchiveId,
     setSelectedArchive,
+    updateArchive,
     type ArchiveId,
 } from '../../modules/data'
 
@@ -42,16 +45,16 @@ export const Archive: Component<
     return (
         <button
             onClick={() => {
-                if (selectedArchive() === props.archiveId)
-                    return setSelectedArchive(undefined)
+                if (selectedArchiveId() === props.archiveId)
+                    return setSelectedArchive(defaultArchiveId)
                 setSelectedArchive(props.archiveId)
             }}
-            class={`group flex justify-between ${selectedArchive() === props.archiveId ? 'bg-highlight shadow-highlight shadow-md' : ''} hover:bg-highlight flex items-center gap-2 rounded-xl px-4 transition-all duration-200 hover:scale-105 hover:cursor-pointer`}
+            class={`group flex justify-between ${selectedArchiveId() === props.archiveId ? 'bg-highlight shadow-highlight shadow-md' : ''} hover:bg-highlight flex items-center gap-2 rounded-xl px-4 transition-all duration-200 hover:scale-105 hover:cursor-pointer`}
         >
             <div class="flex items-center gap-2">
                 <div
                     class={`h-1.5 w-1.5 rounded-full transition-all ${
-                        selectedArchive() === props.archiveId
+                        selectedArchiveId() === props.archiveId
                             ? 'bg-highlight-strongest scale-125'
                             : 'bg-element-accent'
                     }`}
@@ -64,7 +67,9 @@ export const Archive: Component<
                             type="text"
                             value={bufferName()}
                             onInput={(e) =>
-                                setBufferName(e.currentTarget.value)
+                                setBufferName(
+                                    e.currentTarget.value.toUpperCase(),
+                                )
                             }
                             onFocusOut={() => {
                                 setIsEditing(false)
@@ -72,6 +77,10 @@ export const Archive: Component<
                             }}
                             onKeyDown={(e) => {
                                 if (e.key == 'Enter') {
+                                    const newName = bufferName().toUpperCase()
+                                    updateArchive(props.archiveId, {
+                                        name: newName,
+                                    })
                                     setIsEditing(false)
                                 }
                                 if (e.key == 'Escape') {
@@ -109,6 +118,7 @@ export const Archive: Component<
                             e.stopPropagation()
                             if (isConfirmingDelete()) {
                                 setIsConfirmingDelete(false)
+                                deleteArchive(props.archiveId)
                             } else {
                                 setIsConfirmingDelete(true)
                             }

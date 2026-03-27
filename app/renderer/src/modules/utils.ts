@@ -2,7 +2,8 @@ import { type Accessor } from 'solid-js'
 import {
     allMoments,
     dateFilter,
-    selectedArchive,
+    defaultArchiveId,
+    selectedArchiveId,
     selectedTagIds,
     selectedURLFilters,
     type MomentData,
@@ -60,10 +61,13 @@ export let getFilteredMoments: Accessor<Array<MomentData>> = () => {
     return momentsPool
         .filter((momentData) => {
             // archive
-            const currentArchiveId = selectedArchive()
+            const currentArchiveId = selectedArchiveId()
             const momentArchiveId = momentData.archiveId
 
-            if (currentArchiveId && momentArchiveId != currentArchiveId) {
+            if (
+                currentArchiveId != defaultArchiveId &&
+                momentArchiveId != currentArchiveId
+            ) {
                 return false
             }
 
