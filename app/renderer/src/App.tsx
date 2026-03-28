@@ -6,6 +6,7 @@ import { Line } from './components/Line'
 import { TagBar } from './components/TagBar'
 import Display from './components/Display'
 import { Modals } from './components/Modals'
+import * as json from '../../../package.json'
 
 const App: Component = () => (
     <>
@@ -15,7 +16,9 @@ const App: Component = () => (
                 style="-webkit-app-region: drag"
                 class="bg-element m-0 flex shrink-0 items-center justify-center py-2"
             >
-                <h1 class="text-2xl font-black tracking-tight">Athena</h1>
+                <h1 class="text-2xl font-black tracking-tight">
+                    Athena v{json.version}
+                </h1>
             </header>
             <Line class="bg-element-accent h-0.5 w-full" />
             <TagBar />
