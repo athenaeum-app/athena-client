@@ -13,6 +13,11 @@ EndOfTime.setUTCFullYear(9999)
 
 const log_header = '-'.repeat(25)
 
+// Reference Files
+export type FileName = string
+export type FileRefs = Record<string, File>
+export const [refFiles, setRefFiles] = createSignal<FileRefs>({})
+
 // Link Previews
 // url: metadata
 export const [linkPreviewCache, setLinkPreviewCache] = createSignal<
@@ -158,7 +163,7 @@ export interface dataSnapshot {
 }
 
 const writeSave = createDebounce((snapshot: dataSnapshot) => {
-    getApi().writeData(snapshot)
+    getApi().writeMainData(snapshot)
     console.log('Saved Data!')
 }, 250)
 
@@ -397,4 +402,32 @@ export const recolourTag = (tagId: TagId, newTagColour: string) => {
     })
 
     return true
+}
+
+// File References
+export const saveFileReference = async (file: File) => {
+    const isImage = file.type.startsWith('image/')
+    const currentDate = new Date().getTime()
+    const fileName = `attachment_${file.name || currentDate}`
+    const placeholder = `\n[Attaching ${fileName}...]\n`
+    setContent((prev) => prev + placeholder)
+
+    try {
+        const rawData = await file.arrayBuffer()
+        const localUri = await getApi().saveFileRef(rawData, fileName)
+
+        if (localUri) {
+            setContent((prev) => prev.replace(placeholder, localUri))
+            setRefFiles((prev) => ({ ...prev, [localUri]: file }))
+        }
+    } catch (error) {
+        console.error(`Failed to attach a file!: `, error)
+        setContent((prev) =>
+            prev.replace(
+                placeholder,
+                `\n[ERROR! Encounted an error while attaching ${fileName}\n`,
+            ),
+        )
+        return null
+    }
 }

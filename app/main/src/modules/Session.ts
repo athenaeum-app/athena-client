@@ -1,4 +1,9 @@
-import { session } from 'electron'
+import { app, net, session } from 'electron'
+import { resolve } from 'node:path'
+import * as url from 'node:url'
+
+const scheme = 'athena'
+export const uriPrefix = scheme + '://'
 
 export const SetupSession = () => {
     session.defaultSession.webRequest.onBeforeSendHeaders(
@@ -30,4 +35,12 @@ export const SetupSession = () => {
             callback({ requestHeaders: details.requestHeaders })
         },
     )
+
+    session.defaultSession.protocol.handle(scheme, (request) => {
+        const appData = app.getPath('userData')
+        const filePath = request.url.slice(uriPrefix.length)
+        const fileURL = resolve(appData, 'attachments', filePath)
+        console.log('URL: ', fileURL)
+        return net.fetch(url.pathToFileURL(fileURL).toString())
+    })
 }

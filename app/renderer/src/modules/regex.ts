@@ -3,9 +3,11 @@ export const YOUTUBE_ID_REGEX =
 
 export const URL_REGEX = /(https?:\/\/[^\s]+)/g
 
+export const FILE_REF_REGEX = /(athena?:\/\/[^\s]+)/g
+
 export const URL_DOMAIN_REGEX = /https?:\/\/(?<domain>[^\s]+)\//
 
 export const URL_MAIN_DOMAIN_REGEX =
-    /https?:\/\/(?:[^\s/]+\.)*?(?<domain>[^\s/.]+)\.[a-z]{2,}(?:\/|$)/
+    /https?:\/\/(?:[^\s\/]+\.)*?(?<domain>[^\s\/.]+)\.[a-z]{2,}(?:\/|$)/
 
 export const ELECTRON_AGENT_REGEX = /Electron\/ \d+ \. \d+ \. \d+ \s/

@@ -3,10 +3,12 @@ import { CreateWindow as CreateMainWindow } from './modules/Window'
 import { handleApi as setupApi } from './modules/IPCHandler'
 import { SetupMenu } from './modules/Menu'
 import { SetupSession } from './modules/Session'
+import { registerProtocols } from './modules/Protocols'
 
 export const init = () => {
     console.log('Waiting for app ready...')
 
+    registerProtocols()
     setupApi()
 
     app.setName('athena')
@@ -15,7 +17,7 @@ export const init = () => {
     app.whenReady().then(() => {
         console.log('App ready!')
         SetupMenu()
-        SetupSession
+        SetupSession()
         CreateMainWindow()
     })
 

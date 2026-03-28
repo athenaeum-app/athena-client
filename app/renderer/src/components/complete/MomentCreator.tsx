@@ -6,6 +6,7 @@ import {
     createMoment,
     defaultArchiveName,
     registerTags,
+    saveFileReference,
     selectedArchiveId,
     setContent,
     setTagsString,
@@ -80,6 +81,23 @@ export const MomentCreator: Component = () => {
             <textarea
                 class="field-sizing-content h-auto max-h-96 min-h-12 bg-transparent px-2 py-1 text-sm text-slate-300 placeholder-slate-600 outline-none placeholder:italic"
                 placeholder="Moment description..."
+                onPaste={(e) => {
+                    const clipboardData = e.clipboardData
+                    if (!clipboardData) return
+
+                    const items = clipboardData.items
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i]
+                        if (item.kind == 'file') {
+                            const file = item.getAsFile()
+                            e.preventDefault()
+                            if (file) {
+                                saveFileReference(file)
+                            }
+                            return
+                        }
+                    }
+                }}
                 value={content()}
                 onInput={(e) => setContent(e.currentTarget.value)}
             />

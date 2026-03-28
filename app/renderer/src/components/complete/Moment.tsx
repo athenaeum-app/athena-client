@@ -11,6 +11,7 @@ import {
 import { Line } from '../barebone/Line'
 import { LinkPreview } from './LinkPreview'
 import {
+    FILE_REF_REGEX,
     URL_DOMAIN_REGEX,
     URL_MAIN_DOMAIN_REGEX,
     URL_REGEX,
@@ -22,6 +23,7 @@ import {
     tags,
     type MomentData,
 } from '../../modules/data'
+import { FilePreview } from './FilePreview'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
@@ -74,31 +76,16 @@ export const Moment: Component<MomentProps> = (props) => {
         onCleanup(() => viewObserver.disconnect())
     })
 
-    const months = [
-        'January',
-        'Febuary',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-    ]
-
     return (
         <div
             ref={containerRef}
-            class="group bg-element hover:bg-element-accent border-element-accent flex w-full flex-col items-start gap-2 rounded border p-4"
+            class="group hover:bg-element-accent border-element-accent flex w-full flex-col gap-2 rounded border p-4 transition-all duration-300"
         >
             <Show when={inView()}>
                 <div class="flex flex-col flex-wrap gap-2">
-                    <div class="flex w-full justify-between">
+                    <div class="flex w-full items-center justify-between">
                         <Show when={data.archiveId != defaultArchiveId}>
-                            <span class="text-sub text-md w-full pr-1 font-bold tracking-tight">
+                            <span class="text-sub text-md pr-1 font-bold tracking-tight">
                                 [{' '}
                                 {
                                     archives()[data.archiveId || ('' as any)]
@@ -109,14 +96,19 @@ export const Moment: Component<MomentProps> = (props) => {
                         </Show>
                         <span class="text-sub text-xs font-semibold tracking-wider">
                             {(() => {
-                                const timestamp = data.timestamp
-                                let timeSuffix: 'am' | 'pm' = 'am'
-                                let hour = timestamp.getHours()
-                                if (hour > 12) {
-                                    hour -= 12
-                                    timeSuffix = 'pm'
-                                }
-                                return `${timestamp.getFullYear()} ${months[timestamp.getMonth()]} ${timestamp.getDate()}, at ${hour}:${timestamp.getMinutes()}${timeSuffix.toUpperCase()}`
+                                const timestamp = props.data.timestamp
+
+                                return new Intl.DateTimeFormat(
+                                    navigator.language,
+                                    {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                    },
+                                ).format(timestamp)
                             })()}
                         </span>
                     </div>
@@ -127,9 +119,14 @@ export const Moment: Component<MomentProps> = (props) => {
                 <span class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
                     <For each={contentParts()}>
                         {(text) => {
-                            if (!text.match(URL_REGEX))
-                                return <span>{text}</span>
-                            return <LinkPreview url={text} />
+                            if (text.match(FILE_REF_REGEX)) {
+                                return <FilePreview uri={text} />
+                            }
+                            if (text.match(URL_REGEX)) {
+                                console.log('URL detected')
+                                return <LinkPreview url={text} />
+                            }
+                            return <span>{text}</span>
                         }}
                     </For>
                 </span>

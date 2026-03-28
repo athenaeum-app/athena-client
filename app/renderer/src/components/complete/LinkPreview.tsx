@@ -55,10 +55,19 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
         async (url) => {
             console.log('Attempting to get data for: ', props.url)
             const cache = linkPreviewCache()
+            let forceScrape = false
 
             if (cache && cache[props.url]) {
-                console.log('Loading cached data for link preview.')
-                return cache[props.url]
+                const cachedData = cache[props.url]
+                if (cachedData.image == '' && cachedData.video == '') {
+                    forceScrape = true
+                    console.warn(
+                        `Cached data for ${props.url} has no image or video. Ignoring cached data.`,
+                    )
+                } else {
+                    console.log('Loading cached data for link preview.')
+                    return cache[props.url]
+                }
             }
 
             const api = getApi()
@@ -66,10 +75,8 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 console.log(`No api found. Returning`)
                 return null
             }
-            const result = await api.scrapeWebsiteData(url)
-            console.log(
-                'Fetched link preview data for the first time. Saving to cache.',
-            )
+            console.log(`Attempting to scrape ${url}`)
+            const result = await api.scrapeWebsiteData(url, forceScrape)
             setLinkPreviewCache((prev) => ({
                 ...prev,
                 [props.url]: result,
@@ -161,9 +168,17 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                     </div>
                     <button
                         onClick={() => getApi().openExternalBrowser(props.url)}
-                        class="hover:text-highlight-strongest text-highlight-strong text-md text-right font-black tracking-widest whitespace-nowrap transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
+                        class="hover:text-highlight-strongest text-highlight-strong text-md max-w-sm text-right font-black tracking-widest break-all transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
                     >
-                        {`${websiteData()?.siteLink ? `[${websiteData()?.siteLink}]` : ''}`}
+                        {(() => {
+                            const basic = websiteData()
+                                ?.siteLink.match(URL_MAIN_DOMAIN_REGEX)
+                                ?.at(0)
+                            if (basic) {
+                                return basic
+                            }
+                            return websiteData()?.siteLink || ''
+                        })()}
                     </button>
                 </div>
                 <Show when={!videoLink() && !websiteData()?.video}>
