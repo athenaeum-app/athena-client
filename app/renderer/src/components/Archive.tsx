@@ -15,10 +15,8 @@ import {
     setSelectedArchive,
     updateArchive,
     type ArchiveId,
-} from '../../modules/data'
-
-const i_classes =
-    'fa-solid text-highlight-alt hover:text-highlight-alt-strongest hover:scale-150 transition-all duration-300 '
+} from '../modules/data'
+import { iconClasses } from '../modules/globals'
 
 export const Archive: Component<
     ComponentProps<'button'> & { archiveId: ArchiveId }
@@ -44,7 +42,7 @@ export const Archive: Component<
 
     return (
         <button
-            onClick={(e) => {
+            onClick={() => {
                 if (selectedArchiveId() === props.archiveId)
                     return setSelectedArchive(defaultArchiveId)
                 setSelectedArchive(props.archiveId)
@@ -105,7 +103,7 @@ export const Archive: Component<
             <Show when={!isEditing()}>
                 <div class="flex items-center gap-2 opacity-0 transition-all duration-300 group-hover:opacity-100">
                     <i
-                        class={i_classes + 'fa-pencil'}
+                        class={iconClasses + 'fa-pencil'}
                         onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
@@ -115,7 +113,7 @@ export const Archive: Component<
                     />
                     <i
                         class={
-                            i_classes +
+                            iconClasses +
                             `${isConfirmingDelete() ? 'fa-check' : 'fa-trash'}`
                         }
                         onClick={(e) => {

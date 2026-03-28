@@ -6,8 +6,8 @@ import {
     tags,
     type Tag,
     type TagId,
-} from '../../modules/data'
-import { getFilteredMoments, sortTags } from '../../modules/utils'
+} from '../modules/data'
+import { getFilteredMoments, sortTags } from '../modules/globals'
 
 export const TagBar: Component = () => {
     const toggleTag = (tagId: TagId) => {
@@ -49,8 +49,8 @@ export const TagBar: Component = () => {
                             onClick={() => toggleTag(tagData.id)}
                             class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
                                 selectedTagIds().includes(tagData.id)
-                                    ? 'shadow-highlight-strongest border-2 border-white shadow-sm'
-                                    : `over:scale-105 hover:text-white`
+                                    ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
+                                    : `over:scale-105 hover:text-plain`
                             }`}
                             style={`background-color: ${tagData.colour}`}
                         >

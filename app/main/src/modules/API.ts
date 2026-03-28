@@ -106,6 +106,16 @@ export const Api: IPC_API = {
             console.warn(`Failed to open file from uri (${uri}): ${error}`)
         }
     },
+    getFileNameFromURI: (uri: string) => {
+        try {
+            const relativeFilePath = uri.slice(uriPrefix.length)
+            const match = relativeFilePath.match(/.+attachment_(.*)/)
+            return match ? match[1] : 'File'
+        } catch (error) {
+            console.warn(`Failed to open file from uri (${uri}): ${error}`)
+            return 'File'
+        }
+    },
     scrapeWebsiteData: async (url: string, force?: boolean) => {
         url = new URL(url).href
         const logger = new PrefixLogger(url)

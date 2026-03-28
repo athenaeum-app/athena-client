@@ -1,4 +1,4 @@
-import { type Accessor } from 'solid-js'
+import { createSignal, type Accessor } from 'solid-js'
 import {
     allMoments,
     dateFilter,
@@ -7,6 +7,7 @@ import {
     selectedTagIds,
     selectedURLFilters,
     type MomentData,
+    type MomentId,
 } from './data'
 import { tags, type Tag } from './data'
 
@@ -57,7 +58,7 @@ export const sortTags = (tagsToSort: Array<Tag>) => {
 }
 
 export let getFilteredMoments: Accessor<Array<MomentData>> = () => {
-    const momentsPool = Object.values(allMoments())
+    const momentsPool = Object.values(allMoments)
     return momentsPool
         .filter((momentData) => {
             // archive
@@ -111,3 +112,23 @@ export let getFilteredMoments: Accessor<Array<MomentData>> = () => {
                 new Date(a.timestamp).getTime(),
         )
 }
+
+// Moment Creator
+export const [title, setTitle] = createSignal<string>('')
+export const [content, setContent] = createSignal<string>('')
+export const [tagsString, setTagsString] = createSignal<string>('')
+
+// Editing Moments
+export const [editingMoment, setEditingMoment] = createSignal<
+    MomentId | undefined
+>(undefined)
+
+// Modals
+export type MODAL_NAMES = 'NONE' | 'EDIT_MODAL' | 'CONFIRM_MOMENT_DELETE'
+
+export const [displayedModal, setDisplayedModal] =
+    createSignal<MODAL_NAMES>('NONE')
+
+// Constants
+export const iconClasses =
+    'opacity-0 group-hover:opacity-100 fa-solid text-highlight-alt-strong hover:text-highlight-alt-strongest hover:scale-125 hover:cursor-pointer transition-all duration-200 '

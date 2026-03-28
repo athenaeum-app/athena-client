@@ -8,22 +8,32 @@ import {
     type Component,
     type ComponentProps,
 } from 'solid-js'
-import { Line } from '../barebone/Line'
+import { Line } from './Line'
 import { LinkPreview } from './LinkPreview'
 import {
     FILE_REF_REGEX,
     URL_DOMAIN_REGEX,
+    URL_FILE_REGEX,
     URL_MAIN_DOMAIN_REGEX,
     URL_REGEX,
-} from '../../modules/regex'
+} from '../modules/regex'
 import {
     archives,
     defaultArchiveId,
     setAvailableURLFiltersAndNicknames,
     tags,
     type MomentData,
-} from '../../modules/data'
+} from '../modules/data'
 import { FilePreview } from './FilePreview'
+import {
+    displayedModal,
+    iconClasses,
+    setContent,
+    setDisplayedModal,
+    setEditingMoment,
+    setTagsString,
+    setTitle,
+} from '../modules/globals'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
@@ -32,11 +42,19 @@ export type MomentProps = ComponentProps<'div'> & {
 export const Moment: Component<MomentProps> = (props) => {
     let containerRef: HTMLDivElement | undefined
     const data = props.data
+    const [isConfirmingDelete, setIsConfirmingDelete] =
+        createSignal<boolean>(false)
+
+    createEffect(() => {
+        if (displayedModal() == 'NONE') {
+            setIsConfirmingDelete(false)
+        }
+    })
 
     const contentParts = () =>
         data.content
-            .split(URL_REGEX)
-            .filter((fragment) => fragment.trim() !== '')
+            .split(URL_FILE_REGEX)
+            .filter((fragment) => fragment && fragment.trim() !== '')
 
     // extract urls
     createEffect(() => {
@@ -83,34 +101,68 @@ export const Moment: Component<MomentProps> = (props) => {
         >
             <Show when={inView()}>
                 <div class="flex flex-col flex-wrap gap-2">
-                    <div class="flex w-full items-center justify-between">
-                        <Show when={data.archiveId != defaultArchiveId}>
-                            <span class="text-sub text-md pr-1 font-bold tracking-tight">
-                                [{' '}
-                                {
-                                    archives()[data.archiveId || ('' as any)]
-                                        ?.name
-                                }{' '}
-                                ]
-                            </span>
-                        </Show>
-                        <span class="text-sub text-xs font-semibold tracking-wider">
-                            {(() => {
-                                const timestamp = props.data.timestamp
+                    <div class="flex justify-between">
+                        <div class="flex w-full flex-col gap-2">
+                            <span class="text-sub text-md font-semibold tracking-wider">
+                                {(() => {
+                                    const timestamp = props.data.timestamp
 
-                                return new Intl.DateTimeFormat(
-                                    navigator.language,
+                                    return new Intl.DateTimeFormat(
+                                        navigator.language,
+                                        {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                            hour: 'numeric',
+                                            minute: '2-digit',
+                                            hour12: true,
+                                        },
+                                    ).format(timestamp)
+                                })()}
+                            </span>
+                            <Show when={data.archiveId != defaultArchiveId}>
+                                <span class="text-sub pr-1 text-lg font-bold tracking-tight">
+                                    [{' '}
                                     {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                        hour12: true,
-                                    },
-                                ).format(timestamp)
-                            })()}
-                        </span>
+                                        archives()[
+                                            data.archiveId || ('' as any)
+                                        ]?.name
+                                    }{' '}
+                                    ]
+                                </span>
+                            </Show>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <i
+                                class={iconClasses + 'fa-pencil'}
+                                onClick={() => {
+                                    setDisplayedModal('EDIT_MODAL')
+                                    setTitle(data.title)
+                                    setContent(data.content)
+                                    setTagsString(
+                                        [...data.tagIds]
+                                            .map((tagId) => tags()[tagId].name)
+                                            .join(',') + ',',
+                                    )
+                                    setEditingMoment(data.uuid)
+                                }}
+                            />
+                            <i
+                                class={
+                                    iconClasses +
+                                    `${isConfirmingDelete() ? 'fa-check' : 'fa-trash'}`
+                                }
+                                onClick={() => {
+                                    if (!isConfirmingDelete()) {
+                                        setIsConfirmingDelete(true)
+                                    } else {
+                                        setDisplayedModal(
+                                            'CONFIRM_MOMENT_DELETE',
+                                        )
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
                     <span class="tracking text-4xl font-black">
                         {data.title}
@@ -126,7 +178,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                 console.log('URL detected')
                                 return <LinkPreview url={text} />
                             }
-                            return <span>{text}</span>
+                            return <span class="text-lg">{text}</span>
                         }}
                     </For>
                 </span>

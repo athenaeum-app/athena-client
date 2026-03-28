@@ -1,11 +1,11 @@
 import { For, type Component } from 'solid-js'
-import { InputFrame } from '../barebone/InputFrame'
+import { InputFrame } from './InputFrame'
 import {
     archives,
     createArchive,
     defaultArchiveId,
     type ArchiveId,
-} from '../../modules/data'
+} from '../modules/data'
 import { Archive } from './Archive'
 
 export const ArchivesBar: Component = () => {

@@ -8,13 +8,13 @@ import {
     type Component,
     type ComponentProps,
 } from 'solid-js'
-import { getApi } from '../../modules/ipc_client'
+import { getApi } from '../modules/ipc_client'
 import {
     URL_DOMAIN_REGEX,
     URL_MAIN_DOMAIN_REGEX,
     YOUTUBE_ID_REGEX,
-} from '../../modules/regex'
-import { linkPreviewCache, setLinkPreviewCache } from '../../modules/data'
+} from '../modules/regex'
+import { linkPreviewCache, setLinkPreviewCache } from '../modules/data'
 
 interface LinkPreviewProps extends ComponentProps<'div'> {
     url: string

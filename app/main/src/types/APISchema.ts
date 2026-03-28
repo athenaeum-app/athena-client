@@ -14,6 +14,7 @@ export const IpcApi = {
     writeMainData: (_: any) => {},
     scrapeWebsiteData: async (_: string, __?: boolean) => ({}) as ScrapeData,
     openFileFromURI: (uri: string) => {},
+    getFileNameFromURI: (uri: string) => '',
     saveFileRef: async (
         _: ArrayBuffer,
         __: string,

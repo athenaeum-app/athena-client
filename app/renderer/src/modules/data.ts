@@ -1,8 +1,9 @@
 import { batch, createEffect, createRoot, createSignal } from 'solid-js'
 import { getApi } from './ipc_client'
 import type { IpcApi } from '../../../main/src/types/APISchema'
-import { generateVibrantColour } from './utils'
+import { content, generateVibrantColour, setContent } from './globals'
 import { version } from '../../../../package.json'
+import { createStore, unwrap } from 'solid-js/store'
 
 // Constants
 export const BeginningOfTime = new Date()
@@ -26,7 +27,7 @@ export const [linkPreviewCache, setLinkPreviewCache] = createSignal<
 
 // Moments
 export interface MomentData {
-    uuid: string
+    uuid: MomentId
     title: string
     content: string
     archiveId: ArchiveId | undefined
@@ -34,7 +35,7 @@ export interface MomentData {
     tagIds: Array<TagId>
 }
 export type MomentId = `moment_${string}`
-export const [allMoments, setAllMoments] = createSignal<
+export const [allMoments, setAllMoments] = createStore<
     Record<MomentId, MomentData>
 >({})
 
@@ -65,11 +66,6 @@ export const [tags, setTags] = createSignal<Record<TagId, Tag>>({}) // tag_id: t
 export const [selectedTagIds, setSelectedTagIds] = createSignal<Array<TagId>>(
     [],
 ) // tag id
-
-// Feed
-export const [title, setTitle] = createSignal<string>('')
-export const [content, setContent] = createSignal<string>('')
-export const [tagsString, setTagsString] = createSignal<string>('')
 
 // Filters
 export const [dateFilter, setDateFilter] = createSignal<{
@@ -157,7 +153,7 @@ const createDebounce = (callback: Function, timeoutDuration: number) => {
 export interface dataSnapshot {
     version: string
     archives: ReturnType<typeof archives>
-    moments: ReturnType<typeof allMoments>
+    moments: typeof allMoments
     tags: ReturnType<typeof tags>
     linkPreviewCache: ReturnType<typeof linkPreviewCache>
 }
@@ -172,7 +168,7 @@ createRoot(() => {
         const snapshot: dataSnapshot = {
             version,
             archives: archives(),
-            moments: allMoments(),
+            moments: unwrap(allMoments),
             tags: tags(),
             linkPreviewCache: linkPreviewCache(),
         }
@@ -223,7 +219,7 @@ export const deleteArchive = (archiveId: ArchiveId) => {
         }
 
         const allArchives = { ...archives() }
-        const _allMoments = { ...allMoments() }
+        const _allMoments = { ...allMoments }
         const archiveData = allArchives[archiveId]
         const momentIds = archiveData.momentsIds
 
@@ -245,7 +241,7 @@ export const deleteArchive = (archiveId: ArchiveId) => {
 
 // Moments
 export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
-    const newMomentId = window.crypto.randomUUID()
+    const newMomentId: MomentId = `moment_${window.crypto.randomUUID()}`
     const newMoment: MomentData = {
         ...data,
         uuid: newMomentId,
@@ -296,12 +292,12 @@ export const updateMoment = (
 }
 
 export const deleteMoment = (uuid: MomentId) => {
-    const moment = allMoments()[uuid]
+    const moment = allMoments[uuid]
     if (!moment) {
         console.warn('Moment does not exist! Cannot delete.')
         return
     }
-    const archiveId = allMoments()[uuid].archiveId
+    const archiveId = allMoments[uuid].archiveId
 
     setAllMoments((prev) => {
         const result = { ...prev }
@@ -405,28 +401,37 @@ export const recolourTag = (tagId: TagId, newTagColour: string) => {
 }
 
 // File References
-export const saveFileReference = async (file: File) => {
-    const isImage = file.type.startsWith('image/')
+export const saveFileReference = async (
+    file: File,
+    selection: {
+        Start?: number
+        End?: number
+    },
+) => {
     const currentDate = new Date().getTime()
     const fileName = `attachment_${file.name || currentDate}`
-    const placeholder = `\n[Attaching ${fileName}...]\n`
-    setContent((prev) => prev + placeholder)
+    const placeholder = `[Attaching ${fileName}...]`
+
+    const startPos = selection.Start ?? content().length
+    const endPos = selection.End ?? content().length
+
+    setContent(
+        (prev) =>
+            prev.substring(0, startPos) + placeholder + prev.substring(endPos),
+    )
 
     try {
         const rawData = await file.arrayBuffer()
         const localUri = await getApi().saveFileRef(rawData, fileName)
 
         if (localUri) {
-            setContent((prev) => prev.replace(placeholder, localUri))
+            setContent((prev) => prev.replace(placeholder, `${localUri} `))
             setRefFiles((prev) => ({ ...prev, [localUri]: file }))
         }
     } catch (error) {
         console.error(`Failed to attach a file!: `, error)
         setContent((prev) =>
-            prev.replace(
-                placeholder,
-                `\n[ERROR! Encounted an error while attaching ${fileName}\n`,
-            ),
+            prev.replace(placeholder, `[ERROR! Failed to attach ${fileName}]`),
         )
         return null
     }
