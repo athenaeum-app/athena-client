@@ -4,9 +4,11 @@ import { handleApi as setupApi } from './modules/IPCHandler'
 import { SetupMenu } from './modules/Menu'
 import { SetupSession } from './modules/Session'
 import { registerProtocols } from './modules/Protocols'
+import { attemptMigrateFile } from './modules/API'
 
 export const init = () => {
     console.log('Waiting for app ready...')
+    attemptMigrateFile()
 
     registerProtocols()
     setupApi()

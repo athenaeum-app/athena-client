@@ -7,11 +7,16 @@ import { ELECTRON_AGENT_REGEX } from '@app/renderer/src/modules/regex'
 import { FileName, type dataSnapshot } from '@app/renderer/src/modules/data'
 import { uriPrefix } from './Session'
 
+const prodDataFileName = 'athena_data.json'
+const devDataFileName = 'dev_athena_data.json'
+const devDataFilePath = path.join(app.getPath('userData'), devDataFileName)
+const prodDataFilePath = path.join(app.getPath('userData'), prodDataFileName)
+
 const getDataPath = () => {
     if (process.env.DEV) {
-        return path.join(app.getPath('userData'), 'dev_athena_data.json')
+        return devDataFilePath
     } else {
-        return path.join(app.getPath('userData'), 'athena_data.json')
+        return prodDataFilePath
     }
 }
 
@@ -43,6 +48,21 @@ const getContent = (targetKeywords: Array<string>, c: cheerio.CheerioAPI) => {
         }
     }
     return ''
+}
+
+export const attemptMigrateFile = () => {
+    try {
+        // old file name is monents_data.json
+        const legacyPath = path.join(
+            app.getPath('userData'),
+            'monents_data.json',
+        )
+        if (fs.readFileSync(legacyPath)) {
+            fs.renameSync(legacyPath, prodDataFilePath)
+        }
+    } catch (error) {
+        console.warn('Error trying to migrate file:', error)
+    }
 }
 
 export const Api: IPC_API = {
