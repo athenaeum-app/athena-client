@@ -5,15 +5,10 @@ import { SetupMenu } from './modules/Menu'
 import { SetupSession } from './modules/Session'
 import { registerProtocols } from './modules/Protocols'
 import { attemptMigrateFile } from './modules/API'
-import { updateElectronApp, UpdateSourceType } from 'update-electron-app'
+import { startAutoUpdater } from './modules/Updater'
 
 export const init = () => {
-    updateElectronApp({
-        updateSource: {
-            type: UpdateSourceType.ElectronPublicUpdateService,
-            repo: 'RakkenTi/Athena',
-        },
-    })
+    startAutoUpdater()
     attemptMigrateFile()
 
     registerProtocols()

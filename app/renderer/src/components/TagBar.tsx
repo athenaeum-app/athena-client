@@ -20,7 +20,6 @@ export const TagBar: Component = () => {
     }
 
     const availableTags = createMemo(() => {
-        allTags
         const currentSelected = selectedTagIds()
 
         const remainingMoments = getFilteredMoments().filter((moment) =>
@@ -29,10 +28,14 @@ export const TagBar: Component = () => {
 
         const remainingTags = new Set<Tag>()
         remainingMoments.forEach((moment) =>
-            moment.tagIds.forEach((tagId) => remainingTags.add(allTags[tagId])),
+            moment.tagIds.forEach(
+                (tagId) => allTags[tagId] ?? remainingTags.add(allTags[tagId]),
+            ),
         )
 
-        const result = sortTags(Array.from(remainingTags))
+        const result = sortTags(
+            Array.from(remainingTags).filter((tag) => !!tag),
+        )
 
         return result
     })

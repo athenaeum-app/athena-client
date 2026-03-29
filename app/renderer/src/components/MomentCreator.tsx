@@ -12,28 +12,24 @@ import {
     allMoments,
     allTags,
     archives,
+    content,
     createMoment,
     defaultArchiveName,
+    editingMoment,
     registerTags,
     saveFileReference,
     selectedArchiveId,
+    setContent,
+    setEditingMoment,
+    setTagsString,
+    setTitle,
+    tagsString,
+    title,
     updateMoment,
     type ArchiveId,
     type Tag,
 } from '../modules/data'
-import {
-    content,
-    displayedModal,
-    editingMoment,
-    setContent,
-    setDisplayedModal,
-    setEditingMoment,
-    setTagsString,
-    setTitle,
-    sortTags,
-    tagsString,
-    title,
-} from '../modules/globals'
+import { displayedModal, setDisplayedModal, sortTags } from '../modules/globals'
 
 export const MomentCreator: Component<
     ComponentProps<'div'> & {
