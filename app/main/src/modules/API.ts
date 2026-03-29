@@ -7,8 +7,8 @@ import { ELECTRON_AGENT_REGEX } from '@app/renderer/src/modules/regex'
 import { FileName, type dataSnapshot } from '@app/renderer/src/modules/data'
 import { uriPrefix } from './Session'
 
-const prodDataFileName = 'athena_data.json'
 const devDataFileName = 'dev_athena_data.json'
+const prodDataFileName = 'athena_data.json'
 const devDataFilePath = path.join(app.getPath('userData'), devDataFileName)
 const prodDataFilePath = path.join(app.getPath('userData'), prodDataFileName)
 
