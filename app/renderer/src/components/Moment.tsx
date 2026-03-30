@@ -155,7 +155,7 @@ export const Moment: Component<MomentProps> = (props) => {
                             />
                         </div>
                     </div>
-                    <span class="tracking text-4xl font-black">
+                    <span class="tracking text-4xl font-black break-all">
                         {data.title}
                     </span>
                 </div>
