@@ -161,7 +161,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 <div class="flex justify-between">
                     <div class="flex min-w-0 items-center gap-3 pr-2">
                         <img
-                            class="bg-element max-h-120 rounded object-cover"
+                            class="bg-element max-h-120 rounded object-contain"
                             src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${props.url}`}
                         />
                         <span class="text-highlight-alt-strong flex-1 truncate text-lg font-black">
@@ -184,11 +184,23 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                     </button>
                 </div>
                 <Show when={!videoLink() && !websiteData()?.video}>
-                    <img
-                        onClick={() => openDirectImage(websiteData()?.image)}
-                        class="border-highlight-alt-strongest bg-element max-h-120 rounded object-cover transition-all duration-200 hover:cursor-pointer hover:border-2"
-                        src={`${websiteData()?.image || ''}`}
-                    />
+                    <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+                        <div
+                            class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
+                            style={{
+                                'background-image': `url(${websiteData()?.image || ''})`,
+                                'background-size': 'contain',
+                                'background-position': 'center',
+                            }}
+                        />
+                        <img
+                            onClick={() =>
+                                openDirectImage(websiteData()?.image)
+                            }
+                            class="border-highlight-alt-strongest bg-element z-10 max-h-1/3 rounded object-contain hover:cursor-pointer"
+                            src={`${websiteData()?.image || ''}`}
+                        />
+                    </div>
                 </Show>
                 <Show when={videoLink() || websiteData()?.video}>
                     {(link) => {

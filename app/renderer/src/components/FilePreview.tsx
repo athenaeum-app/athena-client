@@ -51,10 +51,20 @@ export const FilePreview: Component<
                         <span class="text-highlight-alt-strong text-lg font-black">
                             Local Image
                         </span>
-                        <img
-                            src={props.uri}
-                            class="bg-element max-h-120 w-full rounded object-cover"
-                        ></img>
+                        <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+                            <div
+                                class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
+                                style={{
+                                    'background-image': `url(${props.uri || ''})`,
+                                    'background-size': 'contain',
+                                    'background-position': 'center',
+                                }}
+                            />
+                            <img
+                                src={props.uri}
+                                class="bg-element z-10 max-h-150 w-full rounded object-contain hover:cursor-pointer"
+                            ></img>
+                        </div>
                     </div>
                 </div>
             </Show>
