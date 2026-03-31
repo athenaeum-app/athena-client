@@ -161,6 +161,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 <div class="flex justify-between">
                     <div class="flex min-w-0 items-center gap-3 pr-2">
                         <img
+                            class="bg-element max-h-120 rounded object-cover"
                             src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${props.url}`}
                         />
                         <span class="text-highlight-alt-strong flex-1 truncate text-lg font-black">
@@ -185,7 +186,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 <Show when={!videoLink() && !websiteData()?.video}>
                     <img
                         onClick={() => openDirectImage(websiteData()?.image)}
-                        class="border-highlight-alt-strongest transition-all duration-200 hover:cursor-pointer hover:border-2"
+                        class="border-highlight-alt-strongest bg-element max-h-120 rounded object-cover transition-all duration-200 hover:cursor-pointer hover:border-2"
                         src={`${websiteData()?.image || ''}`}
                     />
                 </Show>

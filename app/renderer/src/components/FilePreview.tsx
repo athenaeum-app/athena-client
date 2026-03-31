@@ -51,7 +51,10 @@ export const FilePreview: Component<
                         <span class="text-highlight-alt-strong text-lg font-black">
                             Local Image
                         </span>
-                        <img src={props.uri} class="w-full"></img>
+                        <img
+                            src={props.uri}
+                            class="bg-element max-h-120 w-full rounded object-cover"
+                        ></img>
                     </div>
                 </div>
             </Show>
