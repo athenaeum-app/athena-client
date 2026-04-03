@@ -15,7 +15,7 @@ const gridDisplayClasses = 'grid grid-cols-4 gap-2'
 
 export const Feed: Component = () => {
     return (
-        <div class="bg-element pt flex w-full items-center justify-center gap-2 rounded-xl p-2 lg:p-4">
+        <div class="bg-element pt flex w-full items-center justify-center gap-2 overflow-x-hidden rounded-xl p-2 lg:p-4">
             <div class={'flex h-full w-[90%] flex-col items-center gap-4'}>
                 <div
                     class="flex w-full"

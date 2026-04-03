@@ -170,7 +170,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                     </div>
                     <button
                         onClick={() => getApi().openExternalBrowser(props.url)}
-                        class="hover:text-highlight-strongest text-highlight-strong text-md max-w-sm text-right font-black tracking-widest break-all transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
+                        class="hover:text-highlight-strongest text-highlight-strong text-md wrap-break-all max-w-sm text-right font-black tracking-widest transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
                     >
                         {(() => {
                             const basic = websiteData()
