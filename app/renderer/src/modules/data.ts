@@ -210,7 +210,7 @@ export const createArchive = (archiveName: string) => {
     console.log(archives())
     for (const [_, archiveData] of Object.entries(allArchives)) {
         if (archiveName == archiveData.name) {
-            return
+            return archiveData
         }
     }
     const newArchiveId: ArchiveId = `archive_${window.crypto.randomUUID()}`
@@ -221,7 +221,7 @@ export const createArchive = (archiveName: string) => {
     }
     allArchives[newArchiveId] = newArchive
     setArchives(allArchives)
-    return true
+    return newArchive
 }
 
 export const updateArchive = (
@@ -304,6 +304,36 @@ export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
         })
     })
     return true
+}
+
+export const swapMomentArchive = (
+    momentId: MomentId,
+    newArchiveName: string,
+) => {
+    if (newArchiveName.trim() == '') {
+        newArchiveName = defaultArchiveName
+    }
+    console.log(newArchiveName)
+    const momentData = allMoments[momentId]
+    const newArchiveData = createArchive(newArchiveName)
+    const oldArchiveId = momentData.archiveId
+    console.log(
+        `Attempting to move Moment ${momentId} to new archive ${newArchiveName}`,
+    )
+    if (!oldArchiveId || !newArchiveData || !momentData) {
+        console.error('Failed to swap monent archive. Insufficient data.')
+        return
+    }
+    const oldArchiveData = archives()[oldArchiveId]
+    oldArchiveData.momentsIds = oldArchiveData.momentsIds.filter(
+        (id) => id != momentData.uuid,
+    )
+    updateMoment(momentData.uuid, {
+        archiveId: newArchiveData.uuid,
+    })
+    updateArchive(newArchiveData.uuid, {
+        momentsIds: [...newArchiveData.momentsIds, momentData.uuid],
+    })
 }
 
 export const updateMoment = (

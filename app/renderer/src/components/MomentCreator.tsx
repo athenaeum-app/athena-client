@@ -25,6 +25,7 @@ import {
     setEditingMomentId,
     setTagsString,
     setTitle,
+    swapMomentArchive,
     tagsString,
     title,
     updateMoment,
@@ -34,6 +35,7 @@ import {
 import {
     displayedModal,
     displayedMomentModalId,
+    iconClasses,
     setDisplayedModal,
     sortTags,
 } from '../modules/globals'
@@ -47,6 +49,7 @@ export const MomentCreator: Component<
         hide?: boolean
     }
 > = (props) => {
+    let archiveInputRef: HTMLInputElement | undefined
     let textInputAreaRef: HTMLTextAreaElement | undefined // not visible
     let textDisplayRef: HTMLDivElement | undefined
     const [isPreviewing, setIsPreviewing] = createSignal<boolean>(false)
@@ -130,6 +133,7 @@ export const MomentCreator: Component<
             content: content(),
             tagIds: saveTags(),
         })
+        saveArchiveChanges()
     }
 
     const attemptSubmit = () => {
@@ -172,6 +176,29 @@ export const MomentCreator: Component<
         if (candidateArchiveName == defaultArchiveName) return
         return candidateArchiveName
     })
+
+    const [switchingArchive, setSwitchingArchive] = createSignal<boolean>(false)
+    const [bufferArchive, setBufferArchive] = createSignal<string>(
+        archiveName() || '',
+    )
+
+    createEffect(() => {
+        const editingMomentData = allMoments[editingMomentId()!]
+        if (editingMomentData) {
+            const archiveData = archives()[editingMomentData.archiveId!]
+            if (archiveData) {
+                setBufferArchive(archiveData.name)
+            }
+        }
+    })
+
+    const saveArchiveChanges = () => {
+        const currentBufferArchiveName = bufferArchive()
+        const editMomentId = editingMomentId()
+        if (editMomentId) {
+            swapMomentArchive(editMomentId, currentBufferArchiveName)
+        }
+    }
 
     return (
         <div
@@ -306,22 +333,51 @@ export const MomentCreator: Component<
 
                         <Line class="bg-element-accent h-0.5 w-full" />
                         <div class="flex w-full flex-wrap items-center justify-between text-sm">
-                            <div class="bg-element-accent rounded p-2">
-                                <Show
-                                    when={archiveName()}
-                                    fallback={
-                                        <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
-                                            <span>No archive</span>
-                                        </div>
-                                    }
-                                >
-                                    <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
-                                        <span>DESTINATION:</span>
-                                        <span class="bg-element-accent text-highlight-matte rounded px-2 py-1">
-                                            {archiveName()}
-                                        </span>
-                                    </div>
-                                </Show>
+                            <div class="group bg-element-accent bg flex items-center gap-1 rounded p-2">
+                                <div class="text-element-accent-highlight flex items-center gap-2 font-mono tracking-widest">
+                                    <span>DESTINATION:</span>
+                                    <input
+                                        ref={archiveInputRef}
+                                        disabled={
+                                            switchingArchive() ? false : true
+                                        }
+                                        onFocusOut={() => {
+                                            setSwitchingArchive(false)
+                                        }}
+                                        placeholder="No Archive"
+                                        value={`${archiveName() ? bufferArchive() : ''}`}
+                                        class="bg-element-accent text-highlight-matte field-sizing-content p-1"
+                                        onInput={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setBufferArchive(
+                                                e.currentTarget.value
+                                                    .trim()
+                                                    .toUpperCase(),
+                                            )
+                                        }}
+                                        onKeyDown={(e) => {
+                                            e.stopPropagation()
+                                            if (e.key == 'Enter') {
+                                                setSwitchingArchive(false)
+                                            }
+                                            if (e.key == 'Escape') {
+                                                setSwitchingArchive(false)
+                                            }
+                                        }}
+                                    ></input>
+                                    <i
+                                        class={iconClasses + 'fa-pencil'}
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setSwitchingArchive(true)
+                                            if (archiveInputRef) {
+                                                archiveInputRef.focus()
+                                            }
+                                        }}
+                                    />
+                                </div>
                             </div>
                             <button
                                 onClick={attemptSubmit}
