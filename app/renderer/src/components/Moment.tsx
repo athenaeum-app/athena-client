@@ -20,7 +20,7 @@ import {
     setTitle,
     setContent,
     setTagsString,
-    setEditingMoment,
+    setEditingMomentId,
     setMomentToDelete,
 } from '../modules/data'
 import { FilePreview } from './FilePreview'
@@ -130,7 +130,7 @@ export const Moment: Component<MomentProps> = (props) => {
                             </span>
                             <Show when={data.archiveId != defaultArchiveId}>
                                 <span
-                                    class={`text-sub pr-1 ${displayType() == 'Full' ? 'text-lg' : 'text-md'} font-bold tracking-tight`}
+                                    class={`text-sub pr-1 ${displayType() == 'Full' ? 'text-lg' : 'text-md'} font-bold tracking-tight transition-all duration-200`}
                                 >
                                     [{' '}
                                     {
@@ -161,7 +161,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                                     .join(',') + ','
                                             ).replace(/,\s*$/, ''),
                                         )
-                                        setEditingMoment(data.uuid)
+                                        setEditingMomentId(data.uuid)
                                     }}
                                 />
                                 <i
@@ -186,7 +186,7 @@ export const Moment: Component<MomentProps> = (props) => {
                         </Show>
                     </div>
                     <span
-                        class={`tracking ${displayType() == 'Full' ? 'text-4xl' : 'text-xl'} text-main font-black wrap-break-word`}
+                        class={`tracking ${displayType() == 'Full' ? 'text-4xl' : 'text-xl'} text-main font-black break-all`}
                     >
                         {data.title}
                     </span>
@@ -221,7 +221,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                 const tagColour = tagData.colour
                                 return (
                                     <span
-                                        class={`text-dark tracking-tightest rounded-md px-2 py-1 text-center text-xs font-black wrap-break-word md:p-2`}
+                                        class={`text-dark tracking-tightest rounded-md px-2 py-1 text-center text-xs font-black break-all md:p-2`}
                                         style={`background-color: ${tagColour}`}
                                     >
                                         #{tagData.name}

@@ -56,7 +56,7 @@ export const [allMoments, setAllMoments] = createStore<
 
 // Archives
 export const defaultArchiveId = '_default_archive_' as ArchiveId
-export const defaultArchiveName = 'GENERAL'
+export const defaultArchiveName = '__GENERAL__'
 export type ArchiveId = `archive_${string}`
 export interface Archive {
     uuid: ArchiveId
@@ -96,7 +96,12 @@ const loadData = async () => {
     isLoaded = false
 
     const migratedData = await migrateOldData()
-    const readData = migratedData || (await getApi().readData())
+    const readData: DataSnapshot = migratedData || (await getApi().readData())
+
+    // update default archive
+    if (readData.archives) {
+        readData.archives[defaultArchiveId].name = defaultArchiveName
+    }
 
     console.log(log_header)
     console.log('Loading data:', readData)
@@ -163,7 +168,7 @@ const createDebounce = (
 // Data saving
 let lastSavedString = ''
 
-export interface dataSnapshot {
+export interface DataSnapshot {
     version: string
     archives: ReturnType<typeof archives>
     moments: typeof allMoments
@@ -171,7 +176,7 @@ export interface dataSnapshot {
     linkPreviewCache: ReturnType<typeof linkPreviewCache>
 }
 
-const writeSave = createDebounce((snapshot: dataSnapshot) => {
+const writeSave = createDebounce((snapshot: DataSnapshot) => {
     getApi().writeMainData(snapshot)
     console.log('Saved Data!')
 }, 250)
@@ -181,7 +186,7 @@ createRoot(() => {
         JSON.stringify(allMoments)
         JSON.stringify(allTags)
         if (!isLoaded) return
-        const snapshot: dataSnapshot = {
+        const snapshot: DataSnapshot = {
             version,
             archives: archives(),
             moments: unwrap(allMoments),
@@ -202,9 +207,10 @@ createRoot(() => {
 // Archives
 export const createArchive = (archiveName: string) => {
     const allArchives = { ...archives() }
+    console.log(archives())
     for (const [_, archiveData] of Object.entries(allArchives)) {
         if (archiveName == archiveData.name) {
-            return
+            return archiveData
         }
     }
     const newArchiveId: ArchiveId = `archive_${window.crypto.randomUUID()}`
@@ -215,7 +221,7 @@ export const createArchive = (archiveName: string) => {
     }
     allArchives[newArchiveId] = newArchive
     setArchives(allArchives)
-    return true
+    return newArchive
 }
 
 export const updateArchive = (
@@ -252,7 +258,7 @@ export const deleteArchive = (archiveId: ArchiveId) => {
 }
 
 // Editing Moments
-export const [editingMoment, setEditingMoment] = createSignal<
+export const [editingMomentId, setEditingMomentId] = createSignal<
     MomentId | undefined
 >()
 
@@ -298,6 +304,36 @@ export const createMoment = (data: Omit<MomentData, 'uuid'>) => {
         })
     })
     return true
+}
+
+export const swapMomentArchive = (
+    momentId: MomentId,
+    newArchiveName: string,
+) => {
+    if (newArchiveName.trim() == '') {
+        newArchiveName = defaultArchiveName
+    }
+    console.log(newArchiveName)
+    const momentData = allMoments[momentId]
+    const newArchiveData = createArchive(newArchiveName)
+    const oldArchiveId = momentData.archiveId
+    console.log(
+        `Attempting to move Moment ${momentId} to new archive ${newArchiveName}`,
+    )
+    if (!oldArchiveId || !newArchiveData || !momentData) {
+        console.error('Failed to swap monent archive. Insufficient data.')
+        return
+    }
+    const oldArchiveData = archives()[oldArchiveId]
+    oldArchiveData.momentsIds = oldArchiveData.momentsIds.filter(
+        (id) => id != momentData.uuid,
+    )
+    updateMoment(momentData.uuid, {
+        archiveId: newArchiveData.uuid,
+    })
+    updateArchive(newArchiveData.uuid, {
+        momentsIds: [...newArchiveData.momentsIds, momentData.uuid],
+    })
 }
 
 export const updateMoment = (

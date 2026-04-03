@@ -241,11 +241,52 @@ export const Api: IPC_API = {
                     UserAgent = 'facebookexternalhit/1.1'
                 }
 
-                let HTML = ''
-                const hostname = new URL(targetURL).hostname
                 const headerOptions = {
                     'User-Agent': UserAgent,
                 }
+
+                // Special reddit handling
+                if (
+                    targetURL.includes('reddit.com') ||
+                    targetURL.includes('rxddit.com')
+                ) {
+                    logger.log(
+                        'Reddit link detected. Using JSON bypass for high-res media.',
+                    )
+
+                    const jsonUrl =
+                        targetURL.split('?')[0].replace(/\/$/, '') + '.json'
+
+                    try {
+                        const response = await fetch(jsonUrl, {
+                            headers: headerOptions,
+                        })
+                        const json = await response.json()
+
+                        const post = json[0].data.children[0].data
+
+                        const bestImage =
+                            post.url_overridden_by_dest || post.thumbnail
+
+                        return {
+                            title: post.title,
+                            description: `r/${post.subreddit} • u/${post.author}`,
+                            siteLink: 'reddit.com',
+                            image: bestImage,
+                            video: post.is_video
+                                ? post.media?.reddit_video?.fallback_url
+                                : '',
+                        } as ScrapeData
+                    } catch (e) {
+                        logger.log(
+                            'Reddit JSON bypass failed, falling back to standard scrape...',
+                            e,
+                        )
+                    }
+                }
+
+                let HTML = ''
+                const hostname = new URL(targetURL).hostname
 
                 // Fetch
                 try {

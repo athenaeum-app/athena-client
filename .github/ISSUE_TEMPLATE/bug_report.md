@@ -11,7 +11,7 @@ labels: bug
 A clear and concise description of what the bug is.
 Describe what is expected to happen, and what actually happened.
 
-**OS:** (Windows / Fedora)
+**OS:** (Windows / Fedora / ... / All)
 **Steps to Reproduce:**
 
 - Go to...

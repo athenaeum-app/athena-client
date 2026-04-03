@@ -15,15 +15,17 @@ import {
     archives,
     content,
     createMoment,
+    defaultArchiveId,
     defaultArchiveName,
-    editingMoment,
+    editingMomentId,
     registerTags,
     saveFileReference,
     selectedArchiveId,
     setContent,
-    setEditingMoment,
+    setEditingMomentId,
     setTagsString,
     setTitle,
+    swapMomentArchive,
     tagsString,
     title,
     updateMoment,
@@ -33,19 +35,21 @@ import {
 import {
     displayedModal,
     displayedMomentModalId,
+    iconClasses,
     setDisplayedModal,
     sortTags,
 } from '../modules/globals'
 import { getApi } from '../modules/ipc_client'
 
 const textDisplayClasses =
-    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal wrap-break-word whitespace-pre-wrap'
+    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
 
 export const MomentCreator: Component<
     ComponentProps<'div'> & {
         hide?: boolean
     }
 > = (props) => {
+    let archiveInputRef: HTMLInputElement | undefined
     let textInputAreaRef: HTMLTextAreaElement | undefined // not visible
     let textDisplayRef: HTMLDivElement | undefined
     const [isPreviewing, setIsPreviewing] = createSignal<boolean>(false)
@@ -121,7 +125,7 @@ export const MomentCreator: Component<
     }
 
     const saveEdit = () => {
-        const targetMomentId = editingMoment()
+        const targetMomentId = editingMomentId()
         const targetMomentData = targetMomentId && allMoments[targetMomentId]
         if (!targetMomentData) return
         updateMoment(targetMomentId, {
@@ -129,14 +133,16 @@ export const MomentCreator: Component<
             content: content(),
             tagIds: saveTags(),
         })
+        saveArchiveChanges()
+        setBufferArchive(archiveName() || '')
     }
 
     const attemptSubmit = () => {
         if (title().trim() == '' || content().trim() == '') return
-        if (displayedModal() == 'EDIT_MODAL' && editingMoment()) {
+        if (displayedModal() == 'EDIT_MODAL' && editingMomentId()) {
             console.log('Attempting to modify moment!')
             saveEdit()
-            setEditingMoment()
+            setEditingMomentId()
             if (displayedMomentModalId()) {
                 setDisplayedModal('DISPLAY_MOMENT_MODAL')
             } else {
@@ -151,12 +157,49 @@ export const MomentCreator: Component<
     onMount(() => {
         createEffect(() => {
             if (displayedModal() != 'NONE') return
-            setEditingMoment()
+            setEditingMomentId()
             setContent('')
             setTitle('')
             setTagsString('')
         })
     })
+
+    const archiveName = createMemo(() => {
+        let candidateArchiveName =
+            archives()[selectedArchiveId() || ('' as ArchiveId)]?.name
+        const editMomentId = editingMomentId()
+        if (editMomentId) {
+            candidateArchiveName =
+                archives()[
+                    allMoments[editMomentId].archiveId || defaultArchiveId
+                ].name
+        }
+        if (candidateArchiveName == defaultArchiveName) return
+        return candidateArchiveName
+    })
+
+    const [switchingArchive, setSwitchingArchive] = createSignal<boolean>(false)
+    const [bufferArchive, setBufferArchive] = createSignal<string>(
+        archiveName() || '',
+    )
+
+    createEffect(() => {
+        const editingMomentData = allMoments[editingMomentId()!]
+        if (editingMomentData) {
+            const archiveData = archives()[editingMomentData.archiveId!]
+            if (archiveData) {
+                setBufferArchive(archiveData.name)
+            }
+        }
+    })
+
+    const saveArchiveChanges = () => {
+        const currentBufferArchiveName = bufferArchive()
+        const editMomentId = editingMomentId()
+        if (editMomentId) {
+            swapMomentArchive(editMomentId, currentBufferArchiveName)
+        }
+    }
 
     return (
         <div
@@ -291,19 +334,57 @@ export const MomentCreator: Component<
 
                         <Line class="bg-element-accent h-0.5 w-full" />
                         <div class="flex w-full flex-wrap items-center justify-between text-sm">
-                            <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
-                                <span>DESTINATION:</span>
-                                <span class="bg-element-accent text-highlight-matte rounded px-2 py-1">
-                                    {archives()[
-                                        selectedArchiveId() || ('' as ArchiveId)
-                                    ]?.name || defaultArchiveName}
-                                </span>
+                            <div class="group bg-element-accent bg flex items-center gap-1 rounded p-2">
+                                <div class="text-element-accent-highlight flex items-center gap-2 px-2 font-mono tracking-widest">
+                                    <span>DESTINATION:</span>
+                                    <input
+                                        ref={archiveInputRef}
+                                        disabled={
+                                            switchingArchive() ? false : true
+                                        }
+                                        onFocusOut={() => {
+                                            setSwitchingArchive(false)
+                                        }}
+                                        placeholder="No Archive"
+                                        value={`${archiveName() ? bufferArchive() : ''}`}
+                                        class="bg-element-accent text-highlight-matte field-sizing-content p-1"
+                                        onInput={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setBufferArchive(
+                                                e.currentTarget.value
+                                                    .trim()
+                                                    .toUpperCase(),
+                                            )
+                                        }}
+                                        onKeyDown={(e) => {
+                                            e.stopPropagation()
+                                            if (e.key == 'Enter') {
+                                                setSwitchingArchive(false)
+                                            }
+                                            if (e.key == 'Escape') {
+                                                setSwitchingArchive(false)
+                                            }
+                                        }}
+                                    ></input>
+                                    <i
+                                        class={iconClasses + 'fa-pencil'}
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setSwitchingArchive(true)
+                                            if (archiveInputRef) {
+                                                archiveInputRef.focus()
+                                            }
+                                        }}
+                                    />
+                                </div>
                             </div>
                             <button
                                 onClick={attemptSubmit}
                                 class="hover:bg-highlight-strong hg hover:shadow-highlight-strong bg-highlight hover:border-highlight-strong rounded px-4 py-2 text-xs font-bold tracking-widest transition-all duration-200 hover:scale-105 hover:cursor-pointer hover:shadow-md hover:duration-50 active:scale-95"
                             >
-                                {editingMoment() ? 'EDIT' : 'STORE'}
+                                {editingMomentId() ? 'EDIT' : 'STORE'}
                             </button>
                         </div>
                     </div>
