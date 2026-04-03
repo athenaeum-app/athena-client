@@ -241,6 +241,10 @@ export const Api: IPC_API = {
                     UserAgent = 'facebookexternalhit/1.1'
                 }
 
+                const headerOptions = {
+                    'User-Agent': UserAgent,
+                }
+
                 // Special reddit handling
                 if (
                     targetURL.includes('reddit.com') ||
@@ -254,7 +258,9 @@ export const Api: IPC_API = {
                         targetURL.split('?')[0].replace(/\/$/, '') + '.json'
 
                     try {
-                        const response = await fetch(jsonUrl)
+                        const response = await fetch(jsonUrl, {
+                            headers: headerOptions,
+                        })
                         const json = await response.json()
 
                         const post = json[0].data.children[0].data
@@ -281,9 +287,6 @@ export const Api: IPC_API = {
 
                 let HTML = ''
                 const hostname = new URL(targetURL).hostname
-                const headerOptions = {
-                    'User-Agent': UserAgent,
-                }
 
                 // Fetch
                 try {
