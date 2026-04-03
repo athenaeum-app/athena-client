@@ -18,6 +18,7 @@ const App: Component = () => (
             >
                 <h1 class="text-2xl font-black tracking-tight">
                     Athena v{json.version}
+                    {`${import.meta.env.DEV ? '[DEV BUILD]' : ' '}`}
                 </h1>
             </header>
             <Line class="bg-element-accent h-0.5 w-full" />
