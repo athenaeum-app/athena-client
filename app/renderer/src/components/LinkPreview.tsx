@@ -148,7 +148,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                         class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border p-2 hover:cursor-pointer"
                     >
                         <div class="flex w-full justify-between gap-2">
-                            <span class="text-highlight-strong group font-black break-all">
+                            <span class="text-highlight-strong group font-black wrap-break-word">
                                 {websiteData()?.title || props.url}
                             </span>
                             <span class="text-element-accent-highlight group font-black">
@@ -170,7 +170,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                     </div>
                     <button
                         onClick={() => getApi().openExternalBrowser(props.url)}
-                        class="hover:text-highlight-strongest text-highlight-strong text-md max-w-sm text-right font-black tracking-widest break-all transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
+                        class="hover:text-highlight-strongest text-highlight-strong text-md max-w-sm text-right font-black tracking-widest wrap-break-word transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
                     >
                         {(() => {
                             const basic = websiteData()
