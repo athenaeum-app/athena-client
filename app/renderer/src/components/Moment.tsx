@@ -192,7 +192,7 @@ export const Moment: Component<MomentProps> = (props) => {
                     </span>
                 </div>
                 <Show when={contentDisplayType() == 'All'}>
-                    <span class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
+                    <div class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
                         <For each={contentParts()}>
                             {(text) => {
                                 if (text.match(FILE_REF_REGEX)) {
@@ -205,12 +205,12 @@ export const Moment: Component<MomentProps> = (props) => {
                                     <span
                                         class={`${displayType() == 'Full' ? 'text-lg' : 'text-md'}`}
                                     >
-                                        {text}
+                                        {text.trim()}
                                     </span>
                                 )
                             }}
                         </For>
-                    </span>
+                    </div>
                 </Show>
                 <Show when={data.tagIds.length > 0}>
                     <Line class="bg-element-accent h-1 w-full" />
