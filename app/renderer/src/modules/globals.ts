@@ -152,6 +152,7 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
 // Moment Content
 export const extractContentParts = (content: string) => {
     return content
+        .replace(/(?<!-)--(?!-)/g, '—')
         .split(URL_FILE_REGEX)
         .filter((fragment) => fragment && fragment.trim() !== '')
 }
