@@ -185,11 +185,13 @@ export const MomentCreator: Component<
 
     createEffect(() => {
         const editingMomentData = allMoments[editingMomentId()!]
-        if (editingMomentData) {
-            const archiveData = archives()[editingMomentData.archiveId!]
-            if (archiveData) {
-                setBufferArchive(archiveData.name)
-            }
+
+        const archiveData =
+            archives()[editingMomentData?.archiveId! || selectedArchiveId()!]
+        if (archiveData) {
+            const name =
+                archiveData.name == defaultArchiveName ? '' : archiveData.name
+            setBufferArchive(name)
         }
     })
 
@@ -221,23 +223,43 @@ export const MomentCreator: Component<
                             aria-hidden="true"
                             class={textDisplayClasses}
                         >
-                            <For each={content().split(/(https?:\/\/[^\s]+)/g)}>
-                                {(part, index) =>
-                                    index() % 2 === 1 ? (
+                            <For
+                                each={content().split(
+                                    /(athena:\/\/[^\s]+|https?:\/\/[^\s]+)/g,
+                                )}
+                            >
+                                {(part, index) => {
+                                    const isUrl = index() % 2 === 1
+                                    const isAthena =
+                                        part.startsWith('athena://')
+
+                                    return isUrl ? (
                                         <span
-                                            onClick={() =>
-                                                getApi().openExternalBrowser(
-                                                    part,
-                                                )
+                                            onClick={() => {
+                                                if (isAthena) {
+                                                    getApi().openFileFromURI(
+                                                        part,
+                                                    )
+                                                } else {
+                                                    // Open web link
+                                                    getApi().openExternalBrowser(
+                                                        part,
+                                                    )
+                                                }
+                                            }}
+                                            class="text-highlight-strongest underline hover:cursor-pointer hover:decoration-dotted"
+                                            title={
+                                                isAthena
+                                                    ? 'Open Local File'
+                                                    : 'Open Web Link'
                                             }
-                                            class="text-highlight-strongest underline hover:cursor-pointer"
                                         >
                                             {part}
                                         </span>
                                     ) : (
                                         <span class="text-main">{part}</span>
                                     )
-                                }
+                                }}
                             </For>
                             {content().endsWith('\n') ? <br /> : ''}
                         </div>
@@ -346,7 +368,7 @@ export const MomentCreator: Component<
                                             setSwitchingArchive(false)
                                         }}
                                         placeholder="No Archive"
-                                        value={`${archiveName() ? bufferArchive() : ''}`}
+                                        value={`${archiveName() || bufferArchive() ? bufferArchive() : ''}`}
                                         class="bg-element-accent text-highlight-matte field-sizing-content p-1"
                                         onInput={(e) => {
                                             e.preventDefault()

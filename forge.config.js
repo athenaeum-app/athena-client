@@ -28,6 +28,14 @@ export default {
             },
         },
 
+        {
+            name: '@electron-forge/maker-dmg',
+            config: {
+                name: 'Athena',
+                icon: path.join(__dirname, 'assets', 'icon.icns'),
+            },
+        },
+
         // Debian (ubuntu)
         {
             name: '@electron-forge/maker-deb',

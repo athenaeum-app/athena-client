@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest] # only tested on my windows pc and fedora laptop, not sure about macos yet.
+        os: [ubuntu-latest, windows-latest, macos-latest] # only tested on my windows pc and fedora laptop, not sure about macos yet.
     
     steps:
       - name: Checkout Code
@@ -70,5 +70,6 @@ jobs:
             out/make/**/*.rpm
             out/make/**/*.deb
             out/make/**/*.zip
+            out/make/**/*.dmg
             out/make/**/*.nupkg
             out/make/**/*RELEASES

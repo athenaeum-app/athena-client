@@ -1,7 +1,7 @@
 {
     "name": "athena",
     "productName": "Athena",
-    "version": "0.9.1",
+    "version": "0.13.0",
     "description": "A simple app to store your moments in archives. Featuring a special filtering system to easily find what you need.",
     "main": "app/entry.mjs",
     "private": true,
@@ -25,10 +25,11 @@
         "url": "https://github.com/RakkenTi/Athena"
     },
     "author": "Mark Martinez",
-    "license": "MIT",
+    "license": "GPL-3.0-only",
     "devDependencies": {
         "@electron-forge/cli": "^7.11.1",
         "@electron-forge/maker-deb": "^7.11.1",
+        "@electron-forge/maker-dmg": "^7.11.1",
         "@electron-forge/maker-rpm": "^7.11.1",
         "@electron-forge/maker-squirrel": "^7.11.1",
         "@electron-forge/maker-zip": "^7.11.1",
