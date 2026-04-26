@@ -15,10 +15,27 @@ export const init = () => {
 
     registerProtocols()
 
-    app.whenReady().then(() => {
+    const lock = app.requestSingleInstanceLock()
+
+    if (!lock) {
+        app.quit()
+        return
+    }
+
+    let mainWindow: Electron.BrowserWindow | null = null
+
+    app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore()
+            mainWindow.show() // show() is useful on Linux/Fedora to ensure it's visible
+            mainWindow.focus()
+        }
+    })
+
+    app.whenReady().then(async () => {
         SetupMenu()
         SetupSession()
-        CreateMainWindow()
+        mainWindow = await CreateMainWindow()
     })
 
     app.once('window-all-closed', () => {
