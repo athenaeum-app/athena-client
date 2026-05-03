@@ -1,6 +1,7 @@
 import { createMemo, createSignal, type Accessor } from 'solid-js'
 import {
     allMoments,
+    allTags,
     dateFilter,
     defaultArchiveId,
     mediaFilters,
@@ -11,9 +12,9 @@ import {
     type baseUrlString,
     type MomentData,
     type MomentId,
+    type Tag,
     type url,
-} from './data'
-import { allTags, type Tag } from './data'
+} from './store'
 import {
     URL_DOMAIN_REGEX,
     URL_FILE_REGEX,
@@ -53,13 +54,6 @@ export const registerMediaFilter = (url: url) => {
     }
 }
 
-/**
- * Sorts tags by relevance
- *
- * Relevance is defined by which tags are most currently used in the current context.
- *
- * Context is defined as the currently displayed moments.
- */
 export const sortTags = (tagsToSort: Array<Tag>) => {
     const currentFilteredMoments = getFilteredMoments()
     const visibleTagIds = currentFilteredMoments.flatMap((m) => m.tagIds)
@@ -188,6 +182,7 @@ export type MODAL_NAMES =
     | 'EDIT_MODAL'
     | 'CONFIRM_MOMENT_DELETE'
     | 'DISPLAY_MOMENT_MODAL'
+    | 'ADD_LIBRARY_MODAL'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')

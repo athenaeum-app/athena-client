@@ -15,6 +15,7 @@ import ConfirmModal from './ConfirmModal'
 import ModalContainer from './ModalContainer'
 import { MomentCreator } from './MomentCreator'
 import { MomentModal } from './MomentModal'
+import AddLibraryModal from './AddLibraryModal'
 
 export const Modals = () => {
     createEffect(() => {
@@ -61,6 +62,10 @@ export const Modals = () => {
                 {
                     state_name: 'DISPLAY_MOMENT_MODAL',
                     content: <MomentModal />,
+                },
+                {
+                    state_name: 'ADD_LIBRARY_MODAL',
+                    content: <AddLibraryModal />,
                 },
             ]}
         />

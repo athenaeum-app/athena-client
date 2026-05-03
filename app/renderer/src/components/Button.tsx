@@ -1,7 +1,7 @@
 import { type Component, type ComponentProps } from 'solid-js'
 
 interface GenericButtonProps extends ComponentProps<'button'> {
-    onClick: () => any
+    onClick: (e: MouseEvent & { currentTarget: HTMLButtonElement }) => any
     background_color_classes?: string
     text_colour_classes?: string
 }
