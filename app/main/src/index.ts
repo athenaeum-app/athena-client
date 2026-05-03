@@ -22,20 +22,20 @@ export const init = () => {
         return
     }
 
-    let mainWindow: Electron.BrowserWindow | null = null
+    let window: Electron.BrowserWindow | null = null
 
     app.on('second-instance', () => {
-        if (mainWindow) {
-            if (mainWindow.isMinimized()) mainWindow.restore()
-            mainWindow.show() // show() is useful on Linux/Fedora to ensure it's visible
-            mainWindow.focus()
+        if (window) {
+            if (window.isMinimized()) window.restore()
+            window.show()
+            window.focus()
         }
     })
 
     app.whenReady().then(async () => {
         SetupMenu()
         SetupSession()
-        mainWindow = await CreateMainWindow()
+        window = await CreateMainWindow()
     })
 
     app.once('window-all-closed', () => {
