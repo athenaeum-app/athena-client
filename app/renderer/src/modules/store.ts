@@ -19,8 +19,14 @@ export type LibraryType = 'local' | 'server'
 export interface Library {
     id: string
     name: string
-    type: LibraryType
+    type: 'local' | 'server'
+
     url?: string
+    token?: string
+    role?: 'admin' | 'viewer'
+
+    syncStatus?: 'synced' | 'dirty' | 'syncing' | 'conflict' | 'offline'
+    lastSyncTime?: string
 }
 
 export type MomentId = `moment_${string}`
@@ -38,6 +44,8 @@ export interface Archive {
     uuid: ArchiveId
     name: string
     momentsIds: Array<MomentId>
+    updated_at?: string
+    timestamp?: string
 }
 
 export type TagId = `tag_${string}`
@@ -47,6 +55,8 @@ export interface Tag {
     name: string
     colour: string
     refCount: number
+    updated_at?: string
+    timestamp?: string
 }
 
 export interface MediaFilter {
@@ -85,21 +95,13 @@ export const [libraryToDelete, setLibraryToDelete] = createSignal<
 >(null)
 
 // Server / Sync
-export const [jwtToken, setJwtToken] = createSignal(
-    localStorage.getItem('athena_jwt') || '',
-)
-
-// The role granted by the server for the current JWT: 'admin' (read+write)
-// or 'viewer' (read-only).  null means not authenticated.
-export type ServerRole = 'admin' | 'viewer' | null
-export const [serverRole, setServerRole] = createSignal<ServerRole>(
-    (localStorage.getItem('athena_role') as ServerRole) ?? null,
-)
-
-export const [syncStatus, setSyncStatus] = createSignal<
-    'synced' | 'dirty' | 'syncing' | 'conflict' | 'offline'
->('synced')
-export const [lastSyncTime, setLastSyncTime] = createSignal('Never')
+export const [activeLibraryId, _setActiveLibraryId] = createSignal<string>('')
+export const activeLib = () =>
+    libraries().find((l) => l.id === activeLibraryId())
+export const jwtToken = () => activeLib()?.token || ''
+export const serverRole = () => activeLib()?.role || null
+export const syncStatus = () => activeLib()?.syncStatus || 'synced'
+export const lastSyncTime = () => activeLib()?.lastSyncTime || 'Never'
 
 // Link Previews
 export const [linkPreviewCache, setLinkPreviewCache] = createSignal<

@@ -1,16 +1,13 @@
-import { createSignal, Match, Show, type Component } from 'solid-js'
+import { createSignal, Match, Show, type Component, Switch } from 'solid-js'
 import { setDisplayedModal } from '../modules/globals'
 import {
     libraries,
     setLibraries,
-    setActiveLibraryId,
     initializeNewLibrary,
-    setJwtToken,
-    setServerRole,
     type LibraryType,
     type Library,
+    setActiveLibraryId,
 } from '../modules/data'
-import { Switch } from 'solid-js'
 
 const AddLibraryModal: Component = () => {
     const [name, setName] = createSignal('')
@@ -54,14 +51,16 @@ const AddLibraryModal: Component = () => {
         setIsLoading(true)
         setAuthError('')
 
+        let finalUrl: string | undefined
+        let finalToken: string | undefined
+        let finalRole: 'admin' | 'viewer' | undefined
+
         if (type() === 'server') {
             const rawUrl = url().trim()
-            const targetUrl = rawUrl.startsWith('http')
-                ? rawUrl
-                : `http://${rawUrl}`
+            finalUrl = rawUrl.startsWith('http') ? rawUrl : `http://${rawUrl}`
 
             try {
-                const res = await fetch(`${targetUrl}/auth/login`, {
+                const res = await fetch(`${finalUrl}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: password() }),
@@ -75,10 +74,8 @@ const AddLibraryModal: Component = () => {
 
                 const data = await res.json()
 
-                localStorage.setItem('athena_jwt', data.token)
-                localStorage.setItem('athena_role', data.role)
-                setJwtToken(data.token)
-                setServerRole(data.role)
+                finalToken = data.token
+                finalRole = data.role
             } catch (err) {
                 console.error(err)
                 setAuthError('Network error. Is the server running?')
@@ -94,22 +91,22 @@ const AddLibraryModal: Component = () => {
             id: newId,
             name: trimmedName,
             type: type(),
-            url:
-                type() === 'server'
-                    ? url().trim().startsWith('http')
-                        ? url().trim()
-                        : `http://${url().trim()}`
-                    : undefined,
+            url: finalUrl,
+            token: finalToken,
+            role: finalRole,
+            syncStatus: type() === 'server' ? 'synced' : undefined,
         }
 
         initializeNewLibrary(newLib.id)
         setLibraries([...libraries(), newLib])
         setActiveLibraryId(newLib.id)
+
         setDisplayedModal('NONE')
         setIsLoading(false)
         setName('')
         setType('local')
         setUrl('')
+        setPassword('')
     }
 
     return (

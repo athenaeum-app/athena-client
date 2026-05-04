@@ -1,8 +1,10 @@
-import { batch, createEffect, createRoot, createSignal } from 'solid-js'
+import { batch, createEffect, createRoot } from 'solid-js'
 import { reconcile, unwrap } from 'solid-js/store'
 import { getApi } from './ipc_client'
 import { version } from '../../../../package.json'
 import { migrateOldData } from './data_migrate'
+import { mergeLibraryData } from './sync'
+
 import {
     archives,
     setArchives,
@@ -21,8 +23,6 @@ import {
     setSelectedURLFilters,
     defaultArchiveId,
     defaultArchiveName,
-    setSyncStatus,
-    setLastSyncTime,
     type Library,
     type LibraryDataSnapshot,
     type DataSnapshot,
@@ -31,34 +31,68 @@ import {
     type MomentData,
     type TagId,
     type Tag,
+    activeLibraryId,
+    _setActiveLibraryId,
 } from './store'
 
-// Internals
 let allLibraryDataRef: Record<string, LibraryDataSnapshot> = {}
 let isLoaded = false
 let isInitialized = false
 
-const [_activeLibraryId, _setActiveLibraryId] = createSignal<string>('')
-export const activeLibraryId = _activeLibraryId
-
 export const pushPayloadToServer = async (
     targetUrl: string,
     targetId: string,
+    overrideToken?: string,
 ) => {
-    const payload = {
+    const tokenToUse = overrideToken || jwtToken()
+
+    const localPayload = {
         archives: archives(),
         moments: unwrap(allMoments),
         tags: unwrap(allTags),
         linkPreviewCache: linkPreviewCache(),
     }
 
+    const fetchRes = await fetch(`${targetUrl}/api/library/${targetId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${tokenToUse}` },
+    })
+
+    if (!fetchRes.ok && fetchRes.status !== 404) {
+        throw new Error(`Failed to fetch server state (${fetchRes.status})`)
+    }
+
+    let payloadToPush = localPayload as LibraryDataSnapshot
+
+    if (fetchRes.ok) {
+        const serverData = await fetchRes.json()
+        payloadToPush = mergeLibraryData(
+            localPayload,
+            serverData,
+        ) as LibraryDataSnapshot
+
+        // If this sync is happening on the library we are currently looking at,
+        // instantly update the UI to see the new data
+        if (activeLibraryId() === targetId) {
+            batch(() => {
+                setArchives(payloadToPush.archives)
+                setAllMoments(reconcile(payloadToPush.moments))
+                setAllTags(reconcile(payloadToPush.tags))
+                setLinkPreviewCache(payloadToPush.linkPreviewCache)
+            })
+        }
+
+        // Save the merged result
+        allLibraryDataRef[targetId] = structuredClone(payloadToPush)
+    }
+
     const res = await fetch(`${targetUrl}/api/library/${targetId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${jwtToken()}`,
+            Authorization: `Bearer ${tokenToUse}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payloadToPush),
     })
 
     if (!res.ok) throw new Error(`Sync rejected by server (${res.status})`)
@@ -66,10 +100,25 @@ export const pushPayloadToServer = async (
 
 export const copyLibraryData = (sourceId: string, targetId: string) => {
     if (allLibraryDataRef[sourceId]) {
-        allLibraryDataRef[targetId] = structuredClone(
-            allLibraryDataRef[sourceId],
-        )
+        // Only copy if the target doesn't already have data
+        // This prevents the Publishing destroying newly merged data.
+        if (!allLibraryDataRef[targetId]) {
+            allLibraryDataRef[targetId] = structuredClone(
+                allLibraryDataRef[sourceId],
+            )
+        }
     }
+}
+
+export const updateActiveLibrary = (updates: Partial<Library>) => {
+    const currentId = activeLibraryId()
+    if (!currentId) return
+
+    setLibraries((prevLibs) =>
+        prevLibs.map((lib) =>
+            lib.id === currentId ? { ...lib, ...updates } : lib,
+        ),
+    )
 }
 
 export const deleteLibraryData = (libId: string) => {
@@ -77,6 +126,7 @@ export const deleteLibraryData = (libId: string) => {
 
     if (activeLibraryId() === libId) {
         isLoaded = false
+        localStorage.removeItem('athena-jwt-token')
     }
 
     setLibraries((libs) => libs.filter((l) => l.id !== libId))
@@ -90,10 +140,10 @@ export const deleteLibraryData = (libId: string) => {
 
         if (remaining.length > 0) {
             const nextId = remaining[0].id
-            _setActiveLibraryId(nextId)
+            setActiveLibraryId(nextId)
             loadLibraryDataIntoState(nextId)
         } else {
-            _setActiveLibraryId('')
+            setActiveLibraryId('')
             batch(() => {
                 setArchives({})
                 setAllMoments({})
@@ -112,7 +162,6 @@ export const getLibraryFromId = (libId: string) =>
 
 export const getCurrentLibrary = () => getLibraryFromId(activeLibraryId())
 
-// Library data loader
 const loadLibraryDataIntoState = async (libId: string) => {
     if (!libId) return
     isLoaded = false
@@ -187,7 +236,7 @@ const loadData = async () => {
     setLibraries(savedLibraries)
 
     const savedActiveId = rawData.activeLibraryId ?? savedLibraries[0]?.id ?? ''
-    _setActiveLibraryId(savedActiveId)
+    setActiveLibraryId(savedActiveId)
     if (savedActiveId) loadLibraryDataIntoState(savedActiveId)
 
     isInitialized = true
@@ -214,24 +263,35 @@ const writeSave = createDebounce(async (snapshot: DataSnapshot) => {
     if (activeLib?.type === 'server' && jwtToken()) {
         const targetUrl = activeLib.url || 'http://localhost:8080'
         try {
-            setSyncStatus('syncing')
-            await pushPayloadToServer(targetUrl, activeId)
-            setSyncStatus('synced')
-            setLastSyncTime(
-                new Date().toLocaleTimeString([], {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                }),
-            )
+            const newTime = new Date().toLocaleTimeString([], {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+            })
+            updateActiveLibrary({
+                syncStatus: 'syncing',
+                lastSyncTime: newTime,
+            })
+            await Promise.all([
+                pushPayloadToServer(targetUrl, activeId),
+                new Promise((resolve) => setTimeout(resolve, 500)),
+            ])
+            updateActiveLibrary({
+                syncStatus: 'synced',
+                lastSyncTime: newTime,
+            })
         } catch (e: any) {
             if (
                 e.message?.toLowerCase().includes('fetch') ||
                 e.message?.toLowerCase().includes('network')
             ) {
-                setSyncStatus('offline')
+                updateActiveLibrary({
+                    syncStatus: 'offline',
+                })
             } else {
-                setSyncStatus('conflict')
+                updateActiveLibrary({
+                    syncStatus: 'conflict',
+                })
             }
         }
     }
@@ -240,7 +300,7 @@ const writeSave = createDebounce(async (snapshot: DataSnapshot) => {
 createRoot(() => {
     createEffect(() => {
         const currentLibs = libraries()
-        const currentId = _activeLibraryId()
+        const currentId = activeLibraryId()
         const currentArchives = archives()
         const currentCache = linkPreviewCache()
 
@@ -266,9 +326,14 @@ createRoot(() => {
             }
         })
 
+        const libsForSave = currentLibs.map((lib) => {
+            const { syncStatus, lastSyncTime, ...cleanLib } = lib
+            return cleanLib
+        })
+
         const snapshot: DataSnapshot = {
             version,
-            libraries: currentLibs,
+            libraries: libsForSave,
             activeLibraryId: currentId,
             libraryData: cleanedLibraryData,
         }
@@ -281,7 +346,7 @@ createRoot(() => {
 })
 
 export const setActiveLibraryId = (newId: string) => {
-    const currentId = _activeLibraryId()
+    const currentId = activeLibraryId()
     if (newId === currentId) return
 
     if (currentId && isLoaded) {

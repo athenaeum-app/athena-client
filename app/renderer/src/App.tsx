@@ -8,7 +8,7 @@ import Display from './components/Display'
 import { Modals } from './components/Modals'
 import * as json from '../../../package.json'
 import './modules/pdfjs'
-import { activeLibraryId } from './modules/libraryManager'
+import { activeLibraryId } from './modules/store'
 
 const App: Component = () => (
     <>

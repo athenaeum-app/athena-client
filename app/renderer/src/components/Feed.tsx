@@ -7,8 +7,8 @@ import {
     getFilteredMoments,
     setDisplayType,
 } from '../modules/globals'
-import { serverRole } from '../modules/store'
-import { activeLibraryId, getCurrentLibrary } from '../modules/libraryManager'
+import { activeLibraryId, serverRole } from '../modules/store'
+import { getCurrentLibrary } from '../modules/libraries'
 
 const fullDisplayClasses =
     'flex h-full w-full flex-col items-center gap-4 rounded-xl'

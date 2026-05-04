@@ -7,13 +7,12 @@ import {
     jwtToken,
     serverRole,
     syncStatus,
-    setSyncStatus,
     lastSyncTime,
-    setLastSyncTime,
     pushPayloadToServer,
     copyLibraryData,
     deleteLibraryData,
     setLibraryToDelete,
+    updateActiveLibrary,
 } from '../modules/data'
 
 const LoadingSpinner: Component<{ text?: string }> = (props) => (
@@ -28,35 +27,60 @@ const LoadingSpinner: Component<{ text?: string }> = (props) => (
 )
 
 const SyncDashboard: Component = () => {
+    const [isManualSyncing, setIsManualSyncing] = createSignal(false)
+
     const handleManualSync = async () => {
-        setSyncStatus('syncing')
+        setIsManualSyncing(true)
+
+        const newTime = new Date().toLocaleTimeString([], {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        })
+
+        updateActiveLibrary({
+            syncStatus: 'syncing',
+            lastSyncTime: newTime,
+        })
 
         const activeLib = libraries().find((l) => l.id === activeLibraryId())
         if (!activeLib?.url) {
-            setSyncStatus('conflict')
+            updateActiveLibrary({
+                syncStatus: 'conflict',
+                lastSyncTime: newTime,
+            })
+            setIsManualSyncing(false)
             return
         }
 
         try {
-            await pushPayloadToServer(activeLib.url, activeLib.id)
-            setSyncStatus('synced')
-            setLastSyncTime(
-                new Date().toLocaleTimeString([], {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                }),
-            )
+            await Promise.all([
+                pushPayloadToServer(activeLib.url, activeLib.id),
+                new Promise((resolve) => setTimeout(resolve, 600)),
+            ])
+
+            updateActiveLibrary({
+                syncStatus: 'synced',
+                lastSyncTime: newTime,
+            })
         } catch (err: any) {
             console.error('Sync failed:', err)
             if (
                 err.message?.toLowerCase().includes('fetch') ||
                 err.message?.toLowerCase().includes('network')
             ) {
-                setSyncStatus('offline')
+                updateActiveLibrary({
+                    syncStatus: 'offline',
+                    lastSyncTime: newTime,
+                })
             } else {
-                setSyncStatus('conflict')
+                updateActiveLibrary({
+                    syncStatus: 'conflict',
+                    lastSyncTime: newTime,
+                })
             }
+        } finally {
+            setIsManualSyncing(false)
         }
     }
 
@@ -109,13 +133,12 @@ const SyncDashboard: Component = () => {
 
             <div class="flex min-h-7 gap-2">
                 <Show
-                    when={syncStatus() !== 'syncing'}
+                    when={!isManualSyncing()}
                     fallback={<LoadingSpinner text="Pushing..." />}
                 >
                     <Show when={serverRole() === 'admin'}>
                         <button
                             onClick={handleManualSync}
-                            disabled={syncStatus() === 'synced'}
                             class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             Sync Now
@@ -139,6 +162,11 @@ const PublishSection: Component = () => {
     const [targetHasData, setTargetHasData] = createSignal(false)
     const [isCheckingTarget, setIsCheckingTarget] = createSignal(false)
 
+    const targetLib = () => {
+        const targetId = selectedLibraryTargetId()
+        return serverLibs().find((l) => l.id === targetId)
+    }
+
     createEffect(() => {
         const current = selectedLibraryTargetId()
         const libs = serverLibs()
@@ -152,7 +180,7 @@ const PublishSection: Component = () => {
     createEffect(() => {
         const targetId = selectedLibraryTargetId()
         const targetLib = serverLibs().find((l) => l.id === targetId)
-        const token = jwtToken()
+        const token = targetLib?.token
 
         if (targetLib && targetLib.url && token) {
             setIsCheckingTarget(true)
@@ -185,34 +213,48 @@ const PublishSection: Component = () => {
         const targetId = selectedLibraryTargetId()
         const targetLib = serverLibs().find((l) => l.id === targetId)
         if (!targetLib || !targetLib.url) return
+        const newTime = new Date().toLocaleTimeString([], {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        })
 
         setIsPublishing(true)
-        setSyncStatus('syncing')
+        updateActiveLibrary({
+            syncStatus: 'syncing',
+            lastSyncTime: newTime,
+        })
 
         try {
-            await pushPayloadToServer(targetLib.url, targetLib.id)
+            await pushPayloadToServer(
+                targetLib.url,
+                targetLib.id,
+                targetLib.token,
+            )
 
             const oldLocalId = activeLibraryId()
             copyLibraryData(oldLocalId, targetLib.id)
             setActiveLibraryId(targetLib.id)
 
-            setSyncStatus('synced')
-            setLastSyncTime(
-                new Date().toLocaleTimeString([], {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                }),
-            )
+            updateActiveLibrary({
+                syncStatus: 'synced',
+                lastSyncTime: newTime,
+            })
         } catch (err: any) {
             console.error('Publish failed:', err)
             if (
                 err.message?.toLowerCase().includes('fetch') ||
                 err.message?.toLowerCase().includes('network')
             ) {
-                setSyncStatus('offline')
+                updateActiveLibrary({
+                    syncStatus: 'offline',
+                    lastSyncTime: newTime,
+                })
             } else {
-                setSyncStatus('conflict')
+                updateActiveLibrary({
+                    syncStatus: 'conflict',
+                    lastSyncTime: newTime,
+                })
             }
         } finally {
             setIsPublishing(false)
@@ -276,10 +318,12 @@ const PublishSection: Component = () => {
                     </Show>
                 </Show>
 
-                <Show when={serverRole() !== 'admin' || !jwtToken()}>
+                <Show
+                    when={targetLib()?.role !== 'admin' || !targetLib()?.token}
+                >
                     <div class="bg-warning/40 text-warning rounded-md px-3 py-2 text-xs font-black">
-                        You must add a server using the admin password to
-                        publish.
+                        You must connect to this server using the admin password
+                        to publish.
                     </div>
                 </Show>
 
@@ -295,8 +339,8 @@ const PublishSection: Component = () => {
                     disabled={
                         !selectedLibraryTargetId() ||
                         isPublishing() ||
-                        serverRole() !== 'admin' ||
-                        !jwtToken() ||
+                        targetLib()?.role !== 'admin' ||
+                        !targetLib()?.token ||
                         isCheckingTarget()
                     }
                     class={`mt-1 w-full rounded-md py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
