@@ -95,6 +95,8 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
             const currentArchiveId = selectedArchiveId()
             const momentArchiveId = momentData.archiveId
 
+            if (momentData.deleted) return false
+
             if (
                 currentArchiveId != defaultArchiveId &&
                 momentArchiveId != currentArchiveId

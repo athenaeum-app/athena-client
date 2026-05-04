@@ -38,6 +38,7 @@ export interface MomentData {
     timestamp: Date
     tagIds: Array<TagId>
     updated_at?: string
+    deleted?: boolean
 }
 
 export type ArchiveId = `archive_${string}`
@@ -47,6 +48,7 @@ export interface Archive {
     momentsIds: Array<MomentId>
     updated_at?: string
     timestamp?: string
+    deleted?: boolean
 }
 
 export type TagId = `tag_${string}`
@@ -58,6 +60,7 @@ export interface Tag {
     refCount: number
     updated_at?: string
     timestamp?: string
+    deleted?: boolean
 }
 
 export interface MediaFilter {

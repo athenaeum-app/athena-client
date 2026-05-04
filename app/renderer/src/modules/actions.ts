@@ -257,7 +257,11 @@ export const deleteMoment = (uuid: MomentId): boolean | undefined => {
     console.log(`Deleting moment: ${uuid}`)
     const archiveId = momentToDelete.archiveId
 
-    setAllMoments(uuid, undefined!)
+    setAllMoments(uuid, (prev) => ({
+        ...prev,
+        deleted: true,
+        updated_at: new Date().toISOString(),
+    }))
 
     setArchives((prev) => {
         if (!archiveId || !prev[archiveId]) return prev
