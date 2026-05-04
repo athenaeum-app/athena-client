@@ -1,8 +1,6 @@
-import type { LibraryDataSnapshot } from './store'
+import { type LibraryDataSnapshot } from './store'
 
-const mergeRecords = <
-    T extends { updated_at?: string | Date; timestamp?: string | Date },
->(
+const mergeRecords = <T extends Record<string, any>>(
     local: Record<string, T>,
     server: Record<string, T>,
 ): Record<string, T> => {
@@ -17,12 +15,14 @@ const mergeRecords = <
         }
 
         const localTime = new Date(
-            localItem.updated_at || localItem.timestamp || 0,
-        ).getTime()
-        const serverTime = new Date(
-            serverItem.updated_at || serverItem.timestamp || 0,
+            (localItem as any).updated_at || (localItem as any).timestamp || 0,
         ).getTime()
 
+        const serverTime = new Date(
+            (serverItem as any).updated_at ||
+                (serverItem as any).timestamp ||
+                0,
+        ).getTime()
         if (serverTime > localTime) {
             merged[id] = serverItem
         }
@@ -32,22 +32,16 @@ const mergeRecords = <
 }
 
 export const mergeLibraryData = (
-    localData: Partial<LibraryDataSnapshot>,
-    serverData: any,
-) => {
+    local: LibraryDataSnapshot,
+    server: LibraryDataSnapshot,
+): LibraryDataSnapshot => {
     return {
-        archives: mergeRecords(
-            localData.archives || {},
-            serverData.archives || {},
-        ),
-        moments: mergeRecords(
-            localData.moments || {},
-            serverData.moments || {},
-        ),
-        tags: mergeRecords(localData.tags || {}, serverData.tags || {}),
+        archives: mergeRecords(local.archives, server.archives),
+        moments: mergeRecords(local.moments, server.moments),
+        tags: mergeRecords(local.tags, server.tags),
         linkPreviewCache: {
-            ...(localData.linkPreviewCache || {}),
-            ...(serverData.linkPreviewCache || {}),
+            ...server.linkPreviewCache,
+            ...local.linkPreviewCache,
         },
-    }
+    } as LibraryDataSnapshot
 }

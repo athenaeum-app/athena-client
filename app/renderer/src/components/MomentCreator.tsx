@@ -130,7 +130,6 @@ export const MomentCreator: Component<
             title: title(),
             content: content(),
             tagIds: saveTags(),
-            updated_at: new Date().toISOString(),
         })
 
         saveArchiveChanges()

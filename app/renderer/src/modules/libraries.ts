@@ -175,6 +175,16 @@ const loadLibraryDataIntoState = async (libId: string) => {
     isLoaded = false
     const currentLib = getLibraryFromId(libId)
 
+    let localCache = allLibraryDataRef[libId]
+    if (!localCache) {
+        localCache = {
+            archives: {},
+            moments: {},
+            tags: {},
+            linkPreviewCache: {},
+        } as LibraryDataSnapshot
+    }
+
     if (currentLib?.type === 'server' && jwtToken()) {
         const url = currentLib.url || 'http://localhost:8080'
         try {
@@ -184,17 +194,19 @@ const loadLibraryDataIntoState = async (libId: string) => {
             })
             if (res.ok) {
                 const serverData: LibraryDataSnapshot = await res.json()
-                allLibraryDataRef[libId] = serverData
+
+                localCache = mergeLibraryData(
+                    localCache,
+                    serverData,
+                ) as LibraryDataSnapshot
             }
         } catch (e) {
             console.error('sync: failed to pull library data from server:', e)
         }
     }
 
-    const raw = allLibraryDataRef[libId]
-    const libData: LibraryDataSnapshot = raw
-        ? structuredClone(raw)
-        : { archives: {}, moments: {}, tags: {}, linkPreviewCache: {} }
+    allLibraryDataRef[libId] = localCache
+    const libData = structuredClone(localCache)
 
     const newArchives = libData.archives as Record<ArchiveId, Archive>
     if (!newArchives[defaultArchiveId]) {
@@ -211,7 +223,12 @@ const loadLibraryDataIntoState = async (libId: string) => {
         setArchives(newArchives)
         const moments = libData.moments as Record<string, MomentData>
         for (const moment of Object.values(moments)) {
-            moment.timestamp = new Date(moment.timestamp)
+            if (
+                typeof moment.timestamp === 'string' ||
+                typeof moment.timestamp === 'number'
+            ) {
+                moment.timestamp = new Date(moment.timestamp)
+            }
         }
         setAllMoments(reconcile(moments))
         setAllTags(reconcile(libData.tags as Record<TagId, Tag>))
