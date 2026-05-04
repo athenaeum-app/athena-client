@@ -43,9 +43,9 @@ const Display: Component = () => (
                                 </h1>
                                 <p class="text-sub text-md max-w-md leading-relaxed font-semibold">
                                     Your personal knowledge library is empty.
-                                    Create a local vault to store your thoughts
-                                    or connect to a self-hosted server to sync
-                                    across devices.
+                                    Create a local library to store your
+                                    thoughts or connect to a self-hosted server
+                                    to sync across devices.
                                 </p>
                             </div>
 

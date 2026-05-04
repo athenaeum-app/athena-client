@@ -52,7 +52,7 @@ export const pushPayloadToServer = async (
         linkPreviewCache: linkPreviewCache(),
     }
 
-    const res = await fetch(`${targetUrl}/api/vault/${targetId}`, {
+    const res = await fetch(`${targetUrl}/api/library/${targetId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ const loadLibraryDataIntoState = async (libId: string) => {
     if (currentLib?.type === 'server' && jwtToken()) {
         const url = currentLib.url || 'http://localhost:8080'
         try {
-            const res = await fetch(`${url}/api/vault/${libId}`, {
+            const res = await fetch(`${url}/api/library/${libId}`, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${jwtToken()}` },
             })
@@ -130,7 +130,7 @@ const loadLibraryDataIntoState = async (libId: string) => {
                 allLibraryDataRef[libId] = serverData
             }
         } catch (e) {
-            console.error('sync: failed to pull vault data from server:', e)
+            console.error('sync: failed to pull library data from server:', e)
         }
     }
 

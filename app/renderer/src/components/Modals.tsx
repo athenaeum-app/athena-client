@@ -3,6 +3,12 @@ import {
     deleteMoment,
     momentToDelete,
     setMomentToDelete,
+    libraryToDelete,
+    setLibraryToDelete,
+    deleteLibraryData,
+    activeLibraryId,
+    libraries,
+    setActiveLibraryId,
 } from '../modules/data'
 import {
     closeMomentModal,
@@ -29,6 +35,7 @@ export const Modals = () => {
             stateSetter={setDisplayedModal}
             onClose={() => {
                 closeMomentModal()
+                setLibraryToDelete(null) // Reset on close
             }}
             modals={[
                 {
@@ -55,6 +62,36 @@ export const Modals = () => {
                                     )
                                     deleteMoment(targetMomentId)
                                 }
+                            }}
+                        />
+                    ),
+                },
+                {
+                    state_name: 'CONFIRM_LIBRARY_DELETE',
+                    content: (
+                        <ConfirmModal
+                            title="Remove Library?"
+                            rejectCallback={() => {
+                                setLibraryToDelete(null)
+                                setDisplayedModal('NONE')
+                            }}
+                            acceptCallback={() => {
+                                const targetId = libraryToDelete()
+                                if (targetId) {
+                                    console.log(`Removing library ${targetId}`)
+                                    deleteLibraryData(targetId)
+
+                                    if (activeLibraryId() === targetId) {
+                                        const remaining = libraries().filter(
+                                            (l) => l.id !== targetId,
+                                        )
+                                        if (remaining.length > 0) {
+                                            setActiveLibraryId(remaining[0].id)
+                                        }
+                                    }
+                                }
+                                setLibraryToDelete(null)
+                                setDisplayedModal('NONE')
                             }}
                         />
                     ),

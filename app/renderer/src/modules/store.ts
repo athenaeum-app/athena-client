@@ -80,6 +80,9 @@ export const [refFiles, setRefFiles] = createSignal<FileRefs>({})
 
 // Libraries
 export const [libraries, setLibraries] = createSignal<Library[]>([])
+export const [libraryToDelete, setLibraryToDelete] = createSignal<
+    string | null
+>(null)
 
 // Server / Sync
 export const [jwtToken, setJwtToken] = createSignal(

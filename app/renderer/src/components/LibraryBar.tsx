@@ -13,6 +13,7 @@ import {
     pushPayloadToServer,
     copyLibraryData,
     deleteLibraryData,
+    setLibraryToDelete,
 } from '../modules/data'
 
 const LoadingSpinner: Component<{ text?: string }> = (props) => (
@@ -85,7 +86,7 @@ const SyncDashboard: Component = () => {
                     />
                     <span class="text-sub text-xs font-medium tracking-wide">
                         {syncStatus() === 'synced'
-                            ? 'Vault Synced'
+                            ? 'Library Synced'
                             : syncStatus() === 'dirty'
                               ? 'Unsaved Changes'
                               : syncStatus() === 'syncing'
@@ -157,7 +158,7 @@ const PublishSection: Component = () => {
             setIsCheckingTarget(true)
             setTargetHasData(false)
 
-            fetch(`${targetLib.url}/api/vault/${targetLib.id}`, {
+            fetch(`${targetLib.url}/api/library/${targetLib.id}`, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
             })
@@ -329,8 +330,6 @@ export const deleteLibrary = (id: string) => {
 
 export const LibraryBar: Component = () => {
     const activeLib = () => libraries().find((l) => l.id === activeLibraryId())
-    const [isConfirmingDelete, setIsConfirmingDelete] =
-        createSignal<boolean>(false)
 
     return (
         <div class="bg-element mt-auto flex flex-col gap-3 rounded-xl p-4 transition-all duration-300">
@@ -343,7 +342,11 @@ export const LibraryBar: Component = () => {
                     {(lib) => (
                         <div
                             onClick={() => setActiveLibraryId(lib.id)}
-                            class={`group flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors ${activeLibraryId() === lib.id ? 'bg-element-accent text-main' : 'text-sub hover:bg-element-lighter'}`}
+                            class={`group flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors ${
+                                activeLibraryId() === lib.id
+                                    ? 'bg-element-accent text-main'
+                                    : 'text-sub hover:bg-element-lighter'
+                            }`}
                         >
                             <span class="material-symbols-outlined text-lg">
                                 {lib.type === 'local' ? 'folder' : 'cloud'}
@@ -365,25 +368,23 @@ export const LibraryBar: Component = () => {
                                                     : syncStatus() === 'offline'
                                                       ? 'bg-warning shadow-warning/50'
                                                       : 'bg-success shadow-success/50'
-                                                : 'bg-sub opacity-50 shadow-none' // Neutral state for unselected servers
+                                                : 'bg-sub opacity-50 shadow-none'
                                         }`}
                                     />
                                 </Show>
-                                <div class="w-0 transition-none duration-0 group-hover:block group-hover:w-auto">
+                                <div class="hidden w-0 transition-none duration-0 group-hover:block group-hover:w-auto">
                                     <i
                                         class={
                                             iconClasses +
-                                            `transition-none ${isConfirmingDelete() ? 'fa-check text-danger' : 'fa-trash'}`
+                                            'fa-trash hover:text-danger'
                                         }
                                         onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
-                                            if (isConfirmingDelete()) {
-                                                setIsConfirmingDelete(false)
-                                                deleteLibrary(lib.id)
-                                            } else {
-                                                setIsConfirmingDelete(true)
-                                            }
+                                            setLibraryToDelete(lib.id)
+                                            setDisplayedModal(
+                                                'CONFIRM_LIBRARY_DELETE',
+                                            )
                                         }}
                                     />
                                 </div>

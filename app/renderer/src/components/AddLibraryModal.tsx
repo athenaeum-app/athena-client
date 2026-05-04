@@ -180,7 +180,7 @@ const AddLibraryModal: Component = () => {
                             />
                             <input
                                 type="password"
-                                placeholder="Vault Password"
+                                placeholder="Library Password"
                                 value={password()}
                                 onInput={(e) =>
                                     setPassword(e.currentTarget.value)

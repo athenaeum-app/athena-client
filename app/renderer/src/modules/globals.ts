@@ -183,6 +183,7 @@ export type MODAL_NAMES =
     | 'CONFIRM_MOMENT_DELETE'
     | 'DISPLAY_MOMENT_MODAL'
     | 'ADD_LIBRARY_MODAL'
+    | 'CONFIRM_LIBRARY_DELETE'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')
