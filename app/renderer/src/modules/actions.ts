@@ -126,10 +126,6 @@ export const createMoment = (
 
         setAllMoments(newMomentId, newMoment)
 
-        // Bug fix: the default archive must track its momentsIds exactly like
-        // any custom archive.  The old guard
-        //   `if (targetArchiveId == defaultArchiveId) return prev`
-        // was silently skipping this update for the default archive.
         setArchives((prev) => {
             const targetArchiveData = prev[targetArchiveId]
             if (!targetArchiveData) return prev
@@ -256,35 +252,38 @@ export const deleteMoment = (uuid: MomentId): boolean | undefined => {
 
     console.log(`Deleting moment: ${uuid}`)
     const archiveId = momentToDelete.archiveId
+    const now = new Date().toISOString()
 
-    setAllMoments(uuid, (prev) => ({
-        ...prev,
+    setAllMoments(uuid, {
         deleted: true,
-        updated_at: new Date().toISOString(),
-    }))
-
-    setArchives((prev) => {
-        if (!archiveId || !prev[archiveId]) return prev
-        return {
-            ...prev,
-            [archiveId]: {
-                ...prev[archiveId],
-                updated_at: new Date().toISOString(),
-                momentsIds: prev[archiveId].momentsIds.filter(
-                    (id) => id !== uuid,
-                ),
-            },
-        }
+        updated_at: now,
     })
+
+    const currentArchives = archives()
+    if (archiveId && currentArchives[archiveId]) {
+        updateArchive(archiveId, {
+            momentsIds: currentArchives[archiveId].momentsIds.filter(
+                (id) => id !== uuid,
+            ),
+        })
+    }
 
     for (const id of momentToDelete.tagIds) {
         if (!allTags[id]) continue
         const newCount = allTags[id].refCount - 1
+
         if (newCount <= 0) {
-            console.log('Deleting orphaned tag:', allTags[id].name)
-            setAllTags(id, undefined!)
+            console.log('Tombstoning orphaned tag:', allTags[id].name)
+            setAllTags(id, {
+                refCount: 0,
+                deleted: true,
+                updated_at: now,
+            })
         } else {
-            setAllTags(id, 'refCount', newCount)
+            setAllTags(id, {
+                refCount: newCount,
+                updated_at: now,
+            })
         }
     }
 
@@ -293,7 +292,6 @@ export const deleteMoment = (uuid: MomentId): boolean | undefined => {
 }
 
 // Tags
-
 export const registerTags = (newTags: Array<string>): Array<TagId> => {
     const transformedNames = [
         ...new Set(
