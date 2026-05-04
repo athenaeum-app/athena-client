@@ -71,6 +71,15 @@ export const pushPayloadToServer = async (
             serverData,
         ) as LibraryDataSnapshot
 
+        for (const moment of Object.values(payloadToPush.moments)) {
+            if (
+                typeof moment.timestamp === 'string' ||
+                typeof moment.timestamp === 'number'
+            ) {
+                moment.timestamp = new Date(moment.timestamp)
+            }
+        }
+
         // If this sync is happening on the library we are currently looking at,
         // instantly update the UI to see the new data
         if (activeLibraryId() === targetId) {
@@ -82,7 +91,6 @@ export const pushPayloadToServer = async (
             })
         }
 
-        // Save the merged result
         allLibraryDataRef[targetId] = structuredClone(payloadToPush)
     }
 
