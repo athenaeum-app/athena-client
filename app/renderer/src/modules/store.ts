@@ -37,6 +37,7 @@ export interface MomentData {
     archiveId: ArchiveId | undefined
     timestamp: Date
     tagIds: Array<TagId>
+    updated_at?: string
 }
 
 export type ArchiveId = `archive_${string}`

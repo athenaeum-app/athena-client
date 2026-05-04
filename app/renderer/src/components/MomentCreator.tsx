@@ -71,7 +71,6 @@ export const MomentCreator: Component<
     })
 
     const getSuggestableTags = createMemo(() => {
-        // retrieve
         const allTagDatas = Object.values(allTags)
         const currentTypedTags = tagsString()
             .split(',')
@@ -98,7 +97,6 @@ export const MomentCreator: Component<
     }
 
     const saveTags = () => {
-        // Update tags
         const tagNameArray: Array<string> = [
             ...new Set(
                 tagsString()
@@ -112,7 +110,6 @@ export const MomentCreator: Component<
     }
 
     const submitNewMoment = () => {
-        // Create Moment
         const date = new Date()
 
         createMoment({
@@ -128,11 +125,14 @@ export const MomentCreator: Component<
         const targetMomentId = editingMomentId()
         const targetMomentData = targetMomentId && allMoments[targetMomentId]
         if (!targetMomentData) return
+
         updateMoment(targetMomentId, {
             title: title(),
             content: content(),
             tagIds: saveTags(),
+            updated_at: new Date().toISOString(),
         })
+
         saveArchiveChanges()
         setBufferArchive(archiveName() || '')
     }
@@ -241,7 +241,6 @@ export const MomentCreator: Component<
                                                         part,
                                                     )
                                                 } else {
-                                                    // Open web link
                                                     getApi().openExternalBrowser(
                                                         part,
                                                     )
@@ -278,7 +277,6 @@ export const MomentCreator: Component<
                             }`}
                             placeholder="Moment description..."
                             onPaste={(e) => {
-                                // Creating file references / previews
                                 const clipboardData = e.clipboardData
                                 if (!clipboardData) return
 

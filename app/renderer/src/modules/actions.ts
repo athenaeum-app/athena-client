@@ -40,10 +40,14 @@ export const createArchive = (archiveName: string): Archive => {
         if (archiveData.name === archiveName) return archiveData
     }
     const newArchiveId: ArchiveId = `archive_${window.crypto.randomUUID()}`
+    const now = new Date().toISOString()
+
     const newArchive: Archive = {
         name: archiveName,
         uuid: newArchiveId,
         momentsIds: [],
+        updated_at: now,
+        timestamp: now,
     }
     allArchives[newArchiveId] = newArchive
     setArchives(allArchives)
@@ -56,7 +60,11 @@ export const updateArchive = (
 ) => {
     setArchives((prev) => ({
         ...prev,
-        [archiveId]: { ...prev[archiveId], ...changes },
+        [archiveId]: {
+            ...prev[archiveId],
+            ...changes,
+            updated_at: new Date().toISOString(),
+        },
     }))
 }
 
@@ -73,13 +81,18 @@ export const deleteArchive = (archiveId: ArchiveId) => {
         const momentIds = archiveData.momentsIds
 
         for (const momentId of momentIds) {
-            setAllMoments(momentId, 'archiveId', defaultArchiveId)
+            setAllMoments(momentId, (prev) => ({
+                ...prev,
+                archiveId: defaultArchiveId,
+                updated_at: new Date().toISOString(),
+            }))
         }
 
         const defaultArch = allArchives[defaultArchiveId]
         if (defaultArch) {
             allArchives[defaultArchiveId] = {
                 ...defaultArch,
+                updated_at: new Date().toISOString(),
                 momentsIds: [...defaultArch.momentsIds, ...momentIds],
             }
         }
@@ -90,10 +103,21 @@ export const deleteArchive = (archiveId: ArchiveId) => {
 }
 
 // Moments
-export const createMoment = (data: Omit<MomentData, 'uuid'>): boolean => {
+export const createMoment = (
+    data: Omit<MomentData, 'uuid' | 'timestamp' | 'updated_at'> & {
+        timestamp?: Date
+    },
+): boolean => {
     const newMomentId: MomentId = `moment_${window.crypto.randomUUID()}`
-    const newMoment: MomentData = { ...data, uuid: newMomentId }
     const targetArchiveId = data.archiveId ?? defaultArchiveId
+    const now = new Date()
+
+    const newMoment: MomentData = {
+        ...data,
+        uuid: newMomentId,
+        timestamp: data.timestamp || now,
+        updated_at: now.toISOString(),
+    }
 
     batch(() => {
         data.tagIds.forEach((id) => {
@@ -113,6 +137,7 @@ export const createMoment = (data: Omit<MomentData, 'uuid'>): boolean => {
                 ...prev,
                 [targetArchiveId]: {
                     ...targetArchiveData,
+                    updated_at: new Date().toISOString(),
                     momentsIds: [
                         ...(targetArchiveData.momentsIds ?? []),
                         newMomentId,
@@ -149,8 +174,6 @@ export const swapMomentArchive = (
     )
 
     batch(() => {
-        // Read the current archive state once for both operations so both
-        // updateArchive calls receive a coherent starting point.
         const currentArchives = archives()
 
         const oldArch = currentArchives[oldArchiveId]
@@ -167,7 +190,11 @@ export const swapMomentArchive = (
             })
         }
 
-        setAllMoments(momentId, 'archiveId', newArchiveData.uuid)
+        setAllMoments(momentId, (prev) => ({
+            ...prev,
+            archiveId: newArchiveData.uuid,
+            updated_at: new Date().toISOString(),
+        }))
     })
 }
 
@@ -177,6 +204,11 @@ export const updateMoment = (
 ): boolean | undefined => {
     const oldMoment = allMoments[momentId]
     if (!oldMoment) return
+
+    const finalChanges = {
+        ...changes,
+        updated_at: new Date().toISOString(),
+    }
 
     const newTagIds = changes.tagIds
 
@@ -211,7 +243,7 @@ export const updateMoment = (
         })
     }
 
-    setAllMoments(momentId, changes)
+    setAllMoments(momentId, finalChanges)
     return true
 }
 
@@ -233,6 +265,7 @@ export const deleteMoment = (uuid: MomentId): boolean | undefined => {
             ...prev,
             [archiveId]: {
                 ...prev[archiveId],
+                updated_at: new Date().toISOString(),
                 momentsIds: prev[archiveId].momentsIds.filter(
                     (id) => id !== uuid,
                 ),
@@ -280,11 +313,14 @@ export const registerTags = (newTags: Array<string>): Array<TagId> => {
                 return
             }
             const newTagId: TagId = `tag_${window.crypto.randomUUID()}`
+            const now = new Date().toISOString()
             const tagData: Tag = {
                 name,
                 id: newTagId,
                 colour: generateVibrantColour(),
                 refCount: 0,
+                updated_at: now,
+                timestamp: now,
             }
             resultIds.push(newTagId)
             setAllTags(newTagId, tagData)
@@ -302,7 +338,11 @@ export const updateTag = (
         console.warn('updateTag: tag does not exist.', tagId)
         return
     }
-    setAllTags(tagId, { ...changes })
+
+    setAllTags(tagId, {
+        ...changes,
+        updated_at: new Date().toISOString(),
+    })
     return true
 }
 

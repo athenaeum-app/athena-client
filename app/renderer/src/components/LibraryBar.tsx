@@ -139,6 +139,11 @@ const SyncDashboard: Component = () => {
                     <Show when={serverRole() === 'admin'}>
                         <button
                             onClick={handleManualSync}
+                            disabled={
+                                isManualSyncing() ||
+                                syncStatus() === 'syncing' ||
+                                syncStatus() === 'offline'
+                            }
                             class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             Sync Now
