@@ -3,7 +3,6 @@ import type { IpcApi } from '../../../main/src/types/APISchema'
 import { createStore } from 'solid-js/store'
 
 // Constants
-
 export const BeginningOfTime = new Date()
 export const EndOfTime = new Date()
 BeginningOfTime.setTime(0)
@@ -86,10 +85,17 @@ export const [libraries, setLibraries] = createSignal<Library[]>([])
 export const [jwtToken, setJwtToken] = createSignal(
     localStorage.getItem('athena_jwt') || '',
 )
+
+// The role granted by the server for the current JWT: 'admin' (read+write)
+// or 'viewer' (read-only).  null means not authenticated.
+export type ServerRole = 'admin' | 'viewer' | null
+export const [serverRole, setServerRole] = createSignal<ServerRole>(
+    (localStorage.getItem('athena_role') as ServerRole) ?? null,
+)
+
 export const [syncStatus, setSyncStatus] = createSignal<
-    'synced' | 'dirty' | 'syncing' | 'conflict'
+    'synced' | 'dirty' | 'syncing' | 'conflict' | 'offline'
 >('synced')
-export const [localVersion, setLocalVersion] = createSignal(1)
 export const [lastSyncTime, setLastSyncTime] = createSignal('Never')
 
 // Link Previews

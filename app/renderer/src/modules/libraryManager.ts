@@ -12,6 +12,7 @@ import {
     setAllTags,
     linkPreviewCache,
     setLinkPreviewCache,
+    jwtToken,
     libraries,
     setLibraries,
     setMediaFilters,
@@ -20,6 +21,8 @@ import {
     setSelectedURLFilters,
     defaultArchiveId,
     defaultArchiveName,
+    setSyncStatus,
+    setLastSyncTime,
     type Library,
     type LibraryDataSnapshot,
     type DataSnapshot,
@@ -30,27 +33,106 @@ import {
     type Tag,
 } from './store'
 
-const LOG = '-'.repeat(25)
-
 // Internals
-
-// Deep-cloned snapshots for every known library.
-// Don't store raw unwrap() references here always use structuredClone().
 let allLibraryDataRef: Record<string, LibraryDataSnapshot> = {}
-
 let isLoaded = false
-
 let isInitialized = false
 
-// Active library signal (use setActiveLibraryId publicly)
 const [_activeLibraryId, _setActiveLibraryId] = createSignal<string>('')
-
-// Public read-only accessor for the active library ID
 export const activeLibraryId = _activeLibraryId
 
+export const pushPayloadToServer = async (
+    targetUrl: string,
+    targetId: string,
+) => {
+    const payload = {
+        archives: archives(),
+        moments: unwrap(allMoments),
+        tags: unwrap(allTags),
+        linkPreviewCache: linkPreviewCache(),
+    }
+
+    const res = await fetch(`${targetUrl}/api/vault/${targetId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${jwtToken()}`,
+        },
+        body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) throw new Error(`Sync rejected by server (${res.status})`)
+}
+
+export const copyLibraryData = (sourceId: string, targetId: string) => {
+    if (allLibraryDataRef[sourceId]) {
+        allLibraryDataRef[targetId] = structuredClone(
+            allLibraryDataRef[sourceId],
+        )
+    }
+}
+
+export const deleteLibraryData = (libId: string) => {
+    console.log(`Deleting library and data for ${libId}`)
+
+    if (activeLibraryId() === libId) {
+        isLoaded = false
+    }
+
+    setLibraries((libs) => libs.filter((l) => l.id !== libId))
+
+    if (allLibraryDataRef[libId]) {
+        delete allLibraryDataRef[libId]
+    }
+
+    if (activeLibraryId() === libId) {
+        const remaining = libraries()
+
+        if (remaining.length > 0) {
+            const nextId = remaining[0].id
+            _setActiveLibraryId(nextId)
+            loadLibraryDataIntoState(nextId)
+        } else {
+            _setActiveLibraryId('')
+            batch(() => {
+                setArchives({})
+                setAllMoments({})
+                setAllTags({})
+                setLinkPreviewCache({})
+                setSelectedArchive(defaultArchiveId)
+                setSelectedTagIds([])
+                setSelectedURLFilters([])
+            })
+        }
+    }
+}
+
+export const getLibraryFromId = (libId: string) =>
+    libraries().find((l) => l.id === libId)
+
+export const getCurrentLibrary = () => getLibraryFromId(activeLibraryId())
+
 // Library data loader
-const loadLibraryDataIntoState = (libId: string) => {
+const loadLibraryDataIntoState = async (libId: string) => {
+    if (!libId) return
     isLoaded = false
+    const currentLib = getLibraryFromId(libId)
+
+    if (currentLib?.type === 'server' && jwtToken()) {
+        const url = currentLib.url || 'http://localhost:8080'
+        try {
+            const res = await fetch(`${url}/api/vault/${libId}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${jwtToken()}` },
+            })
+            if (res.ok) {
+                const serverData: LibraryDataSnapshot = await res.json()
+                allLibraryDataRef[libId] = serverData
+            }
+        } catch (e) {
+            console.error('sync: failed to pull vault data from server:', e)
+        }
+    }
 
     const raw = allLibraryDataRef[libId]
     const libData: LibraryDataSnapshot = raw
@@ -70,16 +152,13 @@ const loadLibraryDataIntoState = (libId: string) => {
 
     batch(() => {
         setArchives(newArchives)
-
         const moments = libData.moments as Record<string, MomentData>
         for (const moment of Object.values(moments)) {
             moment.timestamp = new Date(moment.timestamp)
         }
         setAllMoments(reconcile(moments))
-
         setAllTags(reconcile(libData.tags as Record<TagId, Tag>))
         setLinkPreviewCache(libData.linkPreviewCache ?? {})
-
         setSelectedArchive(defaultArchiveId)
         setSelectedTagIds([])
         setSelectedURLFilters([])
@@ -87,48 +166,31 @@ const loadLibraryDataIntoState = (libId: string) => {
     })
 
     isLoaded = true
-    console.log(`Library "${libId}" loaded into state.`)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Boot loader
-// ─────────────────────────────────────────────────────────────────────────────
-
 const loadData = async () => {
     isLoaded = false
     isInitialized = false
+    const api = getApi()
+    let rawData: DataSnapshot = {} as DataSnapshot
 
-    const migratedData = await migrateOldData()
-    const rawData: DataSnapshot = migratedData ?? (await getApi().readData())
-
-    console.log(LOG)
-    console.log('Loading data:', rawData)
+    if (api && api.readData) {
+        const migratedData = await migrateOldData()
+        rawData = migratedData ?? (await api.readData())
+    }
 
     allLibraryDataRef = rawData.libraryData ?? {}
-
     const savedLibraries: Library[] = rawData.libraries ?? [
         { id: 'local-default', name: 'My Library', type: 'local' },
     ]
     setLibraries(savedLibraries)
 
-    const savedActiveId =
-        rawData.activeLibraryId ?? savedLibraries[0]?.id ?? 'local-default'
-
-    if (!allLibraryDataRef[savedActiveId]) {
-        allLibraryDataRef[savedActiveId] = {
-            archives: {},
-            moments: {},
-            tags: {},
-            linkPreviewCache: {},
-        }
-    }
-
+    const savedActiveId = rawData.activeLibraryId ?? savedLibraries[0]?.id ?? ''
     _setActiveLibraryId(savedActiveId)
-    loadLibraryDataIntoState(savedActiveId)
+    if (savedActiveId) loadLibraryDataIntoState(savedActiveId)
 
     isInitialized = true
-    console.log('App fully loaded!')
-    console.log(LOG)
 }
 
 loadData()
@@ -143,12 +205,38 @@ const createDebounce = (callback: (...args: any[]) => any, ms: number) => {
 
 let lastSavedString = ''
 
-const writeSave = createDebounce((snapshot: DataSnapshot) => {
-    getApi().writeMainData(snapshot)
-    console.log('Saved Data!')
-}, 250)
+const writeSave = createDebounce(async (snapshot: DataSnapshot) => {
+    getApi()?.writeMainData?.(snapshot)
 
-// Auto-saver
+    const activeId = snapshot.activeLibraryId
+    const activeLib = snapshot.libraries.find((l) => l.id === activeId)
+
+    if (activeLib?.type === 'server' && jwtToken()) {
+        const targetUrl = activeLib.url || 'http://localhost:8080'
+        try {
+            setSyncStatus('syncing')
+            await pushPayloadToServer(targetUrl, activeId)
+            setSyncStatus('synced')
+            setLastSyncTime(
+                new Date().toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                }),
+            )
+        } catch (e: any) {
+            if (
+                e.message?.toLowerCase().includes('fetch') ||
+                e.message?.toLowerCase().includes('network')
+            ) {
+                setSyncStatus('offline')
+            } else {
+                setSyncStatus('conflict')
+            }
+        }
+    }
+}, 750)
+
 createRoot(() => {
     createEffect(() => {
         const currentLibs = libraries()
@@ -156,23 +244,33 @@ createRoot(() => {
         const currentArchives = archives()
         const currentCache = linkPreviewCache()
 
+        // Track internal changes
         JSON.stringify(unwrap(allMoments))
         JSON.stringify(unwrap(allTags))
 
         if (!isLoaded) return
 
-        allLibraryDataRef[currentId] = {
-            archives: currentArchives,
-            moments: structuredClone(unwrap(allMoments)),
-            tags: structuredClone(unwrap(allTags)),
-            linkPreviewCache: currentCache,
+        if (currentId) {
+            allLibraryDataRef[currentId] = {
+                archives: currentArchives,
+                moments: structuredClone(unwrap(allMoments)),
+                tags: structuredClone(unwrap(allTags)),
+                linkPreviewCache: currentCache,
+            }
         }
+
+        const cleanedLibraryData: Record<string, LibraryDataSnapshot> = {}
+        currentLibs.forEach((lib) => {
+            if (allLibraryDataRef[lib.id]) {
+                cleanedLibraryData[lib.id] = allLibraryDataRef[lib.id]
+            }
+        })
 
         const snapshot: DataSnapshot = {
             version,
             libraries: currentLibs,
             activeLibraryId: currentId,
-            libraryData: { ...allLibraryDataRef },
+            libraryData: cleanedLibraryData,
         }
 
         const asString = JSON.stringify(snapshot)
@@ -182,12 +280,10 @@ createRoot(() => {
     })
 })
 
-// Public library management API
 export const setActiveLibraryId = (newId: string) => {
     const currentId = _activeLibraryId()
     if (newId === currentId) return
 
-    // Snapshot of the outgoing library's state BEFORE reconcile()
     if (currentId && isLoaded) {
         allLibraryDataRef[currentId] = {
             archives: archives(),
@@ -199,7 +295,7 @@ export const setActiveLibraryId = (newId: string) => {
 
     isLoaded = false
     _setActiveLibraryId(newId)
-    if (isInitialized) loadLibraryDataIntoState(newId)
+    if (isInitialized && newId) loadLibraryDataIntoState(newId)
 }
 
 export const initializeNewLibrary = (libId: string) => {

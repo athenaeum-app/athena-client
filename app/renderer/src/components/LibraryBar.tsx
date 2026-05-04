@@ -1,21 +1,23 @@
-import { createSignal, Show, For, type Component } from 'solid-js'
-import { setDisplayedModal } from '../modules/globals'
+import { createSignal, Show, For, type Component, createEffect } from 'solid-js'
+import { iconClasses, setDisplayedModal } from '../modules/globals'
 import {
-    libraries,
     activeLibraryId,
     setActiveLibraryId,
+    libraries,
     jwtToken,
-    setJwtToken,
+    serverRole,
     syncStatus,
     setSyncStatus,
-    localVersion,
     lastSyncTime,
     setLastSyncTime,
+    pushPayloadToServer,
+    copyLibraryData,
+    deleteLibraryData,
 } from '../modules/data'
 
 const LoadingSpinner: Component<{ text?: string }> = (props) => (
     <div class="text-sub flex flex-1 items-center justify-center gap-2 rounded-md py-1.5 text-xs">
-        <div class="border-sub h-3.5 w-3.5 animate-spin rounded-full border-2 border-t-transparent"></div>
+        <div class="border-sub h-3.5 w-3.5 animate-spin rounded-full border-2 border-t-transparent" />
         <Show when={props.text}>
             <span class="animate-pulse font-medium tracking-wide">
                 {props.text}
@@ -24,108 +26,37 @@ const LoadingSpinner: Component<{ text?: string }> = (props) => (
     </div>
 )
 
-const AuthForm: Component = () => {
-    const [username, setUsername] = createSignal('')
-    const [password, setPassword] = createSignal('')
-    const [isLoading, setIsLoading] = createSignal(false)
-    const [processingMessage, setProcessingMessage] = createSignal('')
-
-    const handleAuth = async (
-        event: MouseEvent & { currentTarget: HTMLButtonElement },
-        type: 'login' | 'register',
-    ) => {
-        event.preventDefault()
-        if (!username().trim() || !password().trim()) return
-
-        setIsLoading(true)
-        try {
-            const activeLib = libraries().find(
-                (l) => l.id === activeLibraryId(),
-            )
-            const url = activeLib?.url || 'http://localhost:8080'
-
-            const res = await fetch(`${url}/auth/${type}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: username(),
-                    password: password(),
-                }),
-            })
-
-            if (!res.ok) throw new Error('Auth failed')
-
-            const data = await res.json()
-            localStorage.setItem('athena_jwt', data.token)
-            setJwtToken(data.token)
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    return (
-        <div class="border-element-accent mt-2 flex flex-col gap-3 border-t pt-4">
-            <span class="text-sub text-[10px] font-bold tracking-widest uppercase">
-                Server Auth Required
-            </span>
-            <input
-                type="text"
-                placeholder="Username"
-                value={username()}
-                onInput={(e) => setUsername(e.currentTarget.value)}
-                class="bg-element text-sub border-element-accent focus:border-sub/50 w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
-                disabled={isLoading()}
-            />
-            <input
-                type="password"
-                placeholder="Password"
-                value={password()}
-                onInput={(e) => setPassword(e.currentTarget.value)}
-                class="bg-element text-sub border-element-accent focus:border-sub/50 w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
-                disabled={isLoading()}
-            />
-            <div class="flex min-h-7 gap-2 pt-1">
-                <Show
-                    when={!isLoading()}
-                    fallback={<LoadingSpinner text={processingMessage()} />}
-                >
-                    <button
-                        onClick={(e) => {
-                            handleAuth(e, 'login')
-                            setProcessingMessage('Logging in...')
-                        }}
-                        class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors hover:cursor-pointer"
-                    >
-                        Login
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            handleAuth(e, 'register')
-                            setProcessingMessage('Registering...')
-                        }}
-                        class="bg-element text-sub border-element-accent hover:bg-sub/10 flex-1 rounded-md border py-1.5 text-xs font-bold transition-colors hover:cursor-pointer"
-                    >
-                        Register
-                    </button>
-                </Show>
-            </div>
-        </div>
-    )
-}
-
 const SyncDashboard: Component = () => {
-    const handleLogout = () => {
-        localStorage.removeItem('athena_jwt')
-        setJwtToken('')
-    }
-
     const handleManualSync = async () => {
         setSyncStatus('syncing')
-        await new Promise((resolve) => setTimeout(resolve, 800))
-        setSyncStatus('synced')
-        setLastSyncTime(new Date().toLocaleTimeString())
+
+        const activeLib = libraries().find((l) => l.id === activeLibraryId())
+        if (!activeLib?.url) {
+            setSyncStatus('conflict')
+            return
+        }
+
+        try {
+            await pushPayloadToServer(activeLib.url, activeLib.id)
+            setSyncStatus('synced')
+            setLastSyncTime(
+                new Date().toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                }),
+            )
+        } catch (err: any) {
+            console.error('Sync failed:', err)
+            if (
+                err.message?.toLowerCase().includes('fetch') ||
+                err.message?.toLowerCase().includes('network')
+            ) {
+                setSyncStatus('offline')
+            } else {
+                setSyncStatus('conflict')
+            }
+        }
     }
 
     const statusIndicator = () => {
@@ -136,6 +67,8 @@ const SyncDashboard: Component = () => {
                 return 'bg-highlight-alt-strongest shadow-md shadow-highlight-alt-strongest/50'
             case 'conflict':
                 return 'bg-danger shadow-md shadow-danger/50'
+            case 'offline':
+                return 'bg-warning shadow-md shadow-warning/50'
             case 'syncing':
                 return 'bg-highlight-strongest animate-pulse shadow-md shadow-highlight-strongest/50'
             default:
@@ -157,14 +90,20 @@ const SyncDashboard: Component = () => {
                               ? 'Unsaved Changes'
                               : syncStatus() === 'syncing'
                                 ? 'Syncing...'
-                                : 'Sync Conflict'}
+                                : syncStatus() === 'offline'
+                                  ? 'Server Offline'
+                                  : 'Sync Conflict'}
                     </span>
                 </div>
+                <Show when={serverRole() === 'viewer'}>
+                    <span class="text-warning rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
+                        Read Only
+                    </span>
+                </Show>
             </div>
 
             <div class="text-sub/70 flex justify-between text-xs tracking-wider uppercase">
-                <span>V.{localVersion()}</span>
-                <span>Last: {lastSyncTime()}</span>
+                <span>Last Sync: {lastSyncTime()}</span>
             </div>
 
             <div class="flex min-h-7 gap-2">
@@ -172,27 +111,226 @@ const SyncDashboard: Component = () => {
                     when={syncStatus() !== 'syncing'}
                     fallback={<LoadingSpinner text="Pushing..." />}
                 >
-                    <button
-                        onClick={handleManualSync}
-                        disabled={syncStatus() === 'synced'}
-                        class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        Sync Now
-                    </button>
-                    <button
-                        onClick={handleLogout}
-                        class="text-danger hover:bg-danger/20 rounded-md px-3 py-1.5 text-xs font-bold transition-colors"
-                    >
-                        Disconnect
-                    </button>
+                    <Show when={serverRole() === 'admin'}>
+                        <button
+                            onClick={handleManualSync}
+                            disabled={syncStatus() === 'synced'}
+                            class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            Sync Now
+                        </button>
+                    </Show>
                 </Show>
             </div>
         </div>
     )
 }
 
+const PublishSection: Component = () => {
+    const serverLibs = () => libraries().filter((l) => l.type === 'server')
+    const [isConfirmingPublishing, setIsConfirmingPublishing] =
+        createSignal(false)
+    const [selectedLibraryTargetId, setSelectedLibraryTargetId] = createSignal(
+        serverLibs()[0]?.id || '',
+    )
+    const [isPublishing, setIsPublishing] = createSignal(false)
+
+    const [targetHasData, setTargetHasData] = createSignal(false)
+    const [isCheckingTarget, setIsCheckingTarget] = createSignal(false)
+
+    createEffect(() => {
+        const current = selectedLibraryTargetId()
+        const libs = serverLibs()
+        if (!current && libs.length > 0) {
+            setSelectedLibraryTargetId(libs[0].id)
+        } else if (current && !libs.find((l) => l.id === current)) {
+            setSelectedLibraryTargetId(libs[0]?.id || '')
+        }
+    })
+
+    createEffect(() => {
+        const targetId = selectedLibraryTargetId()
+        const targetLib = serverLibs().find((l) => l.id === targetId)
+        const token = jwtToken()
+
+        if (targetLib && targetLib.url && token) {
+            setIsCheckingTarget(true)
+            setTargetHasData(false)
+
+            fetch(`${targetLib.url}/api/vault/${targetLib.id}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+            })
+                .then((res) => {
+                    if (!res.ok) throw new Error('Failed to fetch')
+                    return res.json()
+                })
+                .then((data) => {
+                    const hasExistingMoments =
+                        Object.keys(data.moments || {}).length > 0
+                    setTargetHasData(hasExistingMoments)
+                })
+                .catch((err) => {
+                    console.error('Failed to verify target server state:', err)
+                    setTargetHasData(true)
+                })
+                .finally(() => {
+                    setIsCheckingTarget(false)
+                })
+        }
+    })
+
+    const handlePublish = async () => {
+        const targetId = selectedLibraryTargetId()
+        const targetLib = serverLibs().find((l) => l.id === targetId)
+        if (!targetLib || !targetLib.url) return
+
+        setIsPublishing(true)
+        setSyncStatus('syncing')
+
+        try {
+            await pushPayloadToServer(targetLib.url, targetLib.id)
+
+            const oldLocalId = activeLibraryId()
+            copyLibraryData(oldLocalId, targetLib.id)
+            setActiveLibraryId(targetLib.id)
+
+            setSyncStatus('synced')
+            setLastSyncTime(
+                new Date().toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                }),
+            )
+        } catch (err: any) {
+            console.error('Publish failed:', err)
+            if (
+                err.message?.toLowerCase().includes('fetch') ||
+                err.message?.toLowerCase().includes('network')
+            ) {
+                setSyncStatus('offline')
+            } else {
+                setSyncStatus('conflict')
+            }
+        } finally {
+            setIsPublishing(false)
+        }
+    }
+
+    return (
+        <Show when={serverLibs().length > 0}>
+            <div class="border-element-accent mt-2 flex flex-col gap-3 border-t pt-4">
+                <span class="text-sub text-[10px] font-bold tracking-widest uppercase">
+                    Publish to Server
+                </span>
+
+                <p class="text-sub/60 text-xs leading-relaxed">
+                    Push this local library into an existing connected server
+                    library.
+                </p>
+
+                <select
+                    value={selectedLibraryTargetId()}
+                    onChange={(e) => {
+                        setSelectedLibraryTargetId(e.currentTarget.value)
+                        setIsConfirmingPublishing(false)
+                    }}
+                    class="bg-element text-plain border-element-accent focus:border-sub/50 w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
+                    disabled={isPublishing()}
+                >
+                    <For each={serverLibs()}>
+                        {(lib) => <option value={lib.id}>{lib.name}</option>}
+                    </For>
+                </select>
+
+                <Show when={jwtToken() && serverRole() === 'admin'}>
+                    <Show when={isCheckingTarget()}>
+                        <div class="text-sub/60 text-xs italic">
+                            Checking server status...
+                        </div>
+                    </Show>
+                    <Show
+                        when={
+                            !isCheckingTarget() &&
+                            targetHasData() &&
+                            isConfirmingPublishing()
+                        }
+                    >
+                        <div class="bg-danger/10 text-danger rounded-md px-3 py-2 text-xs leading-relaxed font-black">
+                            Warning: The selected server already contains data!
+                            Publishing will permanently overwrite it.
+                        </div>
+                    </Show>
+                    <Show
+                        when={
+                            !isCheckingTarget() &&
+                            !targetHasData() &&
+                            selectedLibraryTargetId() !== ''
+                        }
+                    >
+                        <div class="bg-success/10 text-success rounded-md px-3 py-2 text-xs font-bold">
+                            Server is empty and ready to be published to.
+                        </div>
+                    </Show>
+                </Show>
+
+                <Show when={serverRole() !== 'admin' || !jwtToken()}>
+                    <div class="bg-warning/40 text-warning rounded-md px-3 py-2 text-xs font-black">
+                        You must add a server using the admin password to
+                        publish.
+                    </div>
+                </Show>
+
+                <button
+                    onClick={() => {
+                        if (isConfirmingPublishing()) {
+                            setIsConfirmingPublishing(false)
+                            handlePublish()
+                        } else {
+                            setIsConfirmingPublishing(true)
+                        }
+                    }}
+                    disabled={
+                        !selectedLibraryTargetId() ||
+                        isPublishing() ||
+                        serverRole() !== 'admin' ||
+                        !jwtToken() ||
+                        isCheckingTarget()
+                    }
+                    class={`mt-1 w-full rounded-md py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                        isConfirmingPublishing() && targetHasData()
+                            ? 'bg-danger text-plain hover:bg-danger/80'
+                            : 'bg-success/20 text-success hover:bg-success/30'
+                    }`}
+                >
+                    <Show
+                        when={!isPublishing()}
+                        fallback={<LoadingSpinner text="Publishing..." />}
+                    >
+                        {isConfirmingPublishing()
+                            ? targetHasData()
+                                ? 'Force Publish (Overwrite Data)'
+                                : 'Confirm Publish?'
+                            : 'Publish'}
+                    </Show>
+                </button>
+            </div>
+        </Show>
+    )
+}
+
+export const deleteLibrary = (id: string) => {
+    const lib = libraries().find((l) => l.id === id)
+    if (lib) {
+        deleteLibraryData(lib.id)
+    }
+}
+
 export const LibraryBar: Component = () => {
     const activeLib = () => libraries().find((l) => l.id === activeLibraryId())
+    const [isConfirmingDelete, setIsConfirmingDelete] =
+        createSignal<boolean>(false)
 
     return (
         <div class="bg-element mt-auto flex flex-col gap-3 rounded-xl p-4 transition-all duration-300">
@@ -200,35 +338,61 @@ export const LibraryBar: Component = () => {
                 Libraries
             </span>
 
-            {/* Library List */}
             <div class="flex flex-col gap-1">
                 <For each={libraries()}>
                     {(lib) => (
                         <div
                             onClick={() => setActiveLibraryId(lib.id)}
-                            class={`flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors ${activeLibraryId() === lib.id ? 'bg-element-accent text-main' : 'text-sub hover:bg-element-lighter'}`}
+                            class={`group flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors ${activeLibraryId() === lib.id ? 'bg-element-accent text-main' : 'text-sub hover:bg-element-lighter'}`}
                         >
                             <span class="material-symbols-outlined text-lg">
                                 {lib.type === 'local' ? 'folder' : 'cloud'}
                             </span>
                             <span class="text-sm font-medium">{lib.name}</span>
 
-                            {/* Small sync dot indicator for active server libraries in the list */}
-                            <Show
-                                when={
-                                    lib.type === 'server' &&
-                                    activeLibraryId() === lib.id &&
-                                    jwtToken() !== ''
-                                }
-                            >
-                                <div class="bg-success shadow-success/50 ml-auto h-1.5 w-1.5 rounded-full shadow-sm" />
-                            </Show>
+                            <div class="ml-auto flex items-center gap-2">
+                                <Show
+                                    when={
+                                        lib.type === 'server' &&
+                                        jwtToken() !== ''
+                                    }
+                                >
+                                    <div
+                                        class={`h-1.5 w-1.5 rounded-full shadow-sm transition-colors ${
+                                            activeLibraryId() === lib.id
+                                                ? syncStatus() === 'conflict'
+                                                    ? 'bg-danger shadow-danger/50'
+                                                    : syncStatus() === 'offline'
+                                                      ? 'bg-warning shadow-warning/50'
+                                                      : 'bg-success shadow-success/50'
+                                                : 'bg-sub opacity-50 shadow-none' // Neutral state for unselected servers
+                                        }`}
+                                    />
+                                </Show>
+                                <div class="w-0 transition-none duration-0 group-hover:block group-hover:w-auto">
+                                    <i
+                                        class={
+                                            iconClasses +
+                                            `transition-none ${isConfirmingDelete() ? 'fa-check text-danger' : 'fa-trash'}`
+                                        }
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            if (isConfirmingDelete()) {
+                                                setIsConfirmingDelete(false)
+                                                deleteLibrary(lib.id)
+                                            } else {
+                                                setIsConfirmingDelete(true)
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     )}
                 </For>
             </div>
 
-            {/* Add Library Button */}
             <button
                 onClick={() => setDisplayedModal('ADD_LIBRARY_MODAL')}
                 class="text-sub hover:bg-element-lighter hover:text-main mt-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
@@ -237,11 +401,12 @@ export const LibraryBar: Component = () => {
                 Add Library
             </button>
 
-            {/* Conditional Vault Controls - Only shows if the active library is a Server */}
+            <Show when={activeLib()?.type === 'local'}>
+                <PublishSection />
+            </Show>
+
             <Show when={activeLib()?.type === 'server'}>
-                <Show when={jwtToken() !== ''} fallback={<AuthForm />}>
-                    <SyncDashboard />
-                </Show>
+                <SyncDashboard />
             </Show>
         </div>
     )

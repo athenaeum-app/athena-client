@@ -352,6 +352,8 @@ export const Api: IPC_API = {
                         },
                     })
 
+                    tempWindow.webContents.setAudioMuted(true)
+
                     try {
                         let tempUserAgent =
                             tempWindow.webContents.getUserAgent()

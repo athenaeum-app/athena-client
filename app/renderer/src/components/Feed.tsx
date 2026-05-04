@@ -7,6 +7,8 @@ import {
     getFilteredMoments,
     setDisplayType,
 } from '../modules/globals'
+import { serverRole } from '../modules/store'
+import { activeLibraryId, getCurrentLibrary } from '../modules/libraryManager'
 
 const fullDisplayClasses =
     'flex h-full w-full flex-col items-center gap-4 rounded-xl'
@@ -14,6 +16,7 @@ const fullDisplayClasses =
 const gridDisplayClasses = 'grid grid-cols-4 gap-2'
 
 export const Feed: Component = () => {
+    console.log(activeLibraryId())
     return (
         <div class="bg-element pt flex w-full items-center justify-center gap-2 overflow-x-hidden rounded-xl p-2 lg:p-4">
             <div class={'flex h-full w-[90%] flex-col items-center gap-4'}>
@@ -41,7 +44,14 @@ export const Feed: Component = () => {
                     </div>
                 </div>
 
-                <MomentCreator hide={displayedModal() == 'EDIT_MODAL'} />
+                <MomentCreator
+                    hide={
+                        displayedModal() == 'EDIT_MODAL' ||
+                        (getCurrentLibrary()?.type === 'server'
+                            ? serverRole() != 'admin'
+                            : false)
+                    }
+                />
                 <div
                     class={`${displayType() == 'Full' ? fullDisplayClasses : gridDisplayClasses}`}
                 >
