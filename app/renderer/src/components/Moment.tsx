@@ -22,6 +22,8 @@ import {
     setTagsString,
     setEditingMomentId,
     setMomentToDelete,
+    getCurrentLibrary,
+    serverRole,
 } from '../modules/data'
 import { FilePreview } from './FilePreview'
 import {
@@ -142,7 +144,14 @@ export const Moment: Component<MomentProps> = (props) => {
                                 </span>
                             </Show>
                         </div>
-                        <Show when={contentDisplayType() == 'All'}>
+                        <Show
+                            when={
+                                contentDisplayType() == 'All' &&
+                                (getCurrentLibrary()?.type === 'server'
+                                    ? serverRole() == 'admin'
+                                    : false)
+                            }
+                        >
                             <div class="flex items-start gap-2">
                                 <i
                                     class={iconClasses + 'fa-pencil'}
