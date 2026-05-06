@@ -31,16 +31,36 @@ import {
 } from './store'
 import {
     extractBaseURL,
+    extractContentParts,
     extractContentParts as extractContentPartsFromContent,
     generateVibrantColour,
     iterateUrlsInContentParts,
     registerMediaFilter,
 } from './globals'
 
-// ─── ACTION QUEUE ENGINE ────────────────────────────────────────────────────────
-
+// Action Queue
 export type ActionType = 'CREATE' | 'UPDATE' | 'DELETE'
 export type ActionTarget = 'ARCHIVE' | 'MOMENT' | 'TAG'
+
+export const uploadAttachment = async (
+    targetUrl: string,
+    token: string,
+    fileObj: File | Blob,
+): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', fileObj)
+
+    const res = await fetch(`${targetUrl}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+    })
+
+    if (!res.ok) throw new Error('Failed to upload file')
+
+    const data = await res.json()
+    return data.url
+}
 
 export interface ServerAction {
     type: ActionType
@@ -63,10 +83,55 @@ export const flushActionQueue = async () => {
     const token = jwtToken()
     if (!token) return
 
+    const targetUrl = activeLib.url || 'http://localhost:8080'
+
     const payload = [...actionQueue]
     actionQueue = []
 
-    const targetUrl = activeLib.url || 'http://localhost:8080'
+    // Uploading local files to server
+    for (const action of payload) {
+        if (action.target === 'MOMENT' && action.body?.content) {
+            const parts = extractContentParts(action.body.content)
+
+            let updatedContent = action.body.content
+
+            for (const part of parts) {
+                if (
+                    part.startsWith('blob:') ||
+                    part.startsWith('file://') ||
+                    part.startsWith('athena://')
+                ) {
+                    console.log(`Uploading local attachment: ${part}`)
+
+                    try {
+                        const fileRes = await fetch(part)
+                        const rawBlob = await fileRes.blob()
+
+                        const newServerUrl = await uploadAttachment(
+                            targetUrl,
+                            token,
+                            rawBlob,
+                        )
+
+                        const fullServerUrl = `${targetUrl}${newServerUrl}`
+
+                        updatedContent = updatedContent
+                            .split(part)
+                            .join(fullServerUrl)
+                    } catch (err) {
+                        console.error(
+                            'Failed to upload attachment, skipping sync for this moment.',
+                            err,
+                        )
+                        actionQueue = [...payload, ...actionQueue]
+                        return
+                    }
+                }
+            }
+
+            action.body.content = updatedContent
+        }
+    }
 
     try {
         const res = await fetch(`${targetUrl}/api/library`, {
@@ -82,6 +147,17 @@ export const flushActionQueue = async () => {
             console.error('Failed to flush actions', await res.text())
             actionQueue = [...payload, ...actionQueue]
         } else {
+            batch(() => {
+                for (const action of payload) {
+                    if (action.target === 'MOMENT') {
+                        setAllMoments(
+                            action.target_id as MomentId,
+                            'content',
+                            action.body.content,
+                        )
+                    }
+                }
+            })
             console.log(
                 `Successfully flushed ${payload.length} offline actions.`,
             )
@@ -106,41 +182,7 @@ const queueAction = (action: ServerAction) => {
     // Debounce the sync so rapidly typing or rapid state changes get batched into one HTTP request
     syncTimeout = setTimeout(async () => {
         if (actionQueue.length === 0) return
-
-        const token = jwtToken()
-        if (!token) {
-            console.error('Cannot sync: No JWT token found.')
-            return
-        }
-
-        const payload = [...actionQueue]
-        actionQueue = [] // Clear the queue immediately so new actions can queue up while saving
-
-        const targetUrl = activeLib.url || 'http://localhost:8080'
-
-        try {
-            const res = await fetch(`${targetUrl}/api/library`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ actions: payload }),
-            })
-
-            if (!res.ok) {
-                console.error(
-                    'Failed to sync actions to Go server',
-                    await res.text(),
-                )
-                actionQueue = [...payload, ...actionQueue]
-            } else {
-                console.log(`Successfully synced ${payload.length} actions.`)
-            }
-        } catch (err) {
-            console.error('Network error during sync:', err)
-            actionQueue = [...payload, ...actionQueue] // Retry on next action
-        }
+        await flushActionQueue()
     }, 750)
 }
 
@@ -587,18 +629,47 @@ export const recolourTag = (
     newColour: string,
 ): boolean | undefined => updateTag(tagId, { colour: newColour })
 
-// File References
-
 export const saveFileReference = async (
     file: File,
     selection: { Start?: number; End?: number },
 ) => {
+    const startPos = selection.Start ?? content().length
+    const endPos = selection.End ?? content().length
+
+    const activeLib = libraries().find((l) => l.id === activeLibraryId())
+    const token = jwtToken()
+
+    let maxUploadBytes = 500 * 1024 * 1024
+
+    if (activeLib?.type === 'server' && activeLib.url) {
+        try {
+            const res = await fetch(`${activeLib.url}/api/version`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })
+            if (res.ok) {
+                const data = await res.json()
+                if (data.maxUploadBytes) {
+                    maxUploadBytes = data.maxUploadBytes
+                }
+            }
+        } catch (e) {
+            console.warn(
+                'Could not fetch server config. Using default 500MB limit.',
+            )
+        }
+    }
+
+    const isTooLargeForServer = file.size > maxUploadBytes
+    if (isTooLargeForServer) {
+        const maxMB = Math.round(maxUploadBytes / (1024 * 1024))
+        console.warn(
+            `File ${file.name} exceeds the ${maxMB}MB limit. Skipping server upload and saving locally.`,
+        )
+    }
+
     const currentDate = new Date().getTime()
     const fileName = `attachment_${file.name || currentDate}`
     const placeholder = `[Attaching ${fileName}...]`
-
-    const startPos = selection.Start ?? content().length
-    const endPos = selection.End ?? content().length
 
     setContent(
         (prev) =>
@@ -607,10 +678,42 @@ export const saveFileReference = async (
 
     try {
         const rawData = await file.arrayBuffer()
-        const localUri = await getApi().saveFileRef(rawData, fileName)
-        if (localUri) {
-            setContent((prev) => prev.replace(placeholder, `${localUri} `))
-            setRefFiles((prev) => ({ ...prev, [localUri]: file }))
+        let finalUri: string | null = null
+
+        if (
+            activeLib?.type === 'server' &&
+            activeLib.url &&
+            token &&
+            !isTooLargeForServer
+        ) {
+            try {
+                const serverPath = await uploadAttachment(
+                    activeLib.url,
+                    token,
+                    file,
+                )
+                finalUri = `${activeLib.url}${serverPath}`
+                console.log('Successfully uploaded file instantly on drop.')
+            } catch (serverErr) {
+                console.warn(
+                    'Instant upload failed, falling back to local storage.',
+                    serverErr,
+                )
+            }
+        }
+
+        if (!finalUri) {
+            const localUri = await getApi().saveFileRef(rawData, fileName)
+            if (localUri) {
+                finalUri = localUri
+                setRefFiles((prev) => ({ ...prev, [localUri]: file }))
+            }
+        }
+
+        if (finalUri) {
+            setContent((prev) => prev.replace(placeholder, `${finalUri} `))
+        } else {
+            throw new Error('Both Cloud and Local saving failed.')
         }
     } catch (error) {
         console.error('Failed to attach file:', error)

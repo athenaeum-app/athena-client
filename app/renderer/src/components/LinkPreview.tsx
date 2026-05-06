@@ -15,13 +15,16 @@ import {
     YOUTUBE_ID_REGEX,
 } from '../modules/regex'
 import { linkPreviewCache, setLinkPreviewCache } from '../modules/data'
-import { maxImageHeight, rootMarginPixels } from '../modules/globals'
+import {
+    iconClasses,
+    maxImageHeight,
+    rootMarginPixels,
+} from '../modules/globals'
 
 interface LinkPreviewProps extends ComponentProps<'div'> {
     url: string
 }
 
-// Replace certain siteLinks with custom ones
 const siteMap: Array<{
     target: string
     replaceWith: string
@@ -35,6 +38,25 @@ const siteMap: Array<{
 export const LinkPreview: Component<LinkPreviewProps> = (props) => {
     let containerRef: HTMLDivElement | undefined
     const [inView, setInView] = createSignal<boolean>(false)
+
+    const cleanUrl = () => (props.url || '').trim()
+
+    const isDirectMedia = (url: string) => {
+        if (!url) return false
+        return (
+            url.startsWith('blob:') ||
+            url.startsWith('file://') ||
+            url.startsWith('athena://') ||
+            url.includes('/uploads/') ||
+            !!url.match(
+                /\.(jpeg|jpg|gif|png|webp|svg|heic|mp4|webm|mov|ogg)(\?.*)?$/i,
+            )
+        )
+    }
+
+    const isVideoFile = (url: string) => {
+        return !!url.match(/\.(mp4|webm|mov|ogg)(\?.*)?$/i)
+    }
 
     onMount(() => {
         const viewObserver = new IntersectionObserver(
@@ -52,22 +74,48 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
     })
 
     const [websiteData] = createResource(
-        () => (inView() ? props.url : null),
+        () => (inView() ? cleanUrl() : null),
         async (url) => {
-            console.log('Attempting to get data for: ', props.url)
+            console.log('Attempting to get data for: ', url)
             const cache = linkPreviewCache()
             let forceScrape = false
 
-            if (cache && cache[props.url]) {
-                const cachedData = cache[props.url]
+            if (isDirectMedia(url)) {
+                console.log('Is raw media!')
+                let displayTitle = 'Media File'
+                let displayLink = 'Local Media'
+
+                if (url.startsWith('blob:')) {
+                    displayLink = 'Local Unsaved Blob'
+                } else if (url.includes('/uploads/')) {
+                    displayLink = 'Athena Server'
+                    const filename = url.split('/').pop() || 'Media'
+                    displayTitle = filename.includes('_')
+                        ? filename.split('_').slice(1).join('_')
+                        : filename
+                }
+
+                const isVideo = isVideoFile(url)
+
+                return {
+                    title: displayTitle,
+                    siteLink: displayLink,
+                    image: isVideo ? '' : url,
+                    description: '',
+                    video: isVideo ? url : '',
+                }
+            }
+
+            if (cache && cache[url]) {
+                const cachedData = cache[url]
                 if (cachedData.image == '' && cachedData.video == '') {
                     forceScrape = true
                     console.warn(
-                        `Cached data for ${props.url} has no image or video. Ignoring cached data.`,
+                        `Cached data for ${url} has no image or video. Ignoring cached data.`,
                     )
                 } else {
                     console.log('Loading cached data for link preview.')
-                    return cache[props.url]
+                    return cache[url]
                 }
             }
 
@@ -80,7 +128,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
             const result = await api.scrapeWebsiteData(url, forceScrape)
             setLinkPreviewCache((prev) => ({
                 ...prev,
-                [props.url]: result,
+                [url]: result,
             }))
             return result
         },
@@ -99,7 +147,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
 
     const openDirectImage = (url?: string) => {
         console.log(`Opening ${url}`)
-        window.open(url)
+        if (url) window.open(url)
     }
 
     const filterTitle = (title?: string) => {
@@ -125,10 +173,10 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
         return name || ''
     }
 
-    const videoLink = () => getVideoLink(props.url)
+    const videoLink = () => getVideoLink(cleanUrl())
 
     createEffect(() => {
-        console.log(`Website data for ${props.url}:`, websiteData())
+        console.log(`Website data for ${cleanUrl()}:`, websiteData())
     })
 
     const hasMediaData = () => {
@@ -144,12 +192,12 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                 when={hasMediaData() && inView()}
                 fallback={
                     <div
-                        onClick={() => getApi().openExternalBrowser(props.url)}
+                        onClick={() => getApi().openExternalBrowser(cleanUrl())}
                         class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border p-2 hover:cursor-pointer"
                     >
                         <div class="flex w-full justify-between gap-2">
                             <span class="text-highlight-strong group font-black break-all">
-                                {websiteData()?.title || props.url}
+                                {websiteData()?.title || cleanUrl()}
                             </span>
                             <span class="text-element-accent-highlight group font-black">
                                 No Media Data
@@ -160,16 +208,32 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
             >
                 <div class="flex justify-between">
                     <div class="flex min-w-0 items-center gap-3 pr-2">
-                        <img
-                            class={`bg-element ${maxImageHeight()} rounded object-contain`}
-                            src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${props.url}`}
-                        />
+                        <Show
+                            when={!isDirectMedia(cleanUrl())}
+                            fallback={
+                                <div class="bg-element text-sub flex h-5 w-5 items-center justify-center rounded text-lg">
+                                    <i
+                                        class={
+                                            iconClasses +
+                                            (isVideoFile(cleanUrl())
+                                                ? 'fa-file-video'
+                                                : 'fa-image')
+                                        }
+                                    />
+                                </div>
+                            }
+                        >
+                            <img
+                                class={`bg-element ${maxImageHeight()} rounded object-contain`}
+                                src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${cleanUrl()}`}
+                            />
+                        </Show>
                         <span class="text-highlight-alt-strong flex-1 truncate text-lg font-black">
                             {filterTitle(websiteData()?.title)}
                         </span>
                     </div>
                     <button
-                        onClick={() => getApi().openExternalBrowser(props.url)}
+                        onClick={() => getApi().openExternalBrowser(cleanUrl())}
                         class="hover:text-highlight-strongest text-highlight-strong text-md wrap-break-all max-w-sm text-right font-black tracking-widest transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
                     >
                         {(() => {
@@ -208,13 +272,11 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                         if (videoSource && !videoLink()) {
                             return (
                                 <video
+                                    ref={(video) => (video.volume = 0.1)}
                                     class="aspect-video w-full rounded"
                                     controls
                                 >
-                                    <source
-                                        src={videoSource}
-                                        type="video/mp4"
-                                    />
+                                    <source src={videoSource} />
                                     Your browser does not support the video tag.
                                 </video>
                             )
@@ -235,9 +297,11 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                         }
                     }}
                 </Show>
-                <div class="flex justify-between">
-                    <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>
-                </div>
+                <Show when={websiteData()?.description}>
+                    <div class="flex justify-between">
+                        <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>
+                    </div>
+                </Show>
             </Show>
         </div>
     )
