@@ -1,35 +1,33 @@
-# Athena
+# Athena Client
+**Disclaimer:** Please see the disclaimer in the [Organization Profile](https://github.com/athenaeum-app/.github/blob/master/profile/README.md).
 
-A simple, fast, and intuitive library of moments. Acting as a personal mini-blog application, Athena focuses on capturing bite-sized and extensively filterable moments.
+The official desktop client for Athena. Capture bite-sized, easily filterable "moments" in a personal mini-blog format, with support for offline use.
 
-Athena is an app that stores moments (essentially formatted notes), into four layers:
+## Features
+* **Offline-First:** Athena is completely usable even without an internet connection, with all data stored locally (see exception below)
+* **Optional Online Servers:** Connect to a self-hosted Athena Server to securely sync libraries across devices and share with others via an IP and password. See the [Athena Server Repository](https://github.com/athenaeum-app/athena-server/blob/master/README.md) for more information.
+* **Simple Organization:** Organize your thoughts into various Libraries, Archives, Moments, and use smart tags to organize and search your moments.
+* **Rich Media & Link Previews:** Drop in images, videos, and links to automatically generate rich visual previews.
+---
+## Development Setup
+To build and run the Athena client locally, ensure you have Node.js installed.
 
-- At the top is the Athenaeum, which contains all of a user's data.
-- Then archives, which are like folders, splitting the user's data into seperate broad sections.
-- Then moments, which are the individual "entries" of user data, like a short blog post.
+1. Clone the repository and install dependencies:
+```bash
+npm install
+```
 
-The layers exist to allow for easy organization and filtering.
+2. Start the development server:
+```bash
+npm run dev
+```
 
-## What's a Moment?
+---
 
-A moment is like a post or formatted note. It consists of three main parts:
+## Building for Production
 
-- **Title**: A short summary of the body.
-- **Content**: A description of the moment. Could be anything! It's basically a message.
-- **Tags**: This is where Athena shines. Tags are easily accessible and filterable, so use them!
+To package the application into a standalone executable for your operating system:
 
-Moments are assigned to the currently selected archive, or none.
-
-## Core Features
-
-- **Quick-access to Everything:** In Athena, the goal is to maintain a minimal UI, optimizing for the minimal amount of actions taken in order to do something.
-- **Smart tags**: The tag bar is one of fastest ways to find what you are looking for. The tag list dynamically updates based on the current selection of tags, meaning that only tags that will actually yield displayed moments will show. Thus preventing experiences where pressing a tag will yield "No results found."
-- **Link Previewing**: Whenever a link is detected in the content body, it will be displayed in a special format that uses scraped data to display it in a visually appealing way.
-
-## Tech Stack
-
-Athena is built using SolidJS and TailwindCSS with typescript for the frontend, vite for tooling, and electron forge for packaing and creating distributables.
-
-## Locally Stored Data
-
-Athena does not store data to any cloud services, and all data is stored locally, which backups being up to the user. Saving to the cloud will be added in future versions, and will be opt-in.
+```bash
+npm run make
+```
