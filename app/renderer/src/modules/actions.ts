@@ -27,6 +27,7 @@ import {
     activeLibraryId,
     libraries,
     jwtToken,
+    setLibraries,
 } from './store'
 import {
     extractBaseURL,
@@ -141,6 +142,15 @@ const queueAction = (action: ServerAction) => {
             actionQueue = [...payload, ...actionQueue] // Retry on next action
         }
     }, 750)
+}
+
+// libraries
+export const editLibraryName = (id: string, newName: string) => {
+    setLibraries((prevLibs) =>
+        prevLibs.map((lib) =>
+            lib.id === id ? { ...lib, name: newName } : lib,
+        ),
+    )
 }
 
 // Archives

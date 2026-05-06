@@ -33,6 +33,7 @@ import {
     setSelectedTagIds,
     setSelectedURLFilters,
     flushActionQueue,
+    editLibraryName, // <-- ADD THIS IMPORT
 } from '../modules/data'
 
 const LoadingSpinner: Component<{ text?: string }> = (props) => (
@@ -522,6 +523,120 @@ export const deleteLibrary = (id: string) => {
     }
 }
 
+const LibraryItem: Component<{ lib: any }> = (props) => {
+    const [isEditing, setIsEditing] = createSignal<boolean>(false)
+    const [bufferName, setBufferName] = createSignal<string>('')
+    let bufferNameRef: HTMLInputElement | undefined
+
+    createEffect(() => {
+        if (isEditing()) {
+            bufferNameRef?.focus()
+        }
+    })
+
+    return (
+        <div
+            onClick={() => {
+                if (!isEditing()) setActiveLibraryId(props.lib.id)
+            }}
+            class={`group flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors ${
+                activeLibraryId() === props.lib.id
+                    ? 'bg-element-accent text-main'
+                    : 'text-sub hover:bg-element-lighter'
+            }`}
+        >
+            <span class="material-symbols-outlined text-lg">
+                {props.lib.type === 'local' ? 'folder' : 'cloud'}
+            </span>
+
+            <Show
+                when={!isEditing()}
+                fallback={
+                    <input
+                        ref={bufferNameRef}
+                        type="text"
+                        value={bufferName()}
+                        onClick={(e) => e.stopPropagation()}
+                        onInput={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setBufferName(e.currentTarget.value)
+                        }}
+                        onFocusOut={() => {
+                            setIsEditing(false)
+                            setBufferName(props.lib.name)
+                        }}
+                        onKeyDown={(e) => {
+                            e.stopPropagation()
+                            if (e.key === 'Enter') {
+                                const newName = bufferName().trim()
+                                if (newName !== '') {
+                                    editLibraryName(props.lib.id, newName)
+                                }
+                                setIsEditing(false)
+                            }
+                            if (e.key === 'Escape') {
+                                setIsEditing(false)
+                                setBufferName(props.lib.name)
+                            }
+                        }}
+                        class="w-full bg-transparent text-sm font-medium outline-none"
+                    />
+                }
+            >
+                <span class="truncate text-sm font-medium">
+                    {props.lib.name}
+                </span>
+            </Show>
+
+            <div class="ml-auto flex items-center gap-2">
+                <Show
+                    when={
+                        props.lib.type === 'server' &&
+                        jwtToken() !== '' &&
+                        jwtToken() !== undefined
+                    }
+                >
+                    <div
+                        class={`h-1.5 w-1.5 rounded-full shadow-sm transition-colors ${
+                            activeLibraryId() === props.lib.id
+                                ? syncStatus() === 'conflict'
+                                    ? 'bg-danger shadow-danger/50'
+                                    : syncStatus() === 'offline'
+                                      ? 'bg-warning shadow-warning/50'
+                                      : 'bg-success shadow-success/50'
+                                : 'bg-sub opacity-50 shadow-none'
+                        }`}
+                    />
+                </Show>
+
+                <Show when={!isEditing()}>
+                    <div class="hidden w-0 items-center gap-2 transition-none duration-0 group-hover:flex group-hover:w-auto">
+                        <i
+                            class={iconClasses + 'fa-pencil'}
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setIsEditing(true)
+                                setBufferName(props.lib.name)
+                            }}
+                        />
+                        <i
+                            class={iconClasses + 'fa-trash hover:text-danger'}
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setLibraryToDelete(props.lib.id)
+                                setDisplayedModal('CONFIRM_LIBRARY_DELETE')
+                            }}
+                        />
+                    </div>
+                </Show>
+            </div>
+        </div>
+    )
+}
+
 export const LibraryBar: Component = () => {
     const activeLib = () => libraries().find((l) => l.id === activeLibraryId())
 
@@ -533,58 +648,7 @@ export const LibraryBar: Component = () => {
 
             <div class="flex flex-col gap-1">
                 <For each={libraries()}>
-                    {(lib) => (
-                        <div
-                            onClick={() => setActiveLibraryId(lib.id)}
-                            class={`group flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors ${
-                                activeLibraryId() === lib.id
-                                    ? 'bg-element-accent text-main'
-                                    : 'text-sub hover:bg-element-lighter'
-                            }`}
-                        >
-                            <span class="material-symbols-outlined text-lg">
-                                {lib.type === 'local' ? 'folder' : 'cloud'}
-                            </span>
-                            <span class="text-sm font-medium">{lib.name}</span>
-
-                            <div class="ml-auto flex items-center gap-2">
-                                <Show
-                                    when={
-                                        lib.type === 'server' &&
-                                        jwtToken() !== ''
-                                    }
-                                >
-                                    <div
-                                        class={`h-1.5 w-1.5 rounded-full shadow-sm transition-colors ${
-                                            activeLibraryId() === lib.id
-                                                ? syncStatus() === 'conflict'
-                                                    ? 'bg-danger shadow-danger/50'
-                                                    : syncStatus() === 'offline'
-                                                      ? 'bg-warning shadow-warning/50'
-                                                      : 'bg-success shadow-success/50'
-                                                : 'bg-sub opacity-50 shadow-none'
-                                        }`}
-                                    />
-                                </Show>
-                                <div class="hidden w-0 transition-none duration-0 group-hover:block group-hover:w-auto">
-                                    <i
-                                        class={
-                                            iconClasses +
-                                            'fa-trash hover:text-danger'
-                                        }
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            setLibraryToDelete(lib.id)
-                                            setDisplayedModal(
-                                                'CONFIRM_LIBRARY_DELETE',
-                                            )
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {(lib) => <LibraryItem lib={lib} />}
                 </For>
             </div>
 
