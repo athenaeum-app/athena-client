@@ -10,6 +10,7 @@ import {
 } from 'solid-js'
 import { Line } from './Line'
 import {
+    activeUploadCount,
     allMoments,
     allTags,
     archives,
@@ -136,8 +137,12 @@ export const MomentCreator: Component<
         setBufferArchive(archiveName() || '')
     }
 
+    const isUploading = () => activeUploadCount() > 0
+
     const attemptSubmit = () => {
-        if (title().trim() == '' || content().trim() == '') return
+        if (title().trim() == '' || content().trim() == '' || isUploading())
+            return
+
         if (displayedModal() == 'EDIT_MODAL' && editingMomentId()) {
             console.log('Attempting to modify moment!')
             saveEdit()
@@ -400,6 +405,7 @@ export const MomentCreator: Component<
                                 </div>
                             </div>
                             <button
+                                disabled={isUploading()}
                                 onClick={attemptSubmit}
                                 class="hover:bg-highlight-strong hg hover:shadow-highlight-strong bg-highlight hover:border-highlight-strong rounded px-4 py-2 text-xs font-bold tracking-widest transition-all duration-200 hover:scale-105 hover:cursor-pointer hover:shadow-md hover:duration-50 active:scale-95"
                             >

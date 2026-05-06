@@ -91,6 +91,7 @@ export type dataSnapshot = DataSnapshot
 
 // Reference Files
 export const [refFiles, setRefFiles] = createSignal<FileRefs>({})
+export const [activeUploadCount, setActiveUploadCount] = createSignal<number>(0)
 
 // Libraries
 export const [libraries, setLibraries] = createSignal<Library[]>([])

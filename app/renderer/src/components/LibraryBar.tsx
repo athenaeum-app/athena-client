@@ -6,6 +6,7 @@ import {
     createEffect,
     batch,
     onCleanup,
+    untrack,
 } from 'solid-js'
 import { reconcile, unwrap } from 'solid-js/store'
 import { iconClasses, setDisplayedModal } from '../modules/globals'
@@ -33,7 +34,7 @@ import {
     setSelectedTagIds,
     setSelectedURLFilters,
     flushActionQueue,
-    editLibraryName, // <-- ADD THIS IMPORT
+    editLibraryName,
 } from '../modules/data'
 
 const LoadingSpinner: Component<{ text?: string }> = (props) => (
@@ -71,42 +72,50 @@ const SyncDashboard: Component = () => {
                 })
 
                 if (res.ok) {
-                    if (syncStatus() === 'offline') {
-                        console.log('⚠️ Server reconnected! Restoring UI...')
-                        await flushActionQueue()
-                        updateActiveLibrary({ syncStatus: 'synced' })
-                        if (isPolling) setTimeout(pollServer, 1000)
-                        return
-                    }
+                    await untrack(async () => {
+                        if (syncStatus() === 'offline') {
+                            console.log(
+                                '⚠️ Server reconnected! Restoring UI...',
+                            )
+                            await flushActionQueue()
+                            updateActiveLibrary({ syncStatus: 'synced' })
+                            if (isPolling) setTimeout(pollServer, 1000)
+                            return
+                        }
 
-                    const data = await res.json()
-                    const serverVer = data.version
+                        const data = await res.json()
+                        const serverVer = data.version
 
-                    if (localVersion() === -1) {
-                        setLocalVersion(serverVer)
-                    } else if (serverVer > localVersion()) {
-                        console.log(
-                            `Server version ${serverVer} > Local ${localVersion()}. Pulling data...`,
-                        )
-                        await flushActionQueue()
-                        await handleManualSync()
-                        setLocalVersion(serverVer)
-                    }
+                        if (localVersion() === -1) {
+                            setLocalVersion(serverVer)
+                        } else if (serverVer > localVersion()) {
+                            console.log(
+                                `Server version ${serverVer} > Local ${localVersion()}. Pulling data...`,
+                            )
+                            await flushActionQueue()
+                            await handleManualSync()
+                            setLocalVersion(serverVer)
+                        }
+                    })
                 } else if (res.status >= 500 || res.status === 404) {
+                    untrack(() => {
+                        if (syncStatus() !== 'offline') {
+                            console.warn(
+                                '❌ Server returned an error. Marking as offline.',
+                            )
+                            updateActiveLibrary({ syncStatus: 'offline' })
+                        }
+                    })
+                }
+            } catch (err) {
+                untrack(() => {
                     if (syncStatus() !== 'offline') {
                         console.warn(
-                            '❌ Server returned an error. Marking as offline.',
+                            '❌ Server unreachable. Switching to offline mode.',
                         )
                         updateActiveLibrary({ syncStatus: 'offline' })
                     }
-                }
-            } catch (err) {
-                if (syncStatus() !== 'offline') {
-                    console.warn(
-                        '❌ Server unreachable. Switching to offline mode.',
-                    )
-                    updateActiveLibrary({ syncStatus: 'offline' })
-                }
+                })
             }
 
             if (isPolling) {
@@ -152,7 +161,10 @@ const SyncDashboard: Component = () => {
                 headers: { Authorization: `Bearer ${jwtToken()}` },
             })
 
-            if (!res.ok) throw new Error('Failed to pull server state')
+            if (res.status === 401 || res.status === 403) {
+                throw new Error('UNAUTHORIZED')
+            }
+            if (!res.ok) throw new Error('SERVER_ERROR')
 
             const serverData = await res.json()
 
@@ -180,11 +192,22 @@ const SyncDashboard: Component = () => {
             })
         } catch (err: any) {
             console.error('Sync failed:', err)
+
+            const msg = err.message || ''
+
             if (
-                err.message?.toLowerCase().includes('fetch') ||
-                err.message?.toLowerCase().includes('network')
+                msg.includes('fetch') ||
+                msg.includes('network') ||
+                msg === 'SERVER_ERROR'
             ) {
                 updateActiveLibrary({
+                    syncStatus: 'offline',
+                    lastSyncTime: newTime,
+                })
+            } else if (msg === 'UNAUTHORIZED') {
+                console.error('Token expired or invalid password!')
+                updateActiveLibrary({
+                    token: '', // Wipe the bad token to force a re-login prompt
                     syncStatus: 'offline',
                     lastSyncTime: newTime,
                 })

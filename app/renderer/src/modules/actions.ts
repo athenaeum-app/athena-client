@@ -28,6 +28,7 @@ import {
     libraries,
     jwtToken,
     setLibraries,
+    setActiveUploadCount,
 } from './store'
 import {
     extractBaseURL,
@@ -671,6 +672,7 @@ export const saveFileReference = async (
     const fileName = `attachment_${file.name || currentDate}`
     const placeholder = `[Attaching ${fileName}...]`
 
+    setActiveUploadCount((prev) => prev + 1)
     setContent(
         (prev) =>
             prev.substring(0, startPos) + placeholder + prev.substring(endPos),
@@ -721,6 +723,8 @@ export const saveFileReference = async (
             prev.replace(placeholder, `[ERROR! Failed to attach ${fileName}]`),
         )
         return null
+    } finally {
+        setActiveUploadCount((prev) => prev - 1)
     }
 }
 
