@@ -37,7 +37,9 @@ import {
     generateVibrantColour,
     iterateUrlsInContentParts,
     registerMediaFilter,
+    setDisplayedModal,
 } from './globals'
+import { updateActiveLibrary } from './libraries'
 
 // Action Queue
 export type ActionType = 'CREATE' | 'UPDATE' | 'DELETE'
@@ -82,14 +84,17 @@ export const flushActionQueue = async () => {
     if (activeLib?.type !== 'server') return
 
     const token = jwtToken()
-    if (!token) return
+    if (!token) {
+        console.log('no token, halting queue')
+        setDisplayedModal('SERVER_LOGIN_MODAL')
+        return
+    }
 
     const targetUrl = activeLib.url || 'http://localhost:8080'
 
     const payload = [...actionQueue]
     actionQueue = []
 
-    // Uploading local files to server
     for (const action of payload) {
         if (action.target === 'MOMENT' && action.body?.content) {
             const parts = extractContentParts(action.body.content)
@@ -135,7 +140,7 @@ export const flushActionQueue = async () => {
     }
 
     try {
-        const res = await fetch(`${targetUrl}/api/library`, {
+        const res = await fetch(`${activeLib.url}/api/library`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -144,28 +149,28 @@ export const flushActionQueue = async () => {
             body: JSON.stringify({ actions: payload }),
         })
 
-        if (!res.ok) {
-            console.error('Failed to flush actions', await res.text())
+        if (res.status === 401 || res.status === 403) {
+            console.warn('Token expired while saving! Halting queue.')
+
             actionQueue = [...payload, ...actionQueue]
-        } else {
-            batch(() => {
-                for (const action of payload) {
-                    if (action.target === 'MOMENT') {
-                        setAllMoments(
-                            action.target_id as MomentId,
-                            'content',
-                            action.body.content,
-                        )
-                    }
-                }
+
+            updateActiveLibrary({
+                token: '',
+                syncStatus: 'offline',
             })
-            console.log(
-                `Successfully flushed ${payload.length} offline actions.`,
-            )
+
+            setDisplayedModal('SERVER_LOGIN_MODAL')
+
+            return
         }
+
+        if (!res.ok) throw new Error('Failed to push actions')
     } catch (err) {
-        console.error('Network error during flush:', err)
+        console.error('Failed to flush actions', err)
+
         actionQueue = [...payload, ...actionQueue]
+
+        updateActiveLibrary({ syncStatus: 'offline' })
     }
 }
 

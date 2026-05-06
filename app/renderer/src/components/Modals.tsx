@@ -22,6 +22,7 @@ import ModalContainer from './ModalContainer'
 import { MomentCreator } from './MomentCreator'
 import { MomentModal } from './MomentModal'
 import AddLibraryModal from './AddLibraryModal'
+import { ServerLoginModal } from './ServerLoginModal'
 
 export const Modals = () => {
     createEffect(() => {
@@ -103,6 +104,10 @@ export const Modals = () => {
                 {
                     state_name: 'ADD_LIBRARY_MODAL',
                     content: <AddLibraryModal />,
+                },
+                {
+                    state_name: 'SERVER_LOGIN_MODAL',
+                    content: <ServerLoginModal />,
                 },
             ]}
         />
