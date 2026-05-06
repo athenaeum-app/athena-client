@@ -32,6 +32,7 @@ import {
     setSelectedArchive,
     setSelectedTagIds,
     setSelectedURLFilters,
+    flushActionQueue,
 } from '../modules/data'
 
 const LoadingSpinner: Component<{ text?: string }> = (props) => (
@@ -69,10 +70,16 @@ const SyncDashboard: Component = () => {
                 })
 
                 if (res.ok) {
+                    if (syncStatus() === 'offline') {
+                        console.log('⚠️ Server reconnected! Restoring UI...')
+                        await flushActionQueue()
+                        updateActiveLibrary({ syncStatus: 'synced' })
+                        if (isPolling) setTimeout(pollServer, 1000)
+                        return
+                    }
+
                     const data = await res.json()
                     const serverVer = data.version
-
-                    console.log(serverVer)
 
                     if (localVersion() === -1) {
                         setLocalVersion(serverVer)
@@ -80,11 +87,26 @@ const SyncDashboard: Component = () => {
                         console.log(
                             `Server version ${serverVer} > Local ${localVersion()}. Pulling data...`,
                         )
+                        await flushActionQueue()
                         await handleManualSync()
                         setLocalVersion(serverVer)
                     }
+                } else if (res.status >= 500 || res.status === 404) {
+                    if (syncStatus() !== 'offline') {
+                        console.warn(
+                            '❌ Server returned an error. Marking as offline.',
+                        )
+                        updateActiveLibrary({ syncStatus: 'offline' })
+                    }
                 }
-            } catch (err) {}
+            } catch (err) {
+                if (syncStatus() !== 'offline') {
+                    console.warn(
+                        '❌ Server unreachable. Switching to offline mode.',
+                    )
+                    updateActiveLibrary({ syncStatus: 'offline' })
+                }
+            }
 
             if (isPolling) {
                 setTimeout(pollServer, 1000)
@@ -228,19 +250,17 @@ const SyncDashboard: Component = () => {
                     when={!isManualSyncing()}
                     fallback={<LoadingSpinner text="Pulling..." />}
                 >
-                    <Show when={serverRole() === 'admin'}>
-                        <button
-                            onClick={handleManualSync}
-                            disabled={
-                                isManualSyncing() ||
-                                syncStatus() === 'syncing' ||
-                                syncStatus() === 'offline'
-                            }
-                            class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                            Sync
-                        </button>
-                    </Show>
+                    <button
+                        onClick={handleManualSync}
+                        disabled={
+                            isManualSyncing() ||
+                            syncStatus() === 'syncing' ||
+                            syncStatus() === 'offline'
+                        }
+                        class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        Sync
+                    </button>
                 </Show>
             </div>
         </div>

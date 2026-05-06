@@ -51,6 +51,46 @@ export interface ServerAction {
 let actionQueue: ServerAction[] = []
 let syncTimeout: ReturnType<typeof setTimeout> | null = null
 
+export const flushActionQueue = async () => {
+    if (actionQueue.length === 0) return
+    console.log('Flushing action queue...')
+
+    const activeId = activeLibraryId()
+    const activeLib = libraries().find((l) => l.id === activeId)
+    if (activeLib?.type !== 'server') return
+
+    const token = jwtToken()
+    if (!token) return
+
+    const payload = [...actionQueue]
+    actionQueue = []
+
+    const targetUrl = activeLib.url || 'http://localhost:8080'
+
+    try {
+        const res = await fetch(`${targetUrl}/api/library`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ actions: payload }),
+        })
+
+        if (!res.ok) {
+            console.error('Failed to flush actions', await res.text())
+            actionQueue = [...payload, ...actionQueue]
+        } else {
+            console.log(
+                `Successfully flushed ${payload.length} offline actions.`,
+            )
+        }
+    } catch (err) {
+        console.error('Network error during flush:', err)
+        actionQueue = [...payload, ...actionQueue]
+    }
+}
+
 const queueAction = (action: ServerAction) => {
     const activeId = activeLibraryId()
     const activeLib = libraries().find((l) => l.id === activeId)
