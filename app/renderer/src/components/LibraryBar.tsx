@@ -5,6 +5,7 @@ import {
     type Component,
     createEffect,
     batch,
+    onCleanup,
 } from 'solid-js'
 import { reconcile, unwrap } from 'solid-js/store'
 import { iconClasses, setDisplayedModal } from '../modules/globals'
@@ -46,6 +47,57 @@ const LoadingSpinner: Component<{ text?: string }> = (props) => (
 
 const SyncDashboard: Component = () => {
     const [isManualSyncing, setIsManualSyncing] = createSignal(false)
+
+    const [localVersion, setLocalVersion] = createSignal<number>(-1)
+
+    // Auto sync
+    // Via polling (only if version mismatch)
+    createEffect(() => {
+        const activeLib = libraries().find((l) => l.id === activeLibraryId())
+        const token = jwtToken()
+
+        if (!activeLib || activeLib.type !== 'server' || !token) return
+
+        let isPolling = true
+
+        const pollServer = async () => {
+            if (!isPolling) return
+
+            try {
+                const res = await fetch(`${activeLib.url}/api/version`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+
+                if (res.ok) {
+                    const data = await res.json()
+                    const serverVer = data.version
+
+                    console.log(serverVer)
+
+                    if (localVersion() === -1) {
+                        setLocalVersion(serverVer)
+                    } else if (serverVer > localVersion()) {
+                        console.log(
+                            `Server version ${serverVer} > Local ${localVersion()}. Pulling data...`,
+                        )
+                        await handleManualSync()
+                        setLocalVersion(serverVer)
+                    }
+                }
+            } catch (err) {}
+
+            if (isPolling) {
+                setTimeout(pollServer, 1000)
+            }
+        }
+
+        pollServer()
+
+        onCleanup(() => {
+            isPolling = false
+            setLocalVersion(-1)
+        })
+    })
 
     const handleManualSync = async () => {
         setIsManualSyncing(true)
@@ -186,7 +238,7 @@ const SyncDashboard: Component = () => {
                             }
                             class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                            Pull Latest State
+                            Sync
                         </button>
                     </Show>
                 </Show>
@@ -301,7 +353,7 @@ const PublishSection: Component = () => {
                 })
             })
 
-            const res = await fetch(`${targetLib.url}/action`, {
+            const res = await fetch(`${targetLib.url}/api/library`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
