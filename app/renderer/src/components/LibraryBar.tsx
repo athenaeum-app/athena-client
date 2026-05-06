@@ -1,4 +1,12 @@
-import { createSignal, Show, For, type Component, createEffect } from 'solid-js'
+import {
+    createSignal,
+    Show,
+    For,
+    type Component,
+    createEffect,
+    batch,
+} from 'solid-js'
+import { reconcile, unwrap } from 'solid-js/store'
 import { iconClasses, setDisplayedModal } from '../modules/globals'
 import {
     activeLibraryId,
@@ -8,11 +16,21 @@ import {
     serverRole,
     syncStatus,
     lastSyncTime,
-    pushPayloadToServer,
     copyLibraryData,
     deleteLibraryData,
     setLibraryToDelete,
     updateActiveLibrary,
+    archives,
+    allMoments,
+    allTags,
+    setArchives,
+    setAllMoments,
+    setAllTags,
+    setLinkPreviewCache,
+    defaultArchiveId,
+    setSelectedArchive,
+    setSelectedTagIds,
+    setSelectedURLFilters,
 } from '../modules/data'
 
 const LoadingSpinner: Component<{ text?: string }> = (props) => (
@@ -44,7 +62,7 @@ const SyncDashboard: Component = () => {
         })
 
         const activeLib = libraries().find((l) => l.id === activeLibraryId())
-        if (!activeLib?.url) {
+        if (!activeLib?.url || !jwtToken()) {
             updateActiveLibrary({
                 syncStatus: 'conflict',
                 lastSyncTime: newTime,
@@ -54,10 +72,32 @@ const SyncDashboard: Component = () => {
         }
 
         try {
-            await Promise.all([
-                pushPayloadToServer(activeLib.url, activeLib.id),
-                new Promise((resolve) => setTimeout(resolve, 600)),
-            ])
+            const res = await fetch(`${activeLib.url}/api/library`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${jwtToken()}` },
+            })
+
+            if (!res.ok) throw new Error('Failed to pull server state')
+
+            const serverData = await res.json()
+
+            // Refresh local state with fresh server data
+            batch(() => {
+                setArchives(serverData.archives || {})
+
+                const moments = serverData.moments || {}
+                for (const moment of Object.values(moments) as any[]) {
+                    if (
+                        typeof moment.timestamp === 'string' ||
+                        typeof moment.timestamp === 'number'
+                    ) {
+                        moment.timestamp = new Date(moment.timestamp)
+                    }
+                }
+                setAllMoments(reconcile(moments))
+                setAllTags(reconcile(serverData.tags || {}))
+                setLinkPreviewCache(serverData.linkPreviewCache || {})
+            })
 
             updateActiveLibrary({
                 syncStatus: 'synced',
@@ -134,7 +174,7 @@ const SyncDashboard: Component = () => {
             <div class="flex min-h-7 gap-2">
                 <Show
                     when={!isManualSyncing()}
-                    fallback={<LoadingSpinner text="Pushing..." />}
+                    fallback={<LoadingSpinner text="Pulling..." />}
                 >
                     <Show when={serverRole() === 'admin'}>
                         <button
@@ -146,7 +186,7 @@ const SyncDashboard: Component = () => {
                             }
                             class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                            Sync Now
+                            Pull Latest State
                         </button>
                     </Show>
                 </Show>
@@ -191,7 +231,7 @@ const PublishSection: Component = () => {
             setIsCheckingTarget(true)
             setTargetHasData(false)
 
-            fetch(`${targetLib.url}/api/library/${targetLib.id}`, {
+            fetch(`${targetLib.url}/api/library`, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
             })
@@ -218,6 +258,7 @@ const PublishSection: Component = () => {
         const targetId = selectedLibraryTargetId()
         const targetLib = serverLibs().find((l) => l.id === targetId)
         if (!targetLib || !targetLib.url) return
+
         const newTime = new Date().toLocaleTimeString([], {
             hour: 'numeric',
             minute: '2-digit',
@@ -231,15 +272,57 @@ const PublishSection: Component = () => {
         })
 
         try {
-            await pushPayloadToServer(
-                targetLib.url,
-                targetLib.id,
-                targetLib.token,
-            )
+            const actions: any[] = []
+
+            // Archives and Tags
+            Object.values(archives()).forEach((arch) => {
+                actions.push({
+                    type: 'CREATE',
+                    target: 'ARCHIVE',
+                    target_id: arch.uuid,
+                    body: arch,
+                })
+            })
+            Object.values(unwrap(allTags)).forEach((tag) => {
+                actions.push({
+                    type: 'CREATE',
+                    target: 'TAG',
+                    target_id: tag.id,
+                    body: tag,
+                })
+            })
+            // Moments
+            Object.values(unwrap(allMoments)).forEach((moment) => {
+                actions.push({
+                    type: 'CREATE',
+                    target: 'MOMENT',
+                    target_id: moment.uuid,
+                    body: moment,
+                })
+            })
+
+            const res = await fetch(`${targetLib.url}/action`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${targetLib.token}`,
+                },
+                body: JSON.stringify({ actions }),
+            })
+
+            if (!res.ok)
+                throw new Error(`Publish rejected by server (${res.status})`)
 
             const oldLocalId = activeLibraryId()
             copyLibraryData(oldLocalId, targetLib.id)
-            setActiveLibraryId(targetLib.id)
+
+            // Clean up UI state
+            batch(() => {
+                setActiveLibraryId(targetLib.id)
+                setSelectedArchive(defaultArchiveId)
+                setSelectedTagIds([])
+                setSelectedURLFilters([])
+            })
 
             updateActiveLibrary({
                 syncStatus: 'synced',
@@ -247,20 +330,10 @@ const PublishSection: Component = () => {
             })
         } catch (err: any) {
             console.error('Publish failed:', err)
-            if (
-                err.message?.toLowerCase().includes('fetch') ||
-                err.message?.toLowerCase().includes('network')
-            ) {
-                updateActiveLibrary({
-                    syncStatus: 'offline',
-                    lastSyncTime: newTime,
-                })
-            } else {
-                updateActiveLibrary({
-                    syncStatus: 'conflict',
-                    lastSyncTime: newTime,
-                })
-            }
+            updateActiveLibrary({
+                syncStatus: 'conflict',
+                lastSyncTime: newTime,
+            })
         } finally {
             setIsPublishing(false)
         }
@@ -307,7 +380,7 @@ const PublishSection: Component = () => {
                     >
                         <div class="bg-danger/10 text-danger rounded-md px-3 py-2 text-xs leading-relaxed font-black">
                             Warning: The selected server already contains data!
-                            Publishing will permanently overwrite it.
+                            Publishing will merge and potentially overwrite it.
                         </div>
                     </Show>
                     <Show

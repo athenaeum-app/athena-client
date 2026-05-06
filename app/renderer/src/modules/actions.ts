@@ -24,6 +24,9 @@ import {
     type MomentId,
     type Tag,
     type TagId,
+    activeLibraryId,
+    libraries,
+    jwtToken,
 } from './store'
 import {
     extractBaseURL,
@@ -32,6 +35,73 @@ import {
     iterateUrlsInContentParts,
     registerMediaFilter,
 } from './globals'
+
+// ─── ACTION QUEUE ENGINE ────────────────────────────────────────────────────────
+
+export type ActionType = 'CREATE' | 'UPDATE' | 'DELETE'
+export type ActionTarget = 'ARCHIVE' | 'MOMENT' | 'TAG'
+
+export interface ServerAction {
+    type: ActionType
+    target: ActionTarget
+    target_id: string
+    body: any
+}
+
+let actionQueue: ServerAction[] = []
+let syncTimeout: ReturnType<typeof setTimeout> | null = null
+
+const queueAction = (action: ServerAction) => {
+    const activeId = activeLibraryId()
+    const activeLib = libraries().find((l) => l.id === activeId)
+
+    // Only queue actions if currently looking at an online library
+    if (activeLib?.type !== 'server') return
+
+    actionQueue.push(action)
+
+    if (syncTimeout) clearTimeout(syncTimeout)
+
+    // Debounce the sync so rapidly typing or rapid state changes get batched into one HTTP request
+    syncTimeout = setTimeout(async () => {
+        if (actionQueue.length === 0) return
+
+        const token = jwtToken()
+        if (!token) {
+            console.error('Cannot sync: No JWT token found.')
+            return
+        }
+
+        const payload = [...actionQueue]
+        actionQueue = [] // Clear the queue immediately so new actions can queue up while saving
+
+        const targetUrl = activeLib.url || 'http://localhost:8080'
+
+        try {
+            const res = await fetch(`${targetUrl}/api/library`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ actions: payload }),
+            })
+
+            if (!res.ok) {
+                console.error(
+                    'Failed to sync actions to Go server',
+                    await res.text(),
+                )
+                actionQueue = [...payload, ...actionQueue]
+            } else {
+                console.log(`Successfully synced ${payload.length} actions.`)
+            }
+        } catch (err) {
+            console.error('Network error during sync:', err)
+            actionQueue = [...payload, ...actionQueue] // Retry on next action
+        }
+    }, 750)
+}
 
 // Archives
 export const createArchive = (archiveName: string): Archive => {
@@ -51,6 +121,15 @@ export const createArchive = (archiveName: string): Archive => {
     }
     allArchives[newArchiveId] = newArchive
     setArchives(allArchives)
+
+    // Queue to Server
+    queueAction({
+        type: 'CREATE',
+        target: 'ARCHIVE',
+        target_id: newArchiveId,
+        body: newArchive,
+    })
+
     return newArchive
 }
 
@@ -58,14 +137,27 @@ export const updateArchive = (
     archiveId: ArchiveId,
     changes: Partial<Omit<Archive, 'uuid'>>,
 ) => {
-    setArchives((prev) => ({
+    const prev = archives()[archiveId]
+    if (!prev) return
+
+    const updatedArchive = {
         ...prev,
-        [archiveId]: {
-            ...prev[archiveId],
-            ...changes,
-            updated_at: new Date().toISOString(),
-        },
+        ...changes,
+        updated_at: new Date().toISOString(),
+    }
+
+    setArchives((all) => ({
+        ...all,
+        [archiveId]: updatedArchive,
     }))
+
+    // Queue to Server (Backend Upsert expects the full object)
+    queueAction({
+        type: 'UPDATE',
+        target: 'ARCHIVE',
+        target_id: archiveId,
+        body: updatedArchive,
+    })
 }
 
 export const deleteArchive = (archiveId: ArchiveId) => {
@@ -80,12 +172,23 @@ export const deleteArchive = (archiveId: ArchiveId) => {
 
         const momentIds = archiveData.momentsIds
 
+        // Reassign moments to default archive
         for (const momentId of momentIds) {
-            setAllMoments(momentId, (prev) => ({
-                ...prev,
+            const oldMoment = allMoments[momentId]
+            const updatedMoment = {
+                ...oldMoment,
                 archiveId: defaultArchiveId,
                 updated_at: new Date().toISOString(),
-            }))
+            }
+            setAllMoments(momentId, updatedMoment)
+
+            // Queue Moment Updates so the Server knows they moved!
+            queueAction({
+                type: 'UPDATE',
+                target: 'MOMENT',
+                target_id: momentId,
+                body: updatedMoment,
+            })
         }
 
         const defaultArch = allArchives[defaultArchiveId]
@@ -95,14 +198,28 @@ export const deleteArchive = (archiveId: ArchiveId) => {
                 updated_at: new Date().toISOString(),
                 momentsIds: [...defaultArch.momentsIds, ...momentIds],
             }
+            queueAction({
+                type: 'UPDATE',
+                target: 'ARCHIVE',
+                target_id: defaultArchiveId,
+                body: allArchives[defaultArchiveId],
+            })
         }
 
         delete allArchives[archiveId]
         setArchives(allArchives)
+
+        // Tell Server to delete the Archive
+        queueAction({
+            type: 'DELETE',
+            target: 'ARCHIVE',
+            target_id: archiveId,
+            body: {},
+        })
     })
 }
 
-// Moments
+// MOMENTS
 export const createMoment = (
     data: Omit<MomentData, 'uuid' | 'timestamp' | 'updated_at'> & {
         timestamp?: Date
@@ -142,6 +259,15 @@ export const createMoment = (
             }
         })
     })
+
+    // Queue to Server
+    queueAction({
+        type: 'CREATE',
+        target: 'MOMENT',
+        target_id: newMomentId,
+        body: newMoment,
+    })
+
     return true
 }
 
@@ -186,11 +312,20 @@ export const swapMomentArchive = (
             })
         }
 
-        setAllMoments(momentId, (prev) => ({
-            ...prev,
+        const updatedMoment = {
+            ...momentData,
             archiveId: newArchiveData.uuid,
             updated_at: new Date().toISOString(),
-        }))
+        }
+        setAllMoments(momentId, updatedMoment)
+
+        // Queue Moment Update to Server
+        queueAction({
+            type: 'UPDATE',
+            target: 'MOMENT',
+            target_id: momentId,
+            body: updatedMoment,
+        })
     })
 }
 
@@ -229,6 +364,13 @@ export const updateMoment = (
             if (newCount <= 0) {
                 setAllTags(id, undefined!)
                 setSelectedTagIds((prev) => prev.filter((tid) => tid !== id))
+                // Tell Server the Tag is dead
+                queueAction({
+                    type: 'DELETE',
+                    target: 'TAG',
+                    target_id: id,
+                    body: {},
+                })
             } else {
                 setAllTags(id, 'refCount', newCount)
             }
@@ -239,7 +381,17 @@ export const updateMoment = (
         })
     }
 
-    setAllMoments(momentId, finalChanges)
+    const updatedMoment = { ...oldMoment, ...finalChanges }
+    setAllMoments(momentId, updatedMoment)
+
+    // Queue to Server
+    queueAction({
+        type: 'UPDATE',
+        target: 'MOMENT',
+        target_id: momentId,
+        body: updatedMoment,
+    })
+
     return true
 }
 
@@ -279,6 +431,13 @@ export const deleteMoment = (uuid: MomentId): boolean | undefined => {
                 deleted: true,
                 updated_at: now,
             })
+            // Tell Server to delete orphaned Tag
+            queueAction({
+                type: 'DELETE',
+                target: 'TAG',
+                target_id: id,
+                body: {},
+            })
         } else {
             setAllTags(id, {
                 refCount: newCount,
@@ -288,6 +447,9 @@ export const deleteMoment = (uuid: MomentId): boolean | undefined => {
     }
 
     subtractMediaFiltersFromContent(momentToDelete.content)
+
+    queueAction({ type: 'DELETE', target: 'MOMENT', target_id: uuid, body: {} })
+
     return true
 }
 
@@ -326,6 +488,14 @@ export const registerTags = (newTags: Array<string>): Array<TagId> => {
             }
             resultIds.push(newTagId)
             setAllTags(newTagId, tagData)
+
+            // Queue to Server
+            queueAction({
+                type: 'CREATE',
+                target: 'TAG',
+                target_id: newTagId,
+                body: tagData,
+            })
         })
     })
 
@@ -336,14 +506,25 @@ export const updateTag = (
     tagId: TagId,
     changes: Partial<Omit<Tag, 'id'>>,
 ): boolean | undefined => {
-    if (!allTags[tagId]) {
+    const prev = allTags[tagId]
+    if (!prev) {
         console.warn('updateTag: tag does not exist.', tagId)
         return
     }
 
-    setAllTags(tagId, {
+    const updatedTag = {
+        ...prev,
         ...changes,
         updated_at: new Date().toISOString(),
+    }
+    setAllTags(tagId, updatedTag)
+
+    // Queue to Server
+    queueAction({
+        type: 'UPDATE',
+        target: 'TAG',
+        target_id: tagId,
+        body: updatedTag,
     })
     return true
 }
@@ -357,6 +538,7 @@ export const recolourTag = (
 ): boolean | undefined => updateTag(tagId, { colour: newColour })
 
 // File References
+
 export const saveFileReference = async (
     file: File,
     selection: { Start?: number; End?: number },

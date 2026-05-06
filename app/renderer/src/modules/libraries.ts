@@ -3,7 +3,6 @@ import { reconcile, unwrap } from 'solid-js/store'
 import { getApi } from './ipc_client'
 import { version } from '../../../../package.json'
 import { migrateOldData } from './data_migrate'
-import { mergeLibraryData } from './sync'
 
 import {
     archives,
@@ -39,77 +38,9 @@ let allLibraryDataRef: Record<string, LibraryDataSnapshot> = {}
 let isLoaded = false
 let isInitialized = false
 
-export const pushPayloadToServer = async (
-    targetUrl: string,
-    targetId: string,
-    overrideToken?: string,
-) => {
-    const tokenToUse = overrideToken || jwtToken()
-
-    const localPayload = {
-        archives: archives(),
-        moments: unwrap(allMoments),
-        tags: unwrap(allTags),
-        linkPreviewCache: linkPreviewCache(),
-    }
-
-    const fetchRes = await fetch(`${targetUrl}/api/library/${targetId}`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${tokenToUse}` },
-    })
-
-    if (!fetchRes.ok && fetchRes.status !== 404) {
-        throw new Error(`Failed to fetch server state (${fetchRes.status})`)
-    }
-
-    let payloadToPush = localPayload as LibraryDataSnapshot
-
-    if (fetchRes.ok) {
-        const serverData = await fetchRes.json()
-        payloadToPush = mergeLibraryData(
-            localPayload,
-            serverData,
-        ) as LibraryDataSnapshot
-
-        for (const moment of Object.values(payloadToPush.moments)) {
-            if (
-                typeof moment.timestamp === 'string' ||
-                typeof moment.timestamp === 'number'
-            ) {
-                moment.timestamp = new Date(moment.timestamp)
-            }
-        }
-
-        // If this sync is happening on the library we are currently looking at,
-        // instantly update the UI to see the new data
-        if (activeLibraryId() === targetId) {
-            batch(() => {
-                setArchives(payloadToPush.archives)
-                setAllMoments(reconcile(payloadToPush.moments))
-                setAllTags(reconcile(payloadToPush.tags))
-                setLinkPreviewCache(payloadToPush.linkPreviewCache)
-            })
-        }
-
-        allLibraryDataRef[targetId] = structuredClone(payloadToPush)
-    }
-
-    const res = await fetch(`${targetUrl}/api/library/${targetId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${tokenToUse}`,
-        },
-        body: JSON.stringify(payloadToPush),
-    })
-
-    if (!res.ok) throw new Error(`Sync rejected by server (${res.status})`)
-}
-
 export const copyLibraryData = (sourceId: string, targetId: string) => {
     if (allLibraryDataRef[sourceId]) {
         // Only copy if the target doesn't already have data
-        // This prevents the Publishing destroying newly merged data.
         if (!allLibraryDataRef[targetId]) {
             allLibraryDataRef[targetId] = structuredClone(
                 allLibraryDataRef[sourceId],
@@ -185,20 +116,17 @@ const loadLibraryDataIntoState = async (libId: string) => {
         } as LibraryDataSnapshot
     }
 
+    // Pull from Server on load
     if (currentLib?.type === 'server' && jwtToken()) {
         const url = currentLib.url || 'http://localhost:8080'
         try {
-            const res = await fetch(`${url}/api/library/${libId}`, {
+            const res = await fetch(`${url}/api/library`, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${jwtToken()}` },
             })
             if (res.ok) {
                 const serverData: LibraryDataSnapshot = await res.json()
-
-                localCache = mergeLibraryData(
-                    localCache,
-                    serverData,
-                ) as LibraryDataSnapshot
+                localCache = serverData
             }
         } catch (e) {
             console.error('sync: failed to pull library data from server:', e)
@@ -281,45 +209,6 @@ let lastSavedString = ''
 
 const writeSave = createDebounce(async (snapshot: DataSnapshot) => {
     getApi()?.writeMainData?.(snapshot)
-
-    const activeId = snapshot.activeLibraryId
-    const activeLib = snapshot.libraries.find((l) => l.id === activeId)
-
-    if (activeLib?.type === 'server' && jwtToken()) {
-        const targetUrl = activeLib.url || 'http://localhost:8080'
-        try {
-            const newTime = new Date().toLocaleTimeString([], {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-            })
-            updateActiveLibrary({
-                syncStatus: 'syncing',
-                lastSyncTime: newTime,
-            })
-            await Promise.all([
-                pushPayloadToServer(targetUrl, activeId),
-                new Promise((resolve) => setTimeout(resolve, 500)),
-            ])
-            updateActiveLibrary({
-                syncStatus: 'synced',
-                lastSyncTime: newTime,
-            })
-        } catch (e: any) {
-            if (
-                e.message?.toLowerCase().includes('fetch') ||
-                e.message?.toLowerCase().includes('network')
-            ) {
-                updateActiveLibrary({
-                    syncStatus: 'offline',
-                })
-            } else {
-                updateActiveLibrary({
-                    syncStatus: 'conflict',
-                })
-            }
-        }
-    }
 }, 750)
 
 createRoot(() => {
