@@ -16,7 +16,8 @@ import {
 } from '../modules/regex'
 import { linkPreviewCache, setLinkPreviewCache } from '../modules/data'
 import {
-    iconClasses,
+    animatedIconClasses,
+    fixedIconClasses,
     maxImageHeight,
     rootMarginPixels,
 } from '../modules/globals'
@@ -214,7 +215,7 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                                 <div class="bg-element text-sub flex h-5 w-5 items-center justify-center rounded text-lg">
                                     <i
                                         class={
-                                            iconClasses +
+                                            fixedIconClasses +
                                             (isVideoFile(cleanUrl())
                                                 ? 'fa-file-video'
                                                 : 'fa-image')

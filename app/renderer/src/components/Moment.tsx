@@ -29,7 +29,7 @@ import {
 import { FilePreview } from './FilePreview'
 import {
     displayedModal,
-    iconClasses,
+    animatedIconClasses,
     rootMarginPixels,
     setDisplayedModal,
     registerMediaFilter,
@@ -155,7 +155,7 @@ export const Moment: Component<MomentProps> = (props) => {
                         >
                             <div class="flex items-start gap-2">
                                 <i
-                                    class={iconClasses + 'fa-pencil'}
+                                    class={animatedIconClasses + 'fa-pencil'}
                                     onClick={(e) => {
                                         e.stopPropagation() // prevents triggering modal open
                                         setDisplayedModal('EDIT_MODAL')
@@ -176,7 +176,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                 />
                                 <i
                                     class={
-                                        iconClasses +
+                                        animatedIconClasses +
                                         `${isConfirmingDelete() ? 'fa-check' : 'fa-trash'}`
                                     }
                                     onClick={(e) => {

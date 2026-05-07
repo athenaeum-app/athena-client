@@ -11,7 +11,7 @@ import {
     Match,
 } from 'solid-js'
 import { reconcile, unwrap } from 'solid-js/store'
-import { iconClasses, setDisplayedModal } from '../modules/globals'
+import { animatedIconClasses, setDisplayedModal } from '../modules/globals'
 import {
     activeLibraryId,
     setActiveLibraryId,
@@ -742,7 +742,7 @@ const LibraryItem: Component<{ lib: any }> = (props) => {
                 <Show when={!isEditing()}>
                     <div class="hidden w-0 items-center gap-2 transition-none duration-0 group-hover:flex group-hover:w-auto">
                         <i
-                            class={iconClasses + 'fa-pencil'}
+                            class={animatedIconClasses + 'fa-pencil'}
                             onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
@@ -751,7 +751,10 @@ const LibraryItem: Component<{ lib: any }> = (props) => {
                             }}
                         />
                         <i
-                            class={iconClasses + 'fa-trash hover:text-danger'}
+                            class={
+                                animatedIconClasses +
+                                'fa-trash hover:text-danger'
+                            }
                             onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()

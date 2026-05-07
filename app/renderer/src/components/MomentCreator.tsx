@@ -36,7 +36,7 @@ import {
 import {
     displayedModal,
     displayedMomentModalId,
-    iconClasses,
+    animatedIconClasses,
     setDisplayedModal,
     sortTags,
 } from '../modules/globals'
@@ -392,7 +392,9 @@ export const MomentCreator: Component<
                                         }}
                                     ></input>
                                     <i
-                                        class={iconClasses + 'fa-pencil'}
+                                        class={
+                                            animatedIconClasses + 'fa-pencil'
+                                        }
                                         onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()

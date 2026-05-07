@@ -16,7 +16,7 @@ import {
     updateArchive,
     type ArchiveId,
 } from '../modules/data'
-import { iconClasses } from '../modules/globals'
+import { animatedIconClasses } from '../modules/globals'
 
 export const Archive: Component<
     ComponentProps<'button'> & { archiveId: ArchiveId }
@@ -103,7 +103,7 @@ export const Archive: Component<
             <Show when={!isEditing()}>
                 <div class="flex items-center gap-2 opacity-0 transition-all duration-300 group-hover:opacity-100">
                     <i
-                        class={iconClasses + 'fa-pencil'}
+                        class={animatedIconClasses + 'fa-pencil'}
                         onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
@@ -113,7 +113,7 @@ export const Archive: Component<
                     />
                     <i
                         class={
-                            iconClasses +
+                            animatedIconClasses +
                             `${isConfirmingDelete() ? 'fa-check' : 'fa-trash'}`
                         }
                         onClick={(e) => {
