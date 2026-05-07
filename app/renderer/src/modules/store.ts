@@ -94,19 +94,26 @@ export const [refFiles, setRefFiles] = createSignal<FileRefs>({})
 export const [activeUploadCount, setActiveUploadCount] = createSignal<number>(0)
 
 // Libraries
+export const [isDownloading, setIsDownloadingServer] = createSignal(false)
+export const [switchingLibrary, setSwitchingLibrary] =
+    createSignal<boolean>(false)
+export const shouldBlurLibraryView = () =>
+    !jwtToken() && getActiveLibrary()?.type === 'server'
 export const [libraries, setLibraries] = createSignal<Library[]>([])
 export const [libraryToDelete, setLibraryToDelete] = createSignal<
     string | null
 >(null)
+export const [serverDownloadLibName, setServerDownloadLibName] =
+    createSignal<string>('')
 
 // Server / Sync
 export const [activeLibraryId, _setActiveLibraryId] = createSignal<string>('')
-export const activeLib = () =>
+export const getActiveLibrary = () =>
     libraries().find((l) => l.id === activeLibraryId())
-export const jwtToken = () => activeLib()?.token || ''
-export const serverRole = () => activeLib()?.role || null
-export const syncStatus = () => activeLib()?.syncStatus || 'synced'
-export const lastSyncTime = () => activeLib()?.lastSyncTime || 'Never'
+export const jwtToken = () => getActiveLibrary()?.token || ''
+export const serverRole = () => getActiveLibrary()?.role || null
+export const syncStatus = () => getActiveLibrary()?.syncStatus || 'synced'
+export const lastSyncTime = () => getActiveLibrary()?.lastSyncTime || 'Never'
 
 // Link Previews
 export const [linkPreviewCache, setLinkPreviewCache] = createSignal<

@@ -7,6 +7,8 @@ import {
     batch,
     onCleanup,
     untrack,
+    Switch,
+    Match,
 } from 'solid-js'
 import { reconcile, unwrap } from 'solid-js/store'
 import { iconClasses, setDisplayedModal } from '../modules/globals'
@@ -35,18 +37,11 @@ import {
     setSelectedURLFilters,
     flushActionQueue,
     editLibraryName,
+    getActiveLibrary,
+    setServerDownloadLibName,
+    isDownloading,
 } from '../modules/data'
-
-const LoadingSpinner: Component<{ text?: string }> = (props) => (
-    <div class="text-sub flex flex-1 items-center justify-center gap-2 rounded-md py-1.5 text-xs">
-        <div class="border-sub h-3.5 w-3.5 animate-spin rounded-full border-2 border-t-transparent" />
-        <Show when={props.text}>
-            <span class="animate-pulse font-medium tracking-wide">
-                {props.text}
-            </span>
-        </Show>
-    </div>
-)
+import { LoadingSpinner } from './LoadingSpinner'
 
 const SyncDashboard: Component = () => {
     const [isManualSyncing, setIsManualSyncing] = createSignal(false)
@@ -131,7 +126,16 @@ const SyncDashboard: Component = () => {
         })
     })
 
+    const checkAuth = () => {
+        if (!jwtToken()) {
+            setDisplayedModal('SERVER_LOGIN_MODAL')
+            return false
+        }
+        return true
+    }
+
     const handleManualSync = async () => {
+        if (!checkAuth()) return
         setIsManualSyncing(true)
 
         const newTime = new Date().toLocaleTimeString([], {
@@ -169,6 +173,13 @@ const SyncDashboard: Component = () => {
             const serverData = await res.json()
 
             // Refresh local state with fresh server data
+            // Abort if the library changed
+            if (activeLibraryId() !== activeLib.id) {
+                console.warn(
+                    'Library switched during fetch! Discarding data to prevent corruption.',
+                )
+                return
+            }
             batch(() => {
                 setArchives(serverData.archives || {})
 
@@ -219,17 +230,20 @@ const SyncDashboard: Component = () => {
             }
         } finally {
             setIsManualSyncing(false)
+            checkAuth()
         }
     }
 
     const statusIndicator = () => {
+        const danger = 'bg-danger shadow-md shadow-danger/50'
+        if (!jwtToken()) return danger
         switch (syncStatus()) {
             case 'synced':
                 return 'bg-success shadow-md shadow-success/50'
             case 'dirty':
                 return 'bg-highlight-alt-strongest shadow-md shadow-highlight-alt-strongest/50'
             case 'conflict':
-                return 'bg-danger shadow-md shadow-danger/50'
+                return danger
             case 'offline':
                 return 'bg-warning shadow-md shadow-warning/50'
             case 'syncing':
@@ -247,15 +261,17 @@ const SyncDashboard: Component = () => {
                         class={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${statusIndicator()}`}
                     />
                     <span class="text-sub text-xs font-medium tracking-wide">
-                        {syncStatus() === 'synced'
-                            ? 'Library Synced'
-                            : syncStatus() === 'dirty'
-                              ? 'Unsaved Changes'
-                              : syncStatus() === 'syncing'
-                                ? 'Syncing...'
-                                : syncStatus() === 'offline'
-                                  ? 'Server Offline'
-                                  : 'Sync Conflict'}
+                        {!jwtToken()
+                            ? 'Logged out'
+                            : syncStatus() === 'synced'
+                              ? 'Library Synced'
+                              : syncStatus() === 'dirty'
+                                ? 'Unsaved Changes'
+                                : syncStatus() === 'syncing'
+                                  ? 'Syncing...'
+                                  : syncStatus() === 'offline'
+                                    ? 'Server Offline'
+                                    : 'Sync Conflict'}
                     </span>
                 </div>
                 <Show when={serverRole() === 'viewer'}>
@@ -277,13 +293,14 @@ const SyncDashboard: Component = () => {
                     <button
                         onClick={handleManualSync}
                         disabled={
-                            isManualSyncing() ||
-                            syncStatus() === 'syncing' ||
-                            syncStatus() === 'offline'
+                            (isManualSyncing() ||
+                                syncStatus() === 'syncing' ||
+                                syncStatus() === 'offline') &&
+                            !!jwtToken()
                         }
                         class="bg-sub/10 text-sub hover:bg-sub/20 flex-1 rounded-md py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                        Sync
+                        {!jwtToken() ? 'Log in' : 'Sync'}
                     </button>
                 </Show>
             </div>
@@ -291,30 +308,38 @@ const SyncDashboard: Component = () => {
     )
 }
 
-const PublishSection: Component = () => {
+const PushPullSection: Component = () => {
+    const localLibs = () => libraries().filter((l) => l.type === 'local')
     const serverLibs = () => libraries().filter((l) => l.type === 'server')
-    const [isConfirmingPublishing, setIsConfirmingPublishing] =
-        createSignal(false)
+    const [isConfirmingDownload, setIsConfirmingDownload] = createSignal(false)
     const [selectedLibraryTargetId, setSelectedLibraryTargetId] = createSignal(
-        serverLibs()[0]?.id || '',
+        serverLibs()[0]?.id || localLibs()[0]?.id,
     )
     const [isPublishing, setIsPublishing] = createSignal(false)
+    const [isConfirmingPublishing, setIsConfirmingPublishing] =
+        createSignal(false)
 
     const [targetHasData, setTargetHasData] = createSignal(false)
     const [isCheckingTarget, setIsCheckingTarget] = createSignal(false)
 
     const targetLib = () => {
         const targetId = selectedLibraryTargetId()
-        return serverLibs().find((l) => l.id === targetId)
+        if (isActiveLibraryLocal()) {
+            return serverLibs().find((l) => l.id === targetId)
+        } else {
+            return localLibs().find((l) => l.id === targetId)
+        }
     }
 
     createEffect(() => {
         const current = selectedLibraryTargetId()
-        const libs = serverLibs()
-        if (!current && libs.length > 0) {
-            setSelectedLibraryTargetId(libs[0].id)
-        } else if (current && !libs.find((l) => l.id === current)) {
-            setSelectedLibraryTargetId(libs[0]?.id || '')
+
+        const allowedLibs = isActiveLibraryLocal() ? serverLibs() : localLibs()
+
+        const isValid = allowedLibs.some((l) => l.id === current)
+
+        if (!isValid) {
+            setSelectedLibraryTargetId(allowedLibs[0]?.id || '')
         }
     })
 
@@ -349,6 +374,13 @@ const PublishSection: Component = () => {
                 })
         }
     })
+
+    const handleDownload = async () => {
+        setServerDownloadLibName(
+            `${getActiveLibrary()?.name || 'Server'} (Local Copy)`,
+        )
+        setDisplayedModal('DOWNLOAD_SERVER_MODAL')
+    }
 
     const handlePublish = async () => {
         const targetId = selectedLibraryTargetId()
@@ -435,31 +467,75 @@ const PublishSection: Component = () => {
         }
     }
 
+    const isActiveLibraryLocal = () => getActiveLibrary()?.type == 'local'
+
+    const isSubmitDisabled = () => {
+        if (isActiveLibraryLocal()) {
+            return (
+                !selectedLibraryTargetId() ||
+                isPublishing() ||
+                targetLib()?.role !== 'admin' ||
+                !targetLib()?.token ||
+                isCheckingTarget()
+            )
+        }
+        return false
+    }
+
     return (
         <Show when={serverLibs().length > 0}>
             <div class="border-element-accent mt-2 flex flex-col gap-3 border-t pt-4">
                 <span class="text-sub text-[10px] font-bold tracking-widest uppercase">
-                    Publish to Server
+                    {`${isActiveLibraryLocal() ? 'Publish To Server' : 'Import From Server'}`}
                 </span>
 
                 <p class="text-sub/60 text-xs leading-relaxed">
-                    Push this local library into an existing connected server
-                    library.
+                    {`${isActiveLibraryLocal() ? 'Push this local library into an existing connected server library.' : 'Download the server to a local library.'}`}
                 </p>
 
-                <select
-                    value={selectedLibraryTargetId()}
-                    onChange={(e) => {
-                        setSelectedLibraryTargetId(e.currentTarget.value)
-                        setIsConfirmingPublishing(false)
-                    }}
-                    class="bg-element text-plain border-element-accent focus:border-sub/50 w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
-                    disabled={isPublishing()}
-                >
-                    <For each={serverLibs()}>
-                        {(lib) => <option value={lib.id}>{lib.name}</option>}
-                    </For>
-                </select>
+                <Show when={isActiveLibraryLocal()}>
+                    <select
+                        value={selectedLibraryTargetId()}
+                        onChange={(e) => {
+                            setSelectedLibraryTargetId(e.currentTarget.value)
+                            setIsConfirmingPublishing(false)
+                        }}
+                        class="bg-element text-plain border-element-accent focus:border-sub/50 w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
+                        disabled={isPublishing()}
+                    >
+                        <Switch
+                            fallback={
+                                <For each={serverLibs()}>
+                                    {(lib) => (
+                                        <option value={lib.id}>
+                                            {lib.name}
+                                        </option>
+                                    )}
+                                </For>
+                            }
+                        >
+                            <Match when={!isActiveLibraryLocal()}>
+                                <Show
+                                    when={localLibs().length > 0}
+                                    fallback={
+                                        <option value="">
+                                            No local libraries available!
+                                        </option>
+                                    }
+                                >
+                                    {' '}
+                                    <For each={localLibs()}>
+                                        {(lib) => (
+                                            <option value={lib.id}>
+                                                {lib.name}
+                                            </option>
+                                        )}
+                                    </For>
+                                </Show>
+                            </Match>
+                        </Switch>
+                    </select>
+                </Show>
 
                 <Show when={jwtToken() && serverRole() === 'admin'}>
                     <Show when={isCheckingTarget()}>
@@ -479,21 +555,27 @@ const PublishSection: Component = () => {
                             Publishing will merge and potentially overwrite it.
                         </div>
                     </Show>
-                    <Show
-                        when={
-                            !isCheckingTarget() &&
-                            !targetHasData() &&
-                            selectedLibraryTargetId() !== ''
-                        }
-                    >
-                        <div class="bg-success/10 text-success rounded-md px-3 py-2 text-xs font-bold">
-                            Server is empty and ready to be published to.
-                        </div>
+                    <Show when={isActiveLibraryLocal()}>
+                        <Show
+                            when={
+                                !isCheckingTarget() &&
+                                !targetHasData() &&
+                                selectedLibraryTargetId() !== ''
+                            }
+                        >
+                            <div class="bg-success/10 text-success rounded-md px-3 py-2 text-xs font-bold">
+                                Server is empty and ready to be published to.
+                            </div>
+                        </Show>
                     </Show>
                 </Show>
 
                 <Show
-                    when={targetLib()?.role !== 'admin' || !targetLib()?.token}
+                    when={
+                        (targetLib()?.role !== 'admin' ||
+                            !targetLib()?.token) &&
+                        isActiveLibraryLocal()
+                    }
                 >
                     <div class="bg-warning/40 text-warning rounded-md px-3 py-2 text-xs font-black">
                         You must connect to this server using the admin password
@@ -503,36 +585,60 @@ const PublishSection: Component = () => {
 
                 <button
                     onClick={() => {
-                        if (isConfirmingPublishing()) {
-                            setIsConfirmingPublishing(false)
-                            handlePublish()
+                        if (isActiveLibraryLocal()) {
+                            if (isConfirmingPublishing()) {
+                                setIsConfirmingPublishing(false)
+                                handlePublish()
+                            } else {
+                                setIsConfirmingPublishing(true)
+                            }
                         } else {
-                            setIsConfirmingPublishing(true)
+                            if (isConfirmingDownload()) {
+                                setIsConfirmingDownload(false)
+                                handleDownload()
+                            } else {
+                                setIsConfirmingDownload(true)
+                            }
                         }
                     }}
-                    disabled={
-                        !selectedLibraryTargetId() ||
-                        isPublishing() ||
-                        targetLib()?.role !== 'admin' ||
-                        !targetLib()?.token ||
-                        isCheckingTarget()
-                    }
+                    disabled={isSubmitDisabled()}
                     class={`mt-1 w-full rounded-md py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                         isConfirmingPublishing() && targetHasData()
                             ? 'bg-danger text-plain hover:bg-danger/80'
                             : 'bg-success/20 text-success hover:bg-success/30'
                     }`}
                 >
-                    <Show
-                        when={!isPublishing()}
-                        fallback={<LoadingSpinner text="Publishing..." />}
+                    <Switch
+                        fallback={
+                            <Show
+                                when={!isDownloading()}
+                                fallback={
+                                    <LoadingSpinner text="Downloading..." />
+                                }
+                            >
+                                {isConfirmingDownload()
+                                    ? targetHasData()
+                                        ? 'Download Server'
+                                        : 'Confirm Download?'
+                                    : 'Download'}
+                            </Show>
+                        }
                     >
-                        {isConfirmingPublishing()
-                            ? targetHasData()
-                                ? 'Force Publish (Overwrite Data)'
-                                : 'Confirm Publish?'
-                            : 'Publish'}
-                    </Show>
+                        <Match when={isActiveLibraryLocal()}>
+                            <Show
+                                when={!isPublishing()}
+                                fallback={
+                                    <LoadingSpinner text="Publishing..." />
+                                }
+                            >
+                                {isConfirmingPublishing()
+                                    ? targetHasData()
+                                        ? 'Force Publish (Overwrite Data)'
+                                        : 'Confirm Publish?'
+                                    : 'Publish'}
+                            </Show>
+                        </Match>
+                    </Switch>
                 </button>
             </div>
         </Show>
@@ -683,9 +789,7 @@ export const LibraryBar: Component = () => {
                 Add Library
             </button>
 
-            <Show when={activeLib()?.type === 'local'}>
-                <PublishSection />
-            </Show>
+            <PushPullSection />
 
             <Show when={activeLib()?.type === 'server'}>
                 <SyncDashboard />

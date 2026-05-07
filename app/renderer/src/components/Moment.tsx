@@ -24,6 +24,7 @@ import {
     setMomentToDelete,
     getCurrentLibrary,
     serverRole,
+    jwtToken,
 } from '../modules/data'
 import { FilePreview } from './FilePreview'
 import {
@@ -149,7 +150,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                 contentDisplayType() == 'All' &&
                                 (getCurrentLibrary()?.type === 'server'
                                     ? serverRole() == 'admin'
-                                    : false)
+                                    : true)
                             }
                         >
                             <div class="flex items-start gap-2">

@@ -29,6 +29,7 @@ import {
     jwtToken,
     setLibraries,
     setActiveUploadCount,
+    getActiveLibrary,
 } from './store'
 import {
     extractBaseURL,
@@ -79,8 +80,7 @@ export const flushActionQueue = async () => {
     if (actionQueue.length === 0) return
     console.log('Flushing action queue...')
 
-    const activeId = activeLibraryId()
-    const activeLib = libraries().find((l) => l.id === activeId)
+    const activeLib = getActiveLibrary()
     if (activeLib?.type !== 'server') return
 
     const token = jwtToken()
@@ -156,7 +156,7 @@ export const flushActionQueue = async () => {
 
             updateActiveLibrary({
                 token: '',
-                syncStatus: 'offline',
+                syncStatus: 'conflict',
             })
 
             setDisplayedModal('SERVER_LOGIN_MODAL')
@@ -192,7 +192,7 @@ const queueAction = (action: ServerAction) => {
     }, 750)
 }
 
-// libraries
+// Libraries
 export const editLibraryName = (id: string, newName: string) => {
     setLibraries((prevLibs) =>
         prevLibs.map((lib) =>

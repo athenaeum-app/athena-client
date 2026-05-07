@@ -7,8 +7,14 @@ import {
     getFilteredMoments,
     setDisplayType,
 } from '../modules/globals'
-import { activeLibraryId, serverRole } from '../modules/store'
+import {
+    activeLibraryId,
+    serverRole,
+    shouldBlurLibraryView,
+    switchingLibrary,
+} from '../modules/store'
 import { getCurrentLibrary } from '../modules/libraries'
+import { LoadingSpinner } from './LoadingSpinner'
 
 const fullDisplayClasses =
     'flex h-full w-full flex-col items-center gap-4 rounded-xl'
@@ -43,24 +49,43 @@ export const Feed: Component = () => {
                         </Show>
                     </div>
                 </div>
-
-                <MomentCreator
-                    hide={
-                        displayedModal() == 'EDIT_MODAL' ||
-                        (getCurrentLibrary()?.type === 'server'
-                            ? serverRole() != 'admin'
-                            : false)
+                <Show
+                    when={!switchingLibrary()}
+                    fallback={
+                        <div class="w-full">
+                            <LoadingSpinner text="Loading library..." />
+                        </div>
                     }
-                />
-                <div
-                    class={`${displayType() == 'Full' ? fullDisplayClasses : gridDisplayClasses}`}
                 >
-                    <For each={getFilteredMoments()}>
-                        {(momentData) => {
-                            return <Moment data={momentData} />
-                        }}
-                    </For>
-                </div>
+                    <div
+                        class={`${shouldBlurLibraryView() ? 'blur-sm' : ''} w-full`}
+                    >
+                        <MomentCreator
+                            hide={
+                                displayedModal() == 'EDIT_MODAL' ||
+                                (getCurrentLibrary()?.type === 'server'
+                                    ? serverRole() != 'admin'
+                                    : false) ||
+                                shouldBlurLibraryView()
+                            }
+                        />
+                    </div>
+                    <div
+                        class={`${displayType() == 'Full' ? fullDisplayClasses : gridDisplayClasses}`}
+                    >
+                        <For each={getFilteredMoments()}>
+                            {(momentData) => {
+                                return (
+                                    <div
+                                        class={`${shouldBlurLibraryView() ? 'blur-sm' : ''} w-full`}
+                                    >
+                                        <Moment data={momentData} />
+                                    </div>
+                                )
+                            }}
+                        </For>
+                    </div>
+                </Show>
             </div>
         </div>
     )

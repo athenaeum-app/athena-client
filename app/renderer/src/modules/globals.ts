@@ -187,6 +187,7 @@ export type MODAL_NAMES =
     | 'ADD_LIBRARY_MODAL'
     | 'CONFIRM_LIBRARY_DELETE'
     | 'SERVER_LOGIN_MODAL'
+    | 'DOWNLOAD_SERVER_MODAL'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')

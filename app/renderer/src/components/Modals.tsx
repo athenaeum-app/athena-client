@@ -23,6 +23,7 @@ import { MomentCreator } from './MomentCreator'
 import { MomentModal } from './MomentModal'
 import AddLibraryModal from './AddLibraryModal'
 import { ServerLoginModal } from './ServerLoginModal'
+import { DownloadServerModal } from './DownloadServerModal'
 
 export const Modals = () => {
     createEffect(() => {
@@ -108,6 +109,10 @@ export const Modals = () => {
                 {
                     state_name: 'SERVER_LOGIN_MODAL',
                     content: <ServerLoginModal />,
+                },
+                {
+                    state_name: 'DOWNLOAD_SERVER_MODAL',
+                    content: <DownloadServerModal />,
                 },
             ]}
         />
