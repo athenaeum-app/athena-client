@@ -36,6 +36,7 @@ import {
     setIsDownloadingServer,
     type LibraryType,
     setLinkPreviewCache,
+    getActiveLibrary,
 } from './store'
 
 let allLibraryDataRef: Record<string, LibraryDataSnapshot> = {}
@@ -176,6 +177,7 @@ const switchToLibraryFromId = async (libId: string) => {
                         method: 'GET',
                         headers: { Authorization: `Bearer ${jwtToken()}` },
                     })
+
                     if (res.ok) {
                         const serverData: LibraryDataSnapshot = await res.json()
                         localCache = serverData
@@ -203,24 +205,30 @@ const switchToLibraryFromId = async (libId: string) => {
             newArchives[defaultArchiveId].name = defaultArchiveName
         }
 
-        batch(() => {
-            setArchives(newArchives)
-            const moments = libData.moments as Record<string, MomentData>
-            for (const moment of Object.values(moments)) {
-                if (
-                    typeof moment.timestamp === 'string' ||
-                    typeof moment.timestamp === 'number'
-                ) {
-                    moment.timestamp = new Date(moment.timestamp)
+        // If swapped to another server, abort
+        if (activeLibraryId() !== libId) {
+            console.log('Server mismatch! No longer overriding data.')
+            return
+        } else {
+            batch(() => {
+                setArchives(newArchives)
+                const moments = libData.moments as Record<string, MomentData>
+                for (const moment of Object.values(moments)) {
+                    if (
+                        typeof moment.timestamp === 'string' ||
+                        typeof moment.timestamp === 'number'
+                    ) {
+                        moment.timestamp = new Date(moment.timestamp)
+                    }
                 }
-            }
-            setAllMoments(reconcile(moments))
-            setAllTags(reconcile(libData.tags as Record<TagId, Tag>))
-            setSelectedArchive(defaultArchiveId)
-            setSelectedTagIds([])
-            setSelectedURLFilters([])
-            setMediaFilters(reconcile({}))
-        })
+                setAllMoments(reconcile(moments))
+                setAllTags(reconcile(libData.tags as Record<TagId, Tag>))
+                setSelectedArchive(defaultArchiveId)
+                setSelectedTagIds([])
+                setSelectedURLFilters([])
+                setMediaFilters(reconcile({}))
+            })
+        }
 
         setCanSave(true)
     } finally {

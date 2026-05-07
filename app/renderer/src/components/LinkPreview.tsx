@@ -182,10 +182,6 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
 
     const videoLink = () => getVideoLink(cleanUrl())
 
-    createEffect(() => {
-        console.log(`Website data for ${cleanUrl()}:`, websiteData())
-    })
-
     const hasMediaData = () => {
         return websiteData() && (websiteData()?.image || websiteData()?.video)
     }
