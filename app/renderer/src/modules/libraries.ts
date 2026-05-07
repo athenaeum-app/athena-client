@@ -12,7 +12,6 @@ import {
     allTags,
     setAllTags,
     linkPreviewCache,
-    setLinkPreviewCache,
     jwtToken,
     libraries,
     setLibraries,
@@ -36,6 +35,7 @@ import {
     serverDownloadLibName,
     setIsDownloadingServer,
     type LibraryType,
+    setLinkPreviewCache,
 } from './store'
 
 let allLibraryDataRef: Record<string, LibraryDataSnapshot> = {}
@@ -120,7 +120,6 @@ export const deleteLibraryData = (libId: string) => {
                 setArchives({})
                 setAllMoments({})
                 setAllTags({})
-                setLinkPreviewCache({})
                 setSelectedArchive(defaultArchiveId)
                 setSelectedTagIds([])
                 setSelectedURLFilters([])
@@ -148,7 +147,6 @@ const switchToLibraryFromId = async (libId: string) => {
                 archives: {},
                 moments: {},
                 tags: {},
-                linkPreviewCache: {},
             } as LibraryDataSnapshot
         }
 
@@ -218,7 +216,6 @@ const switchToLibraryFromId = async (libId: string) => {
             }
             setAllMoments(reconcile(moments))
             setAllTags(reconcile(libData.tags as Record<TagId, Tag>))
-            setLinkPreviewCache(libData.linkPreviewCache ?? {})
             setSelectedArchive(defaultArchiveId)
             setSelectedTagIds([])
             setSelectedURLFilters([])
@@ -240,8 +237,12 @@ const loadData = async () => {
 
     if (api && api.readData) {
         const migratedData = await migrateOldData()
-        rawData = migratedData ?? (await api.readData())
+        const readData = await api.readData()
+        rawData = migratedData ?? readData
     }
+
+    const loadedCache = rawData.linkPreviewCache ?? {}
+    setLinkPreviewCache(loadedCache)
 
     allLibraryDataRef = rawData.libraryData ?? {}
     const savedLibraries: Library[] = rawData.libraries ?? [
@@ -290,7 +291,6 @@ createRoot(() => {
                 archives: currentArchives,
                 moments: structuredClone(unwrap(allMoments)),
                 tags: structuredClone(unwrap(allTags)),
-                linkPreviewCache: currentCache,
             }
         }
 
@@ -311,6 +311,7 @@ createRoot(() => {
             libraries: libsForSave,
             activeLibraryId: currentId,
             libraryData: cleanedLibraryData,
+            linkPreviewCache: currentCache,
         }
 
         const asString = JSON.stringify(snapshot)
@@ -329,7 +330,6 @@ export const setActiveLibraryId = (newId: string) => {
             archives: archives(),
             moments: structuredClone(unwrap(allMoments)),
             tags: structuredClone(unwrap(allTags)),
-            linkPreviewCache: linkPreviewCache(),
         }
     }
 
@@ -350,6 +350,5 @@ export const initializeNewLibrary = (libId: string) => {
         } as Record<ArchiveId, Archive>,
         moments: {},
         tags: {},
-        linkPreviewCache: {},
     }
 }

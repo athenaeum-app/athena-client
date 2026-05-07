@@ -285,19 +285,25 @@ export const MomentCreator: Component<
                                 if (!clipboardData) return
 
                                 const items = clipboardData.items
+                                let hasFiles = false
+
                                 for (let i = 0; i < items.length; i++) {
                                     const item = items[i]
                                     if (item.kind == 'file') {
                                         const file = item.getAsFile()
-                                        e.preventDefault()
+
                                         if (file) {
+                                            hasFiles = true
                                             saveFileReference(file, {
                                                 Start: textInputAreaRef?.selectionStart,
                                                 End: textInputAreaRef?.selectionEnd,
                                             })
                                         }
-                                        return
                                     }
+                                }
+
+                                if (hasFiles) {
+                                    e.preventDefault()
                                 }
                             }}
                             value={props.hide ? '' : content()}

@@ -75,7 +75,6 @@ export interface LibraryDataSnapshot {
     archives: Record<ArchiveId, Archive>
     moments: Record<MomentId, MomentData>
     tags: Record<TagId, Tag>
-    linkPreviewCache: Record<string, any>
 }
 
 export interface DataSnapshot {
@@ -83,6 +82,7 @@ export interface DataSnapshot {
     libraries: Library[]
     activeLibraryId: string
     libraryData: Record<string, LibraryDataSnapshot>
+    linkPreviewCache: Record<string, any>
 }
 
 export type dataSnapshot = DataSnapshot

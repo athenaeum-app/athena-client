@@ -30,7 +30,6 @@ import {
     setArchives,
     setAllMoments,
     setAllTags,
-    setLinkPreviewCache,
     defaultArchiveId,
     setSelectedArchive,
     setSelectedTagIds,
@@ -194,7 +193,6 @@ const SyncDashboard: Component = () => {
                 }
                 setAllMoments(reconcile(moments))
                 setAllTags(reconcile(serverData.tags || {}))
-                setLinkPreviewCache(serverData.linkPreviewCache || {})
             })
 
             updateActiveLibrary({

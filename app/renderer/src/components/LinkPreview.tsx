@@ -2,9 +2,11 @@ import {
     createEffect,
     createResource,
     createSignal,
+    Match,
     onCleanup,
     onMount,
     Show,
+    Switch,
     type Component,
     type ComponentProps,
 } from 'solid-js'
@@ -16,11 +18,11 @@ import {
 } from '../modules/regex'
 import { linkPreviewCache, setLinkPreviewCache } from '../modules/data'
 import {
-    animatedIconClasses,
     fixedIconClasses,
     maxImageHeight,
     rootMarginPixels,
 } from '../modules/globals'
+import { LocalPDFPreview } from './PDFPreview'
 
 interface LinkPreviewProps extends ComponentProps<'div'> {
     url: string
@@ -57,6 +59,10 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
 
     const isVideoFile = (url: string) => {
         return !!url.match(/\.(mp4|webm|mov|ogg)(\?.*)?$/i)
+    }
+
+    const isPDF = (url: string) => {
+        return !!url.match(/\.(pdf)(\?.*)?$/i)
     }
 
     onMount(() => {
@@ -248,56 +254,62 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                         })()}
                     </button>
                 </div>
-                <Show when={!videoLink() && !websiteData()?.video}>
-                    <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
-                        <div
-                            class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
-                            style={{
-                                'background-image': `url(${websiteData()?.image || ''})`,
-                                'background-size': 'contain',
-                                'background-position': 'center',
-                            }}
-                        />
-                        <img
-                            onClick={() =>
-                                openDirectImage(websiteData()?.image)
+                <Switch>
+                    <Match when={isPDF(cleanUrl())}>
+                        <LocalPDFPreview url={cleanUrl()}></LocalPDFPreview>
+                    </Match>
+                    <Match when={!videoLink() && !websiteData()?.video}>
+                        <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+                            <div
+                                class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
+                                style={{
+                                    'background-image': `url(${websiteData()?.image || ''})`,
+                                    'background-size': 'contain',
+                                    'background-position': 'center',
+                                }}
+                            />
+                            <img
+                                onClick={() =>
+                                    openDirectImage(websiteData()?.image)
+                                }
+                                class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
+                                src={`${websiteData()?.image || ''}`}
+                            />
+                        </div>
+                    </Match>
+                    <Match when={videoLink() || websiteData()?.video}>
+                        {(link) => {
+                            const videoSource = websiteData()?.video
+                            if (videoSource && !videoLink()) {
+                                return (
+                                    <video
+                                        ref={(video) => (video.volume = 0.1)}
+                                        class="aspect-video w-full rounded"
+                                        controls
+                                    >
+                                        <source src={videoSource} />
+                                        Your browser does not support the video
+                                        tag.
+                                    </video>
+                                )
                             }
-                            class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
-                            src={`${websiteData()?.image || ''}`}
-                        />
-                    </div>
-                </Show>
-                <Show when={videoLink() || websiteData()?.video}>
-                    {(link) => {
-                        const videoSource = websiteData()?.video
-                        if (videoSource && !videoLink()) {
-                            return (
-                                <video
-                                    ref={(video) => (video.volume = 0.1)}
-                                    class="aspect-video w-full rounded"
-                                    controls
-                                >
-                                    <source src={videoSource} />
-                                    Your browser does not support the video tag.
-                                </video>
-                            )
-                        }
-                        if (videoLink()) {
-                            console.log(`Displaying ${link()} as iframe.`)
-                            return (
-                                <iframe
-                                    loading="lazy"
-                                    class="aspect-video h-full w-full"
-                                    src={link() as string}
-                                    title="YouTube video player"
-                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    referrerpolicy="strict-origin-when-cross-origin"
-                                    allowfullscreen
-                                ></iframe>
-                            )
-                        }
-                    }}
-                </Show>
+                            if (videoLink()) {
+                                console.log(`Displaying ${link()} as iframe.`)
+                                return (
+                                    <iframe
+                                        loading="lazy"
+                                        class="aspect-video h-full w-full"
+                                        src={link() as string}
+                                        title="YouTube video player"
+                                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        referrerpolicy="strict-origin-when-cross-origin"
+                                        allowfullscreen
+                                    ></iframe>
+                                )
+                            }
+                        }}
+                    </Match>
+                </Switch>
                 <Show when={websiteData()?.description}>
                     <div class="flex justify-between">
                         <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>

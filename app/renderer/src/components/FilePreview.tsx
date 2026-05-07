@@ -80,7 +80,7 @@ export const FilePreview: Component<
                             getApi().openFileFromURI(props.uri)
                         }}
                     >
-                        <LocalPDFPreview uri={props.uri} />
+                        <LocalPDFPreview url={props.uri} />
                     </div>
                 </Match>
             </Switch>

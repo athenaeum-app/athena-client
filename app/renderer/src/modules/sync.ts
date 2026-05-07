@@ -39,9 +39,5 @@ export const mergeLibraryData = (
         archives: mergeRecords(local.archives, server.archives),
         moments: mergeRecords(local.moments, server.moments),
         tags: mergeRecords(local.tags, server.tags),
-        linkPreviewCache: {
-            ...server.linkPreviewCache,
-            ...local.linkPreviewCache,
-        },
     } as LibraryDataSnapshot
 }

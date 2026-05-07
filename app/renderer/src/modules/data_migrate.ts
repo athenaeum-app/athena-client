@@ -37,7 +37,6 @@ const migrateSingleLibraryToMulti = (rawData: any): DataSnapshot => {
         archives: rawData.archives || {},
         moments: rawData.moments || {},
         tags: rawData.tags || {},
-        linkPreviewCache: rawData.linkPreviewCache || {},
     }
 
     // Guarantee the default archive is present
@@ -54,6 +53,7 @@ const migrateSingleLibraryToMulti = (rawData: any): DataSnapshot => {
         libraries: [DEFAULT_LIBRARY],
         activeLibraryId: DEFAULT_LIBRARY_ID,
         libraryData: { [DEFAULT_LIBRARY_ID]: libSnapshot },
+        linkPreviewCache: rawData.linkPreviewCache || {},
     }
 
     api.writeMainData(snapshot)
@@ -67,7 +67,6 @@ const migrateFirstLegacy = (rawData: any): DataSnapshot => {
     const oldTags = (rawData.tags || []) as Array<string>
     const oldTagColours = (rawData.tagColours || {}) as Record<string, string>
     const oldArchives = (rawData.archives || []) as Array<string>
-    const linkPreviewCache = rawData.linkPreviewCache || {}
 
     const newTags: Record<TagId, Tag> = {}
     const newArchives: Record<ArchiveId, Archive> = {}
@@ -145,9 +144,9 @@ const migrateFirstLegacy = (rawData: any): DataSnapshot => {
                 archives: newArchives,
                 moments: newMoments,
                 tags: newTags,
-                linkPreviewCache,
             },
         },
+        linkPreviewCache: {}, // Ancient formats get an empty cache
     }
 
     api.writeMainData(snapshot)
@@ -161,6 +160,27 @@ export const migrateOldData = async (): Promise<DataSnapshot | null> => {
     const rawData = await api.readData()
 
     if (rawData.libraryData !== undefined) {
+        let needsCacheMigration = false
+        let combinedCache = rawData.linkPreviewCache || {}
+
+        for (const libId in rawData.libraryData) {
+            if (rawData.libraryData[libId].linkPreviewCache) {
+                needsCacheMigration = true
+                combinedCache = {
+                    ...combinedCache,
+                    ...rawData.libraryData[libId].linkPreviewCache,
+                }
+                delete rawData.libraryData[libId].linkPreviewCache
+            }
+        }
+
+        if (needsCacheMigration || !rawData.linkPreviewCache) {
+            console.log('Migrating per-library link cache to global cache...')
+            rawData.linkPreviewCache = combinedCache
+            api.writeMainData(rawData)
+            return rawData as DataSnapshot
+        }
+
         return null
     }
 
