@@ -1,3 +1,4 @@
+import * as json from '../../../../package.json'
 import { createMemo, createSignal, type Accessor } from 'solid-js'
 import {
     allMoments,
@@ -12,6 +13,7 @@ import {
     selectedURLFilters,
     setMediaFilters,
     type baseUrlString,
+    type LibraryDataSnapshot,
     type MomentData,
     type MomentId,
     type Tag,
@@ -24,6 +26,13 @@ import {
     URL_MAIN_DOMAIN_REGEX,
     URL_REGEX,
 } from './regex'
+import { defaultSettings, type AppSettings } from './settings'
+
+// Fix this later lol
+export let [allLibraryDataRef, setAllLibraryDataRef] = createSignal<
+    Record<string, LibraryDataSnapshot>
+>({})
+export const [canSave, setCanSave] = createSignal<boolean>(false)
 
 export const generateVibrantColour = () => {
     const hue = Math.floor(Math.random() * 360)
@@ -230,6 +239,7 @@ export type MODAL_NAMES =
     | 'SERVER_LOGIN_MODAL'
     | 'DOWNLOAD_SERVER_MODAL'
     | 'IMAGE_INSPECT_MODAL'
+    | 'APP_MENU_MODAL'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')
@@ -265,3 +275,24 @@ export const siteMap: Array<{
         replaceWith: 'Discord',
     },
 ]
+
+export const appVersion = json.version
+
+// Settings
+export const [appSettings, setAppSettings] =
+    createSignal<AppSettings>(defaultSettings)
+
+export const [systemFonts, setSystemFonts] = createSignal<string[]>([])
+
+export const loadSystemFonts = async () => {
+    try {
+        const win = window as any
+        if ('queryLocalFonts' in win) {
+            const fonts = await win.queryLocalFonts()
+            const uniqueFamilies = [...new Set(fonts.map((f: any) => f.family))]
+            setSystemFonts(uniqueFamilies.sort() as string[])
+        }
+    } catch (e) {
+        console.warn('Local font access denied')
+    }
+}

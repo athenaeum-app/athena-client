@@ -6,6 +6,7 @@ import {
     type JSXElement,
     type Setter,
 } from 'solid-js'
+import { ExpandableContainer } from './ExpandableContainer'
 
 export interface ModalContainerData<
     T extends string,
@@ -58,14 +59,11 @@ const ModalContainer = <T extends string>(props: ModalContainerData<T>) => {
                                     : 'pointer-events-none fixed opacity-0'
                             } `}
                         >
-                            <div
-                                class={`grid transition-all duration-500 ease-in-out ${isVisible() ? 'grid-rows-[1fr] delay-300' : 'grid-rows-[0fr]'}`}
-                            >
-                                {/*If modals cause lag then wrap in show component here*/}
+                            <ExpandableContainer expanded={isVisible()}>
                                 <div class="flex max-w-4xl items-center justify-center overflow-hidden">
                                     {item.content}
                                 </div>
-                            </div>
+                            </ExpandableContainer>
                         </div>
                     )
                 }}

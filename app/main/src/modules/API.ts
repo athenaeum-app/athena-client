@@ -11,12 +11,15 @@ import { MAX_BACKUP_COUNT, MAX_BACKUP_SIZE_IN_MB } from './Settings'
 const backupsFolderName = 'backups'
 const devDataFileName = 'dev_athena_data.json'
 const prodDataFileName = 'athena_data.json'
+const settingsFileName = 'settings.json'
 const devDataFilePath = () =>
     path.join(app.getPath('userData'), devDataFileName)
 const prodDataFilePath = () =>
     path.join(app.getPath('userData'), prodDataFileName)
 const backupsFolderPath = () =>
     path.join(app.getPath('userData'), backupsFolderName)
+const settingsFilePath = () =>
+    path.join(app.getPath('userData'), settingsFileName)
 
 const getDataPath = () => {
     if (process.env.DEV) {
@@ -443,5 +446,35 @@ export const Api: IPC_API = {
         sessionCache[url] = scrapePromise
 
         return scrapePromise
+    },
+
+    // Settings
+    readSettings: () => {
+        try {
+            const targetPath = settingsFilePath()
+            if (!fs.existsSync(targetPath)) {
+                return {}
+            }
+            const raw = fs.readFileSync(targetPath, 'utf-8')
+            return JSON.parse(raw)
+        } catch (error) {
+            console.warn('Failed to read settings.json:', error)
+            return {}
+        }
+    },
+    writeSettings: (settingsData: any) => {
+        try {
+            const targetPath = settingsFilePath()
+            const bufferPath = targetPath + '.tmp'
+            console.log(`Attempting to save settings to ${targetPath}..`)
+
+            const formattedData = JSON.stringify(settingsData, null, 2)
+            fs.writeFileSync(bufferPath, formattedData, 'utf-8')
+            fs.renameSync(bufferPath, targetPath)
+
+            console.log('Settings saved!')
+        } catch (error) {
+            console.error('Failed to save settings data:', error)
+        }
     },
 }

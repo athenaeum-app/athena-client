@@ -6,66 +6,130 @@
     font-size: var(--text-xl);
 }
 
-.material-symbols-outlined,
-.material-icons :hover {
+.material-symbols-outlined:hover,
+.material-icons:hover {
     color: var(--color-icon-hover);
 }
 
+.disable-animations,
+.disable-animations *,
+.disable-animations *::before,
+.disable-animations *::after {
+    animation: none !important;
+    transition: none !important;
+}
+
+:root,
+[data-theme='dark'] {
+    --theme-bg: var(--color-slate-900);
+    --theme-element-matte: var(--color-slate-950);
+    --theme-element-accent: var(--color-slate-800);
+    --theme-element-lighter: var(--color-slate-900);
+
+    --theme-text-main: var(--color-slate-300);
+    --theme-text-sub: var(--color-slate-500);
+    --theme-plain: var(--color-white);
+
+    --theme-highlight: var(--color-cyan-500);
+    --theme-highlight-alt: var(--color-pink-500);
+}
+
+[data-theme='light'] {
+    --theme-bg: var(--color-slate-50);
+    --theme-element-matte: var(--color-white);
+    --theme-element-accent: var(--color-slate-200);
+    --theme-element-lighter: var(--color-slate-100);
+
+    --theme-text-main: var(--color-slate-800);
+    --theme-text-sub: var(--color-slate-500);
+    --theme-plain: var(--color-black);
+
+    --theme-highlight: var(--color-cyan-600); /* Slightly darker for contrast */
+    --theme-highlight-alt: var(--color-pink-600);
+}
+
+[data-theme='neutral'] {
+    --theme-bg: #000000;
+    --theme-element-matte: #111111;
+    --theme-element-accent: #222222;
+    --theme-element-lighter: #1a1a1a;
+
+    --theme-text-main: var(--color-slate-300);
+    --theme-text-sub: var(--color-slate-500);
+    --theme-plain: var(--color-white);
+
+    --theme-highlight: var(--color-cyan-500);
+    --theme-highlight-alt: var(--color-pink-500);
+}
+
 @theme {
-    --color-element-matte: var(--color-slate-950);
+    --color-background: var(--theme-bg);
+    --color-element-matte: var(--theme-element-matte);
+
     --color-element: color-mix(
         in srgb,
-        var(--color-slate-950) 50%,
+        var(--theme-element-matte) 50%,
         transparent
     );
-    --color-dark: var(--color-slate-800);
     --color-element-lighter: color-mix(
         in srgb,
-        var(--color-slate-900) 30%,
+        var(--theme-element-lighter) 30%,
         transparent
     );
+
+    --color-dark: var(--theme-element-accent);
+    --color-element-accent: var(--theme-element-accent);
     --color-element-accent-highlight: var(--color-slate-400);
-    --color-highlight-matte: var(--color-cyan-500);
+
+    /* Highlights */
+    --color-highlight-matte: var(--theme-highlight);
     --color-highlight: color-mix(
         in srgb,
-        var(--color-cyan-500) 20%,
+        var(--theme-highlight) 20%,
         transparent
     );
     --color-highlight-strong: color-mix(
         in srgb,
-        var(--color-cyan-500) 80%,
+        var(--theme-highlight) 80%,
         transparent
     );
-    --color-highlight-strongest: color-mix(
-        in srgb,
-        var(--color-cyan-500) 100%,
-        transparent
-    );
+    --color-highlight-strongest: var(--theme-highlight);
+
+    /* Alt Highlights */
     --color-highlight-alt: color-mix(
         in srgb,
-        var(--color-pink-500) 20%,
+        var(--theme-highlight-alt) 20%,
         transparent
     );
     --color-highlight-alt-strong: color-mix(
         in srgb,
-        var(--color-pink-500) 80%,
+        var(--theme-highlight-alt) 80%,
         transparent
     );
-    --color-highlight-alt-strongest: color-mix(
-        in srgb,
-        var(--color-pink-500) 100%,
-        transparent
-    );
-    --color-background: var(--color-slate-900);
-    --color-main: var(--color-slate-300);
+    --color-highlight-alt-strongest: var(--theme-highlight-alt);
+
+    /* Text */
+    --color-main: var(--theme-text-main);
+    --color-sub: var(--theme-text-sub);
+    --color-plain: var(--theme-plain);
+
     --color-icon: var(--color-highlight-alt-strong);
     --color-icon-hover: var(--color-highlight-alt-strongest);
-    --color-sub: var(--color-slate-500);
-    --color-element-accent: var(--color-slate-800);
+
+    /* Status */
     --color-danger: var(--color-red-500);
     --color-warning: var(--color-yellow-500);
     --color-success: var(--color-green-500);
-    --color-plain: var(--color-white);
+}
+
+optgroup {
+    color: var(--color-main);
+    background-color: var(--color-element-accent);
+}
+
+option {
+    background-color: var(--color-element-lighter);
+    color: var(--color-main);
 }
 
 ::-webkit-scrollbar {
@@ -82,6 +146,7 @@
     border: 2px solid transparent;
     background-clip: content-box;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-highlight-strong);
     border-radius: 0.4em;

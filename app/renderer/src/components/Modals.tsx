@@ -25,6 +25,7 @@ import { MomentModal } from './MomentModal'
 import AddLibraryModal from './AddLibraryModal'
 import { ServerLoginModal } from './ServerLoginModal'
 import { DownloadServerModal } from './DownloadServerModal'
+import { AppMenuModal } from './AppMenuModal'
 
 export const Modals = () => {
     createEffect(() => {
@@ -44,6 +45,10 @@ export const Modals = () => {
                 {
                     state_name: 'EDIT_MODAL',
                     content: <MomentCreator />,
+                },
+                {
+                    state_name: 'APP_MENU_MODAL',
+                    content: <AppMenuModal />,
                 },
                 {
                     state_name: 'CONFIRM_MOMENT_DELETE',

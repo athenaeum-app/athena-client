@@ -39,9 +39,11 @@ import {
     generateVibrantColour,
     iterateUrlsInContentParts,
     registerMediaFilter,
+    setAppSettings,
     setDisplayedModal,
 } from './globals'
 import { updateActiveLibrary } from './libraries'
+import type { AppSettings } from './settings'
 
 // Action Queue
 export type ActionType = 'CREATE' | 'UPDATE' | 'DELETE'
@@ -752,5 +754,17 @@ const subtractMediaFiltersFromContent = (contentStr: string) => {
         } else {
             setMediaFilters(baseUrl, 'refCount', newValue)
         }
+    })
+}
+
+// Settings
+export const updateSetting = <K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K],
+) => {
+    setAppSettings((prev) => {
+        const next = { ...prev, [key]: value }
+        getApi().writeSettings(next)
+        return next
     })
 }

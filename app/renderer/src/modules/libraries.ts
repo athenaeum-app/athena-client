@@ -37,17 +37,15 @@ import {
     type LibraryType,
     setLinkPreviewCache,
 } from './store'
-
-let allLibraryDataRef: Record<string, LibraryDataSnapshot> = {}
-export const [canSave, setCanSave] = createSignal<boolean>(false)
-let isInitialized = false
+import { isInitialized } from './boot'
+import { allLibraryDataRef, canSave, setCanSave } from './globals'
 
 export const copyLibraryData = (sourceId: string, targetId: string) => {
-    if (allLibraryDataRef[sourceId]) {
+    if (allLibraryDataRef()[sourceId]) {
         // Only copy if the target doesn't already have data
-        if (!allLibraryDataRef[targetId]) {
-            allLibraryDataRef[targetId] = structuredClone(
-                allLibraryDataRef[sourceId],
+        if (!allLibraryDataRef()[targetId]) {
+            allLibraryDataRef()[targetId] = structuredClone(
+                allLibraryDataRef()[sourceId],
             )
         }
     }
@@ -77,9 +75,9 @@ export const downloadNewLibrary = () => {
             type: 'local' as LibraryType,
         }
 
-        const currentData = allLibraryDataRef[activeLibraryId()]
+        const currentData = allLibraryDataRef()[activeLibraryId()]
         if (currentData) {
-            allLibraryDataRef[newId] = structuredClone(currentData)
+            allLibraryDataRef()[newId] = structuredClone(currentData)
         }
 
         batch(() => {
@@ -103,8 +101,8 @@ export const deleteLibraryData = (libId: string) => {
 
     setLibraries((libs) => libs.filter((l) => l.id !== libId))
 
-    if (allLibraryDataRef[libId]) {
-        delete allLibraryDataRef[libId]
+    if (allLibraryDataRef()[libId]) {
+        delete allLibraryDataRef()[libId]
     }
 
     if (activeLibraryId() === libId) {
@@ -134,14 +132,14 @@ export const getLibraryFromId = (libId: string) =>
 export const getCurrentLibrary = () => getLibraryFromId(activeLibraryId())
 
 // Switch to the new library and load its data
-const switchToLibraryFromId = async (libId: string) => {
+export const switchToLibraryFromId = async (libId: string) => {
     try {
         if (!libId) return
         setSwitchingLibrary(true)
         setCanSave(false)
         const currentLib = getLibraryFromId(libId)
 
-        let localCache = allLibraryDataRef[libId]
+        let localCache = allLibraryDataRef()[libId]
         if (!localCache) {
             localCache = {
                 archives: {},
@@ -190,7 +188,7 @@ const switchToLibraryFromId = async (libId: string) => {
             }
         }
 
-        allLibraryDataRef[libId] = localCache
+        allLibraryDataRef()[libId] = localCache
         const libData = structuredClone(localCache)
 
         const newArchives = libData.archives as Record<ArchiveId, Archive>
@@ -235,37 +233,6 @@ const switchToLibraryFromId = async (libId: string) => {
     }
 }
 
-// Boot loader
-const loadData = async () => {
-    setCanSave(false)
-    isInitialized = false
-    const api = getApi()
-    let rawData: DataSnapshot = {} as DataSnapshot
-
-    if (api && api.readData) {
-        const migratedData = await migrateOldData()
-        const readData = await api.readData()
-        rawData = migratedData ?? readData
-    }
-
-    const loadedCache = rawData.linkPreviewCache ?? {}
-    setLinkPreviewCache(loadedCache)
-
-    allLibraryDataRef = rawData.libraryData ?? {}
-    const savedLibraries: Library[] = rawData.libraries ?? [
-        { id: 'local-default', name: 'My Library', type: 'local' },
-    ]
-    setLibraries(savedLibraries)
-
-    const savedActiveId = rawData.activeLibraryId ?? savedLibraries[0]?.id ?? ''
-    setActiveLibraryId(savedActiveId)
-    if (savedActiveId) switchToLibraryFromId(savedActiveId)
-
-    isInitialized = true
-}
-
-loadData()
-
 const createDebounce = (callback: (...args: any[]) => any, ms: number) => {
     let timer: number | undefined
     return (...args: any[]) => {
@@ -294,7 +261,7 @@ createRoot(() => {
         if (!canSave()) return
 
         if (currentId) {
-            allLibraryDataRef[currentId] = {
+            allLibraryDataRef()[currentId] = {
                 archives: currentArchives,
                 moments: structuredClone(unwrap(allMoments)),
                 tags: structuredClone(unwrap(allTags)),
@@ -303,8 +270,8 @@ createRoot(() => {
 
         const cleanedLibraryData: Record<string, LibraryDataSnapshot> = {}
         currentLibs.forEach((lib) => {
-            if (allLibraryDataRef[lib.id]) {
-                cleanedLibraryData[lib.id] = allLibraryDataRef[lib.id]
+            if (allLibraryDataRef()[lib.id]) {
+                cleanedLibraryData[lib.id] = allLibraryDataRef()[lib.id]
             }
         })
 
@@ -333,7 +300,7 @@ export const setActiveLibraryId = (newId: string) => {
     if (newId === currentId) return
 
     if (currentId && canSave()) {
-        allLibraryDataRef[currentId] = {
+        allLibraryDataRef()[currentId] = {
             archives: archives(),
             moments: structuredClone(unwrap(allMoments)),
             tags: structuredClone(unwrap(allTags)),
@@ -342,12 +309,12 @@ export const setActiveLibraryId = (newId: string) => {
 
     setCanSave(false)
     _setActiveLibraryId(newId)
-    if (isInitialized && newId) switchToLibraryFromId(newId)
+    if (isInitialized() && newId) switchToLibraryFromId(newId)
 }
 
 export const initializeNewLibrary = (libId: string) => {
-    if (allLibraryDataRef[libId]) return
-    allLibraryDataRef[libId] = {
+    if (allLibraryDataRef()[libId]) return
+    allLibraryDataRef()[libId] = {
         archives: {
             [defaultArchiveId]: {
                 uuid: defaultArchiveId,

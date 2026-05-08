@@ -35,6 +35,10 @@ const handleKeyPress = (event: KeyboardEvent) => {
     if (!isTyping && !isModifier && event.key.toLowerCase() === 'escape') {
         setDisplayedModal('NONE')
     }
+
+    if (isModifier && event.key.toLowerCase() === 'm' && !event.shiftKey) {
+        setDisplayedModal('APP_MENU_MODAL')
+    }
 }
 
 export const initShortcuts = () => {

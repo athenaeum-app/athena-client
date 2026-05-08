@@ -1,0 +1,22 @@
+export interface AppSettings {
+    uiScale: number
+    fontFamily: string
+
+    enableTransitions: boolean
+    transitionDuration: 'fast' | 'normal' | 'slow'
+
+    activeTheme: 'light' | 'dark' | 'neutral' | string
+
+    autoBackupEnabled: boolean
+    maxBackupSizeMB: number
+}
+
+export const defaultSettings: AppSettings = {
+    uiScale: 100,
+    fontFamily: 'Inter, sans-serif',
+    enableTransitions: true,
+    transitionDuration: 'normal',
+    activeTheme: 'dark',
+    autoBackupEnabled: true,
+    maxBackupSizeMB: 500,
+}

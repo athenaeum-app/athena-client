@@ -19,6 +19,8 @@ export const IpcApi = {
         _: ArrayBuffer,
         __: string,
     ): Promise<string | undefined> => '',
+    readSettings: () => ({}) as any,
+    writeSettings: (_: any) => {},
 }
 
 export type IPC_API = typeof IpcApi

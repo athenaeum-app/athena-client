@@ -50,8 +50,8 @@ export const ServerLoginModal: Component = () => {
     }
 
     return (
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div class="bg-element border-element-accent flex w-[400px] flex-col gap-4 rounded-xl border p-6 shadow-2xl">
+        <div class="inset-0 flex items-center justify-center">
+            <div class="bg-element border-element-accent flex w-100 flex-col gap-4 rounded-xl border p-6 shadow-2xl">
                 <div class="flex flex-col gap-1">
                     <h2 class="text-main text-lg font-black tracking-wide">
                         Session Expired
