@@ -81,7 +81,7 @@ export const MomentCreator: Component<
         const suggestedTags: Array<Tag> = []
         for (const tagData of allTagDatas) {
             if (
-                tagData.name.startsWith(currentTypedTag) &&
+                tagData.name.includes(currentTypedTag) &&
                 !currentTypedTags.includes(tagData.name)
             ) {
                 suggestedTags.push(tagData)
@@ -327,7 +327,9 @@ export const MomentCreator: Component<
 
                         <Show
                             when={
-                                (title() != '' || content() != '') &&
+                                (title() != '' ||
+                                    content() != '' ||
+                                    tagsString().length > 0) &&
                                 getSuggestableTags().length > 0 &&
                                 !props.hide
                             }

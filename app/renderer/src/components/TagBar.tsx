@@ -44,7 +44,7 @@ export const TagBar: Component = () => {
     })
 
     return (
-        <div class="bg-element z-10 flex w-full flex-wrap items-center justify-center gap-2 p-2 backdrop-blur-md transition-all lg:p-6">
+      <div class="bg-element z-10 flex w-full flex-wrap items-center justify-center gap-2 p-2 backdrop-blur-md transition-all lg:p-6">
             <span class="text-sub text-xs font-black tracking-widest uppercase">
                 Selected Tags:
             </span>
