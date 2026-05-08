@@ -1,13 +1,29 @@
-const { app, BrowserWindow } = require('electron/main')
+import { onCleanup } from 'solid-js'
+import { setIsSearching } from '../components/Feed'
+import { setDisplayedModal } from './globals'
 
-app.whenReady().then(() => {
-    const win = new BrowserWindow()
+const handleKeyPress = (event: KeyboardEvent) => {
+    const activeElement = window.document.activeElement
+    const isTyping =
+        activeElement?.tagName === 'INPUT' ||
+        activeElement?.tagName === 'TEXTAREA'
 
-    win.loadFile('index.html')
-    win.webContents.on('before-input-event', (event, input) => {
-        if (input.control && input.key.toLowerCase() === 'i') {
-            console.log('Pressed Control+I')
-            event.preventDefault()
-        }
+    const isModifier = event.ctrlKey || event.metaKey
+
+    if (isModifier && event.key.toLowerCase() === 'f' && !event.shiftKey) {
+        console.log('Searching')
+        event.preventDefault()
+        setIsSearching(true)
+    }
+
+    if (!isModifier && event.key.toLowerCase() === 'escape') {
+        setDisplayedModal('NONE')
+    }
+}
+
+export const initShortcuts = () => {
+    window.addEventListener('keydown', handleKeyPress)
+    onCleanup(() => {
+        window.removeEventListener('keydown', handleKeyPress)
     })
-})
+}

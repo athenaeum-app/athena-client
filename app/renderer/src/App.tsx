@@ -9,31 +9,36 @@ import { Modals } from './components/Modals'
 import * as json from '../../../package.json'
 import './modules/pdfjs'
 import { activeLibraryId } from './modules/store'
+import { initShortcuts } from './modules/shortcuts'
 
-const App: Component = () => (
-    <>
-        <Modals />
-        <div class="bg-background text-main flex h-screen flex-col">
-            <header
-                style="-webkit-app-region: drag"
-                class="bg-element m-0 flex shrink-0 items-center justify-center py-2"
-            >
-                <h1 class="text-2xl font-black tracking-tight">
-                    Athena v{json.version}
-                    {`${import.meta.env.DEV ? ' [DEV BUILD]' : ' '}`}
-                </h1>
-            </header>
-            <Line class="bg-element-accent h-0.5 w-full" />
-            <Show when={activeLibraryId()}>
-                <TagBar />
-            </Show>
-            <div class="flex flex-1 justify-center overflow-hidden pt-6">
-                <div class="h-full w-[95%]">
-                    <Display />
+const App: Component = () => {
+    initShortcuts()
+
+    return (
+        <>
+            <Modals />
+            <div class="bg-background text-main flex h-screen flex-col">
+                <header
+                    style="-webkit-app-region: drag"
+                    class="bg-element m-0 flex shrink-0 items-center justify-center py-2"
+                >
+                    <h1 class="text-2xl font-black tracking-tight">
+                        Athena v{json.version}
+                        {`${import.meta.env.DEV ? ' [DEV BUILD]' : ' '}`}
+                    </h1>
+                </header>
+                <Line class="bg-element-accent h-0.5 w-full" />
+                <Show when={activeLibraryId()}>
+                    <TagBar />
+                </Show>
+                <div class="flex flex-1 justify-center overflow-hidden pt-6">
+                    <div class="h-full w-[95%]">
+                        <Display />
+                    </div>
                 </div>
             </div>
-        </div>
-    </>
-)
+        </>
+    )
+}
 
 export default App

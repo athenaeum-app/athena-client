@@ -1,4 +1,4 @@
-import { createSignal, For, Show, type Component } from 'solid-js'
+import { createSignal, For, Show, type Component, createEffect } from 'solid-js'
 import { Moment } from './Moment'
 import { MomentCreator } from './MomentCreator'
 import {
@@ -20,10 +20,17 @@ const fullDisplayClasses =
     'flex h-full w-full flex-col items-center gap-4 rounded-xl'
 
 const gridDisplayClasses = 'grid grid-cols-4 gap-2'
+export const [isSearching, setIsSearching] = createSignal(false)
 
 export const Feed: Component = () => {
     let searchBarRef: HTMLInputElement | undefined
-    const [isSearching, setIsSearching] = createSignal(false)
+    createEffect(() => {
+        if (isSearching()) {
+            if (searchBarRef) {
+                searchBarRef.focus()
+            }
+        }
+    })
     return (
         <div class="bg-element pt flex w-full items-center justify-center gap-2 overflow-x-hidden rounded-xl p-2 lg:p-4">
             <div class={'flex h-full w-[90%] flex-col items-center gap-4'}>
@@ -31,9 +38,6 @@ export const Feed: Component = () => {
                     <i
                         onClick={() => {
                             setIsSearching(true)
-                            if (searchBarRef) {
-                                searchBarRef.focus()
-                            }
                         }}
                         hidden={isSearching()}
                         class="fa-solid text-icon fa-magnifying-glass hover:cursor-pointer"
@@ -41,7 +45,7 @@ export const Feed: Component = () => {
                     <input
                         ref={searchBarRef}
                         onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                            if (e.key === 'Enter' || e.key === 'Escape') {
                                 setIsSearching(false)
                             }
                         }}
