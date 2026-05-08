@@ -16,7 +16,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
         setIsSearching(true)
     }
 
-    if (!isModifier && event.key.toLowerCase() === 'escape') {
+    if (!isTyping && !isModifier && event.key.toLowerCase() === 'escape') {
         setDisplayedModal('NONE')
     }
 }
