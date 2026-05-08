@@ -9,7 +9,7 @@ import { downloadNewLibrary } from '../modules/libraries'
 
 export const DownloadServerModal: Component = (props) => {
     return (
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div class="bg-element border-element-accent w-full max-w-sm rounded-xl border p-5 shadow-xl">
                 <h3 class="text-main mb-2 text-lg font-bold">
                     Create Local Copy
