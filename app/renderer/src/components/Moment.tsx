@@ -10,7 +10,6 @@ import {
     type ComponentProps,
 } from 'solid-js'
 import { Line } from './Line'
-import { LinkPreview } from './LinkPreview'
 import { FILE_REF_REGEX, URL_REGEX } from '../modules/regex'
 import {
     archives,
@@ -24,9 +23,7 @@ import {
     setMomentToDelete,
     getCurrentLibrary,
     serverRole,
-    jwtToken,
 } from '../modules/data'
-import { FilePreview } from './FilePreview'
 import {
     displayedModal,
     animatedIconClasses,
@@ -39,6 +36,7 @@ import {
     setDisplayedMomentModalId,
     displayedMomentModalId,
 } from '../modules/globals'
+import { AttachmentPreview } from './AttachmentPreview'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
@@ -205,11 +203,11 @@ export const Moment: Component<MomentProps> = (props) => {
                     <div class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
                         <For each={contentParts()}>
                             {(text) => {
-                                if (text.match(FILE_REF_REGEX)) {
-                                    return <FilePreview uri={text} />
-                                }
-                                if (text.match(URL_REGEX)) {
-                                    return <LinkPreview url={text} />
+                                if (
+                                    text.match(FILE_REF_REGEX) ||
+                                    text.match(URL_REGEX)
+                                ) {
+                                    return <AttachmentPreview link={text} />
                                 }
                                 return (
                                     <span

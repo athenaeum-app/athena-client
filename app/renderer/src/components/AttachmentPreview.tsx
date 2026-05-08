@@ -1,0 +1,411 @@
+import {
+    createMemo,
+    createResource,
+    createSignal,
+    Match,
+    onCleanup,
+    onMount,
+    Show,
+    Switch,
+    type Component,
+    type ComponentProps,
+} from 'solid-js'
+import { getApi } from '../modules/ipc_client'
+import {
+    FILE_REF_REGEX,
+    URL_DOMAIN_REGEX,
+    URL_MAIN_DOMAIN_REGEX,
+    URL_REGEX,
+    YOUTUBE_ID_REGEX,
+} from '../modules/regex'
+import {
+    linkPreviewCache,
+    setInspectingImage,
+    setLinkPreviewCache,
+} from '../modules/data'
+import {
+    fixedIconClasses,
+    imageExtensions,
+    maxImageHeight,
+    rootMarginPixels,
+    setDisplayedModal,
+    siteMap,
+} from '../modules/globals'
+import { LocalPDFPreview } from './PDFPreview'
+
+interface AttachmentPreviewProps extends ComponentProps<'div'> {
+    link: string
+}
+
+export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
+    // Common
+    const isFile = () => props.link.match(FILE_REF_REGEX)
+    const isURL = () => props.link.match(URL_REGEX)
+    const isPDF = () => {
+        return !!props.link.match(/\.(pdf)(\?.*)?$/i)
+    }
+    // URL
+    let containerRef: HTMLDivElement | undefined
+    const [inView, setInView] = createSignal<boolean>(false)
+
+    const cleanUrl = () => (props.link || '').trim()
+
+    const isDirectMedia = (url: string) => {
+        if (!url) return false
+        return (
+            url.startsWith('blob:') ||
+            url.startsWith('file://') ||
+            url.startsWith('athena://') ||
+            url.includes('/uploads/') ||
+            !!url.match(
+                /\.(jpeg|jpg|gif|png|webp|svg|heic|mp4|webm|mov|ogg)(\?.*)?$/i,
+            )
+        )
+    }
+
+    const isVideoFile = (url: string) => {
+        return !!url.match(/\.(mp4|webm|mov|ogg)(\?.*)?$/i)
+    }
+
+    onMount(() => {
+        const viewObserver = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setInView(true)
+                } else {
+                    setInView(false)
+                }
+            },
+            { rootMargin: `${rootMarginPixels}px` },
+        )
+        if (containerRef) viewObserver.observe(containerRef)
+        onCleanup(() => viewObserver.disconnect())
+    })
+
+    const [websiteData] = createResource(
+        () => (inView() ? cleanUrl() : null),
+        async (url) => {
+            console.log('Attempting to get data for: ', url)
+            const cache = linkPreviewCache()
+            let forceScrape = false
+
+            if (isDirectMedia(url)) {
+                console.log('Is raw media!')
+                let displayTitle = 'Media File'
+                let displayLink = 'Local Media'
+
+                if (url.startsWith('blob:')) {
+                    displayLink = 'Local Unsaved Blob'
+                } else if (url.includes('/uploads/')) {
+                    displayLink = 'Athena Server'
+                    const filename = url.split('/').pop() || 'Media'
+                    displayTitle = filename.includes('_')
+                        ? filename.split('_').slice(1).join('_')
+                        : filename
+                }
+
+                const isVideo = isVideoFile(url)
+
+                return {
+                    title: displayTitle,
+                    siteLink: displayLink,
+                    image: isVideo ? '' : url,
+                    description: '',
+                    video: isVideo ? url : '',
+                }
+            }
+
+            if (cache && cache[url]) {
+                const cachedData = cache[url]
+                if (cachedData.image == '' && cachedData.video == '') {
+                    forceScrape = true
+                    console.warn(
+                        `Cached data for ${url} has no image or video. Ignoring cached data.`,
+                    )
+                } else {
+                    console.log('Loading cached data for link preview.')
+                    return cache[url]
+                }
+            }
+
+            const api = getApi()
+            if (!api) {
+                console.log(`No api found. Returning`)
+                return null
+            }
+            console.log(`Attempting to scrape ${url}`)
+            const result = await api.scrapeWebsiteData(url, forceScrape)
+            setLinkPreviewCache((prev) => ({
+                ...prev,
+                [url]: result,
+            }))
+            return result
+        },
+    )
+
+    const getVideoLink = (url: string) => {
+        const match = url.match(YOUTUBE_ID_REGEX)
+        const id = match?.groups?.id
+
+        if (!match || !id) {
+            return null
+        }
+
+        return `https://www.youtube-nocookie.com/embed/${id}?autoplay=0`
+    }
+
+    const filterTitle = (title?: string) => {
+        let name = title
+        for (const { target, replaceWith } of siteMap) {
+            if (!name) return ''
+            if (name.toLowerCase().match(target.toLowerCase())) {
+                name = replaceWith
+            }
+        }
+
+        const match =
+            title?.match(URL_MAIN_DOMAIN_REGEX) ||
+            title?.match(URL_DOMAIN_REGEX)
+
+        if (match?.groups?.domain) {
+            const domainName =
+                match.groups.domain.charAt(0).toUpperCase() +
+                match.groups.domain.slice(1)
+            if (domainName) return domainName
+        }
+
+        return name || ''
+    }
+
+    const videoLink = () => getVideoLink(cleanUrl())
+
+    const hasMediaData = () => {
+        return websiteData() && (websiteData()?.image || websiteData()?.video)
+    }
+
+    // File
+    const extension = createMemo(
+        () => props.link.split('.').pop()?.toLowerCase() || '',
+    )
+    const isImage = createMemo(() => {
+        return imageExtensions.includes(extension())
+    })
+
+    const [fileName] = createResource(() =>
+        getApi().getFileNameFromURI(props.link),
+    )
+
+    return (
+        <Switch>
+            <Match when={isFile()}>
+                <div>
+                    <div class="group bg-highlight border-sub hover:border-highlight-strongest flex w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300">
+                        <Switch
+                            fallback={
+                                <div
+                                    onClick={() =>
+                                        getApi().openFileFromURI(props.link)
+                                    }
+                                    class="group flex w-full items-center justify-between gap-2 p-2 group-hover:cursor-pointer"
+                                >
+                                    <span class="text-highlight-alt-strong text-lg font-black">
+                                        File
+                                    </span>
+                                    <span class="text-highlight-strong text-xs font-bold">
+                                        {fileName()}
+                                    </span>
+                                </div>
+                            }
+                        >
+                            <Match when={isImage()}>
+                                <div
+                                    class="hover:cursor-pointer"
+                                    onClick={() => {
+                                        getApi().openFileFromURI(props.link)
+                                    }}
+                                >
+                                    <div class="flex w-full flex-col gap-2 p-2">
+                                        <span class="text-highlight-alt-strong text-lg font-black">
+                                            Local Image
+                                        </span>
+                                        <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+                                            <div
+                                                class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
+                                                style={{
+                                                    'background-image': `url(${props.link || ''})`,
+                                                    'background-size':
+                                                        'contain',
+                                                    'background-position':
+                                                        'center',
+                                                }}
+                                            />
+                                            <img
+                                                src={props.link}
+                                                class={`bg-element z-10 ${maxImageHeight()} w-full rounded object-contain hover:cursor-pointer`}
+                                            ></img>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Match>
+                            <Match when={isPDF()}>
+                                <div
+                                    class="hover:cursor-pointer"
+                                    onClick={() => {
+                                        getApi().openFileFromURI(props.link)
+                                    }}
+                                >
+                                    <LocalPDFPreview url={props.link} />
+                                </div>
+                            </Match>
+                        </Switch>
+                    </div>
+                </div>
+            </Match>
+            <Match when={isURL()}>
+                <div
+                    ref={containerRef}
+                    class={`bg-highlight border-sub hover:border-highlight-strongest flex ${hasMediaData() ? 'min-h-20 p-2' : 'p-1'} w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300`}
+                >
+                    <Show
+                        when={hasMediaData() && inView()}
+                        fallback={
+                            <div
+                                onClick={() =>
+                                    getApi().openExternalBrowser(cleanUrl())
+                                }
+                                class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border p-2 hover:cursor-pointer"
+                            >
+                                <div class="flex w-full justify-between gap-2">
+                                    <span class="text-highlight-strong group font-black break-all">
+                                        {websiteData()?.title || cleanUrl()}
+                                    </span>
+                                    <span class="text-element-accent-highlight group font-black">
+                                        No Media Data
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    >
+                        <div class="flex justify-between">
+                            <div class="flex min-w-0 items-center gap-3 pr-2">
+                                <Show
+                                    when={!isDirectMedia(cleanUrl())}
+                                    fallback={
+                                        <div class="bg-element text-sub flex h-5 w-5 items-center justify-center rounded text-lg">
+                                            <i
+                                                class={
+                                                    fixedIconClasses +
+                                                    (isVideoFile(cleanUrl())
+                                                        ? 'fa-file-video'
+                                                        : 'fa-image')
+                                                }
+                                            />
+                                        </div>
+                                    }
+                                >
+                                    <img
+                                        class={`bg-element ${maxImageHeight()} rounded object-contain`}
+                                        src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${cleanUrl()}`}
+                                    />
+                                </Show>
+                                <span class="text-highlight-alt-strong flex-1 truncate text-lg font-black">
+                                    {filterTitle(websiteData()?.title)}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() =>
+                                    getApi().openExternalBrowser(cleanUrl())
+                                }
+                                class="hover:text-highlight-strongest text-highlight-strong text-md wrap-break-all max-w-sm text-right font-black tracking-widest transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
+                            >
+                                {(() => {
+                                    const basic = websiteData()
+                                        ?.siteLink.match(URL_MAIN_DOMAIN_REGEX)
+                                        ?.at(0)
+                                    if (basic) {
+                                        return basic
+                                    }
+                                    return websiteData()?.siteLink || ''
+                                })()}
+                            </button>
+                        </div>
+                        <Switch>
+                            <Match when={isPDF()}>
+                                <LocalPDFPreview
+                                    url={cleanUrl()}
+                                ></LocalPDFPreview>
+                            </Match>
+                            <Match when={!videoLink() && !websiteData()?.video}>
+                                <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+                                    <div
+                                        class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
+                                        style={{
+                                            'background-image': `url(${websiteData()?.image || ''})`,
+                                            'background-size': 'contain',
+                                            'background-position': 'center',
+                                        }}
+                                    />
+                                    <img
+                                        onClick={() => {
+                                            if (websiteData()?.image) {
+                                                setInspectingImage(
+                                                    websiteData()?.image,
+                                                )
+                                                setDisplayedModal(
+                                                    'IMAGE_INSPECT_MODAL',
+                                                )
+                                            }
+                                        }}
+                                        class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
+                                        src={`${websiteData()?.image || ''}`}
+                                    />
+                                </div>
+                            </Match>
+                            <Match when={videoLink() || websiteData()?.video}>
+                                {(link) => {
+                                    const videoSource = websiteData()?.video
+                                    if (videoSource && !videoLink()) {
+                                        return (
+                                            <video
+                                                ref={(video) =>
+                                                    (video.volume = 0.1)
+                                                }
+                                                class="aspect-video w-full rounded"
+                                                controls
+                                            >
+                                                <source src={videoSource} />
+                                                Your browser does not support
+                                                the video tag.
+                                            </video>
+                                        )
+                                    }
+                                    if (videoLink()) {
+                                        console.log(
+                                            `Displaying ${link()} as iframe.`,
+                                        )
+                                        return (
+                                            <iframe
+                                                loading="lazy"
+                                                class="aspect-video h-full w-full"
+                                                src={link() as string}
+                                                title="YouTube video player"
+                                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                referrerpolicy="strict-origin-when-cross-origin"
+                                                allowfullscreen
+                                            ></iframe>
+                                        )
+                                    }
+                                }}
+                            </Match>
+                        </Switch>
+                        <Show when={websiteData()?.description}>
+                            <div class="flex justify-between">
+                                <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>
+                            </div>
+                        </Show>
+                    </Show>
+                </div>
+            </Match>
+        </Switch>
+    )
+}

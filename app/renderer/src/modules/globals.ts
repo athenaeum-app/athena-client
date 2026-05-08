@@ -241,3 +241,13 @@ export const imageExtensions = [
     'webp',
     'avif',
 ]
+
+export const siteMap: Array<{
+    target: string
+    replaceWith: string
+}> = [
+    {
+        target: 'cdn.discordapp.com',
+        replaceWith: 'Discord',
+    },
+]
