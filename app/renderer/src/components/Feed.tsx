@@ -1,4 +1,4 @@
-import { For, Show, type Component } from 'solid-js'
+import { createSignal, For, Show, type Component } from 'solid-js'
 import { Moment } from './Moment'
 import { MomentCreator } from './MomentCreator'
 import {
@@ -10,6 +10,7 @@ import {
 import {
     activeLibraryId,
     serverRole,
+    setSearchQuery,
     shouldBlurLibraryView,
     switchingLibrary,
 } from '../modules/store'
@@ -22,31 +23,56 @@ const fullDisplayClasses =
 const gridDisplayClasses = 'grid grid-cols-4 gap-2'
 
 export const Feed: Component = () => {
-    console.log(activeLibraryId())
+    let searchBarRef: HTMLInputElement | undefined
+    const [isSearching, setIsSearching] = createSignal(false)
     return (
         <div class="bg-element pt flex w-full items-center justify-center gap-2 overflow-x-hidden rounded-xl p-2 lg:p-4">
             <div class={'flex h-full w-[90%] flex-col items-center gap-4'}>
-                <div
-                    class="flex w-full"
-                    onClick={() => {
-                        if (displayType() == 'Full') {
-                            setDisplayType('Grid')
-                        } else {
-                            setDisplayType('Full')
-                        }
-                    }}
-                >
-                    <div class="ml-auto">
-                        <Show
-                            when={displayType() == 'Full'}
-                            fallback={
-                                <span class="material-symbols-outlined hover:cursor-pointer">
-                                    grid_view
-                                </span>
+                <div class="flex w-full items-center gap-2">
+                    <i
+                        onClick={() => {
+                            setIsSearching(true)
+                            if (searchBarRef) {
+                                searchBarRef.focus()
                             }
-                        >
-                            <i class="fa-solid fa-bars text-icon hover:cursor-pointer"></i>
-                        </Show>
+                        }}
+                        hidden={isSearching()}
+                        class="fa-solid text-icon fa-magnifying-glass hover:cursor-pointer"
+                    ></i>
+                    <input
+                        ref={searchBarRef}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                setIsSearching(false)
+                            }
+                        }}
+                        onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                        onFocusOut={() => setIsSearching(false)}
+                        placeholder="Search Moments"
+                        class={`${isSearching() ? 'w-full px-2 py-1' : 'w-0 p-0 opacity-0'} bg-element text-plain/80 border-plain/20 rounded-md border transition-all duration-300 focus:outline-none`}
+                    />
+                    <div
+                        class="ml-auto flex items-center"
+                        onClick={() => {
+                            if (displayType() == 'Full') {
+                                setDisplayType('Grid')
+                            } else {
+                                setDisplayType('Full')
+                            }
+                        }}
+                    >
+                        <div class="ml-auto">
+                            <Show
+                                when={displayType() == 'Full'}
+                                fallback={
+                                    <span class="material-symbols-outlined hover:cursor-pointer">
+                                        grid_view
+                                    </span>
+                                }
+                            >
+                                <i class="fa-solid fa-bars text-icon hover:cursor-pointer"></i>
+                            </Show>
+                        </div>
                     </div>
                 </div>
                 <Show

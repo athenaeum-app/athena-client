@@ -126,6 +126,7 @@ export const [content, setContent] = createSignal<string>('')
 export const [tagsString, setTagsString] = createSignal<string>('')
 
 // Moments
+export const [searchQuery, setSearchQuery] = createSignal<string>('')
 export const [allMoments, setAllMoments] = createStore<
     Record<MomentId, MomentData>
 >({})

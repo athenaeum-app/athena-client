@@ -4,7 +4,9 @@ import {
     allTags,
     dateFilter,
     defaultArchiveId,
+    getActiveLibrary,
     mediaFilters,
+    searchQuery,
     selectedArchiveId,
     selectedTagIds,
     selectedURLFilters,
@@ -38,14 +40,25 @@ export const extractBaseURL = (url: baseUrlString) => {
 export const registerMediaFilter = (url: url) => {
     const match =
         url.match(URL_MAIN_DOMAIN_REGEX) || url.match(URL_DOMAIN_REGEX)
+
     if (match && match.groups) {
         const domainName = match.groups.domain
         const baseUrl = match[0].toLowerCase()
 
+        let nickname = domainName
+
+        if (
+            url
+                .toLowerCase()
+                .includes(getActiveLibrary()?.url?.toLowerCase() || '')
+        ) {
+            nickname = 'Server'
+        }
+
         if (!mediaFilters[baseUrl]) {
             setMediaFilters(baseUrl, {
                 url,
-                nickname: domainName.toUpperCase(),
+                nickname: nickname.toUpperCase(),
                 refCount: 1,
             })
         } else {
@@ -89,9 +102,11 @@ export const sortTags = (tagsToSort: Array<Tag>) => {
 
 export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
     const momentsPool = Object.values(allMoments)
+    const textSearchQuery = searchQuery()
+    const searchKeywords = textSearchQuery ? textSearchQuery.split(/\s+/) : []
     return momentsPool
         .filter((momentData) => {
-            // archive
+            // Archive
             const currentArchiveId = selectedArchiveId()
             const momentArchiveId = momentData.archiveId
 
@@ -104,7 +119,7 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
                 return false
             }
 
-            // tags
+            // Tags
             const currentSelectedTagsIds = selectedTagIds()
             if (currentSelectedTagsIds.length > 0) {
                 for (const selectedTagId of currentSelectedTagsIds) {
@@ -112,7 +127,7 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
                 }
             }
 
-            // timeline
+            // Timeline
             const dateFilters = dateFilter()
             const startTime = dateFilters.start.getTime()
             const endTime = dateFilters.end.getTime()
@@ -134,6 +149,18 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
                         .includes(url.toLowerCase()),
                 )
                 if (!containsURL) return false
+            }
+
+            // Text Content
+            if (searchKeywords.length > 0) {
+                const searchableText =
+                    `${momentData.title} ${momentData.content}`.toLowerCase()
+
+                const matchesSearch = searchKeywords.every((term) =>
+                    searchableText.includes(term),
+                )
+
+                if (!matchesSearch) return false
             }
 
             return true
