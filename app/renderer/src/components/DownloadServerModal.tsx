@@ -7,7 +7,7 @@ import {
 import { setDisplayedModal } from '../modules/globals'
 import { downloadNewLibrary } from '../modules/libraries'
 
-export const DownloadServerModal: Component = (props) => {
+export const DownloadServerModal: Component = () => {
     return (
         <div class="inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div class="bg-element border-element-accent w-full max-w-sm rounded-xl border p-5 shadow-xl">

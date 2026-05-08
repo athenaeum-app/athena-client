@@ -770,7 +770,7 @@ const LibraryItem: Component<{ lib: any }> = (props) => {
 
 export const LibraryBar: Component = () => {
     const activeLib = () => libraries().find((l) => l.id === activeLibraryId())
-    const [isExpanded, setIsExpanded] = createSignal(true)
+    const [isExpanded, setIsExpanded] = createSignal(false)
     return (
         <div
             class={`${isExpanded() ? 'gap-2' : 'gap-0'} bg-element flex flex-col items-center rounded-xl p-4 transition-all duration-300 ease-in-out`}
