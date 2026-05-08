@@ -1,6 +1,10 @@
 import { onCleanup } from 'solid-js'
 import { setIsSearching } from '../components/Feed'
-import { setDisplayedModal } from './globals'
+import { displayType, setDisplayedModal, setDisplayType } from './globals'
+import {
+    isLibraryBarExpanded,
+    setIsLibraryBarExpanded,
+} from '../components/LibraryBar'
 
 const handleKeyPress = (event: KeyboardEvent) => {
     const activeElement = window.document.activeElement
@@ -14,6 +18,18 @@ const handleKeyPress = (event: KeyboardEvent) => {
         console.log('Searching')
         event.preventDefault()
         setIsSearching(true)
+    }
+
+    if (isModifier && event.key.toLowerCase() === 'q' && !event.shiftKey) {
+        setIsLibraryBarExpanded(!isLibraryBarExpanded())
+    }
+
+    if (isModifier && event.key.toLowerCase() === 'g' && !event.shiftKey) {
+        if (displayType() === 'Full') {
+            setDisplayType('Grid')
+        } else {
+            setDisplayType('Full')
+        }
     }
 
     if (!isTyping && !isModifier && event.key.toLowerCase() === 'escape') {

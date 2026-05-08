@@ -29,6 +29,10 @@ export const Feed: Component = () => {
             if (searchBarRef) {
                 searchBarRef.focus()
             }
+        } else {
+            if (searchBarRef) {
+                searchBarRef.blur()
+            }
         }
     })
     return (

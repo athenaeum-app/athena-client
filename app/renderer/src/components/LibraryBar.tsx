@@ -768,17 +768,19 @@ const LibraryItem: Component<{ lib: any }> = (props) => {
     )
 }
 
+export const [isLibraryBarExpanded, setIsLibraryBarExpanded] =
+    createSignal(false)
+
 export const LibraryBar: Component = () => {
     const activeLib = () => libraries().find((l) => l.id === activeLibraryId())
-    const [isExpanded, setIsExpanded] = createSignal(false)
     return (
         <div
-            class={`${isExpanded() ? 'gap-2' : 'gap-0'} bg-element flex flex-col items-center rounded-xl p-4 transition-all duration-300 ease-in-out`}
+            class={`${isLibraryBarExpanded() ? 'gap-2' : 'gap-0'} bg-element flex flex-col items-center rounded-xl p-4 transition-all duration-300 ease-in-out`}
         >
             <span class="text-sub mb-1 text-xs font-bold tracking-widest uppercase">
                 Libraries
             </span>
-            <ExpandableContainer expanded={isExpanded()}>
+            <ExpandableContainer expanded={isLibraryBarExpanded()}>
                 <>
                     <div class="mt-auto flex w-full flex-col gap-3 overflow-hidden transition-all duration-300 ease-in-out">
                         <div class="flex max-h-[20vh] flex-col gap-1 overflow-y-auto">
@@ -808,9 +810,9 @@ export const LibraryBar: Component = () => {
                 </>
             </ExpandableContainer>
             <span
-                onClick={() => setIsExpanded(!isExpanded())}
+                onClick={() => setIsLibraryBarExpanded(!isLibraryBarExpanded())}
                 class="material-symbols-outlined text-xl transition-transform duration-300 ease-in-out hover:cursor-pointer"
-                classList={{ 'rotate-180': isExpanded() }}
+                classList={{ 'rotate-180': isLibraryBarExpanded() }}
             >
                 keyboard_arrow_down
             </span>
