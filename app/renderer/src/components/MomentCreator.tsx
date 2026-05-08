@@ -77,7 +77,9 @@ export const MomentCreator: Component<
         const currentTypedTags = tagsString()
             .split(',')
             .map((tag) => tag.toUpperCase().trim())
+
         const currentTypedTag = currentTypedTags[currentTypedTags.length - 1]
+        const alreadyTypedTags = currentTypedTags.slice(0, -1)
 
         const suggestedTags: Array<Tag> = []
         for (const tagData of allTagDatas) {
@@ -89,7 +91,7 @@ export const MomentCreator: Component<
             }
         }
 
-        return sortTags(suggestedTags)
+        return sortTags(suggestedTags, alreadyTypedTags)
     })
 
     const cleanupCreator = () => {

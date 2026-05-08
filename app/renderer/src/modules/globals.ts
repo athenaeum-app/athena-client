@@ -15,6 +15,7 @@ import {
     type MomentData,
     type MomentId,
     type Tag,
+    type TagId,
     type url,
 } from './store'
 import {
@@ -67,36 +68,49 @@ export const registerMediaFilter = (url: url) => {
     }
 }
 
-export const sortTags = (tagsToSort: Array<Tag>) => {
+export const sortTags = (
+    tagsToSort: Array<Tag>,
+    linkedTagNames: string[] = [],
+) => {
     const currentFilteredMoments = getFilteredMoments()
-    const visibleTagIds = currentFilteredMoments.flatMap((m) => m.tagIds)
     const countMap: Record<string, number> = {}
+    const allTagsData = Object.values(allTags)
 
-    for (const tagId of visibleTagIds) {
-        const tagData = allTags[tagId]
-        if (!tagData) continue
-        if (!countMap[tagData.name]) {
-            countMap[tagData.name] = 1
-        } else {
-            countMap[tagData.name] += 1
+    const linkedTagIds = linkedTagNames
+        .map(
+            (name) =>
+                allTagsData.find((t) => t.name.toUpperCase() === name)?.id,
+        )
+        .filter(Boolean) as TagId[]
+
+    for (const moment of currentFilteredMoments) {
+        const sharesLinkedTag =
+            linkedTagIds.length > 0 &&
+            linkedTagIds.some((id) => moment.tagIds.includes(id))
+
+        for (const tagId of moment.tagIds) {
+            const tagData = allTags[tagId]
+            if (!tagData) continue
+
+            let weight = 1
+
+            if (sharesLinkedTag) {
+                weight += 1000
+            }
+
+            if (!countMap[tagData.name]) {
+                countMap[tagData.name] = weight
+            } else {
+                countMap[tagData.name] += weight
+            }
         }
     }
 
     return [...tagsToSort].sort((a, b) => {
-        const aWeight = countMap[a.name]
-        const bWeight = countMap[b.name]
-        if (aWeight && bWeight) {
-            if (aWeight > bWeight) {
-                return -1
-            } else {
-                return 1
-            }
-        } else if (aWeight) {
-            return -1
-        } else if (bWeight) {
-            return 1
-        }
-        return 0
+        const aWeight = countMap[a.name] || 0
+        const bWeight = countMap[b.name] || 0
+
+        return bWeight - aWeight
     })
 }
 
