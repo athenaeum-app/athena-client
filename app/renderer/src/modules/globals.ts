@@ -215,6 +215,7 @@ export type MODAL_NAMES =
     | 'CONFIRM_LIBRARY_DELETE'
     | 'SERVER_LOGIN_MODAL'
     | 'DOWNLOAD_SERVER_MODAL'
+    | 'IMAGE_INSPECT_MODAL'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')

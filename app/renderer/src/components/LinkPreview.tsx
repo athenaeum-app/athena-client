@@ -1,5 +1,4 @@
 import {
-    createEffect,
     createResource,
     createSignal,
     Match,
@@ -16,11 +15,16 @@ import {
     URL_MAIN_DOMAIN_REGEX,
     YOUTUBE_ID_REGEX,
 } from '../modules/regex'
-import { linkPreviewCache, setLinkPreviewCache } from '../modules/data'
+import {
+    linkPreviewCache,
+    setInspectingImage,
+    setLinkPreviewCache,
+} from '../modules/data'
 import {
     fixedIconClasses,
     maxImageHeight,
     rootMarginPixels,
+    setDisplayedModal,
 } from '../modules/globals'
 import { LocalPDFPreview } from './PDFPreview'
 
@@ -152,11 +156,6 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
         return `https://www.youtube-nocookie.com/embed/${id}?autoplay=0`
     }
 
-    const openDirectImage = (url?: string) => {
-        console.log(`Opening ${url}`)
-        if (url) window.open(url)
-    }
-
     const filterTitle = (title?: string) => {
         let name = title
         for (const { target, replaceWith } of siteMap) {
@@ -265,9 +264,12 @@ export const LinkPreview: Component<LinkPreviewProps> = (props) => {
                                 }}
                             />
                             <img
-                                onClick={() =>
-                                    openDirectImage(websiteData()?.image)
-                                }
+                                onClick={() => {
+                                    if (websiteData()?.image) {
+                                        setInspectingImage(websiteData()?.image)
+                                        setDisplayedModal('IMAGE_INSPECT_MODAL')
+                                    }
+                                }}
                                 class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
                                 src={`${websiteData()?.image || ''}`}
                             />

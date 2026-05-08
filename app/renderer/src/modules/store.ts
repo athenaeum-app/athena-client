@@ -116,6 +116,9 @@ export const syncStatus = () => getActiveLibrary()?.syncStatus || 'synced'
 export const lastSyncTime = () => getActiveLibrary()?.lastSyncTime || 'Never'
 
 // Link Previews
+export const [inspectingImage, setInspectingImage] = createSignal<
+    string | undefined
+>()
 export const [linkPreviewCache, setLinkPreviewCache] = createSignal<
     Record<string, Awaited<ReturnType<typeof IpcApi.scrapeWebsiteData>>>
 >({})

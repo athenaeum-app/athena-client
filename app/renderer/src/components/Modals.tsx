@@ -17,6 +17,7 @@ import {
     setDisplayedModal,
     type MODAL_NAMES,
 } from '../modules/globals'
+import ImageInspectModal from './ImageInspectModal'
 import ConfirmModal from './ConfirmModal'
 import ModalContainer from './ModalContainer'
 import { MomentCreator } from './MomentCreator'
@@ -67,6 +68,10 @@ export const Modals = () => {
                             }}
                         />
                     ),
+                },
+                {
+                    state_name: 'IMAGE_INSPECT_MODAL',
+                    content: <ImageInspectModal />,
                 },
                 {
                     state_name: 'CONFIRM_LIBRARY_DELETE',
