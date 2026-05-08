@@ -19,6 +19,7 @@ import {
     YOUTUBE_ID_REGEX,
 } from '../modules/regex'
 import {
+    InspectImage,
     linkPreviewCache,
     setInspectingImage,
     setLinkPreviewCache,
@@ -28,7 +29,6 @@ import {
     imageExtensions,
     maxImageHeight,
     rootMarginPixels,
-    setDisplayedModal,
     siteMap,
 } from '../modules/globals'
 import { LocalPDFPreview } from './PDFPreview'
@@ -221,7 +221,10 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                 <div
                                     class="hover:cursor-pointer"
                                     onClick={() => {
-                                        getApi().openFileFromURI(props.link)
+                                        const url = props.link
+                                        if (url) {
+                                            InspectImage(url)
+                                        }
                                     }}
                                 >
                                     <div class="flex w-full flex-col gap-2 p-2">
@@ -347,13 +350,9 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
                                     />
                                     <img
                                         onClick={() => {
-                                            if (websiteData()?.image) {
-                                                setInspectingImage(
-                                                    websiteData()?.image,
-                                                )
-                                                setDisplayedModal(
-                                                    'IMAGE_INSPECT_MODAL',
-                                                )
+                                            const url = websiteData()?.image
+                                            if (url) {
+                                                InspectImage(url)
                                             }
                                         }}
                                         class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}

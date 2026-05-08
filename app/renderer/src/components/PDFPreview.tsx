@@ -7,6 +7,8 @@ import {
 } from 'solid-js'
 import * as pdfjs from 'pdfjs-dist'
 import { maxImageHeight } from '../modules/globals'
+import { InspectImage } from '../modules/actions'
+import { setInspectingImageExternalLink } from '../modules/store'
 
 export const LocalPDFPreview: Component<
     ComponentProps<'div'> & {
@@ -62,6 +64,13 @@ export const LocalPDFPreview: Component<
                         }}
                     />
                     <img
+                        onClick={() => {
+                            const imageLink = thumbnail()
+                            if (imageLink) {
+                                InspectImage(imageLink)
+                                setInspectingImageExternalLink(props.url)
+                            }
+                        }}
                         src={thumbnail()}
                         class={`bg-element z-10 ${maxImageHeight()} w-full rounded object-contain shadow-lg hover:cursor-pointer`}
                     />

@@ -30,6 +30,7 @@ import {
     setLibraries,
     setActiveUploadCount,
     getActiveLibrary,
+    setInspectingImage,
 } from './store'
 import {
     extractBaseURL,
@@ -318,6 +319,11 @@ export const deleteArchive = (archiveId: ArchiveId) => {
 }
 
 // MOMENTS
+export const InspectImage = (url: string) => {
+    setInspectingImage(url)
+    setDisplayedModal('IMAGE_INSPECT_MODAL')
+}
+
 export const createMoment = (
     data: Omit<MomentData, 'uuid' | 'timestamp' | 'updated_at'> & {
         timestamp?: Date

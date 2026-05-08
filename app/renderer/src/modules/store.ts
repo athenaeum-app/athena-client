@@ -116,6 +116,8 @@ export const syncStatus = () => getActiveLibrary()?.syncStatus || 'synced'
 export const lastSyncTime = () => getActiveLibrary()?.lastSyncTime || 'Never'
 
 // Link Previews
+export const [inspectingImageExternalLink, setInspectingImageExternalLink] =
+    createSignal<string | undefined>()
 export const [inspectingImage, setInspectingImage] = createSignal<
     string | undefined
 >()
