@@ -41,6 +41,7 @@ import {
     sortTags,
 } from '../modules/globals'
 import { getApi } from '../modules/ipc_client'
+import { ExpandableContainer } from './ExpandableContainer'
 
 const textDisplayClasses =
     'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
@@ -208,9 +209,7 @@ export const MomentCreator: Component<
     }
 
     return (
-        <div
-            class={`grid w-full transition-all duration-500 ease-in-out ${props.hide ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}
-        >
+        <ExpandableContainer expanded={!props.hide}>
             <div class="overflow-hidden">
                 <div
                     class={`flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'border-element-matte grid-rows-[0fr] border-0' : 'bg-element-matte border-highlight-alt grid-rows-[1fr] border p-4'}`}
@@ -425,6 +424,6 @@ export const MomentCreator: Component<
                     </div>
                 </div>
             </div>
-        </div>
+        </ExpandableContainer>
     )
 }

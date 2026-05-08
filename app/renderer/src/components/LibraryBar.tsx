@@ -41,6 +41,7 @@ import {
     isDownloading,
 } from '../modules/data'
 import { LoadingSpinner } from './LoadingSpinner'
+import { ExpandableContainer } from './ExpandableContainer'
 
 const SyncDashboard: Component = () => {
     const [isManualSyncing, setIsManualSyncing] = createSignal(false)
@@ -769,32 +770,50 @@ const LibraryItem: Component<{ lib: any }> = (props) => {
 
 export const LibraryBar: Component = () => {
     const activeLib = () => libraries().find((l) => l.id === activeLibraryId())
-
+    const [isExpanded, setIsExpanded] = createSignal(false)
     return (
-        <div class="bg-element mt-auto flex flex-col gap-3 rounded-xl p-4 transition-all duration-300">
+        <div
+            class={`${isExpanded() ? 'gap-2' : 'gap-0'} bg-element flex flex-col items-center rounded-xl p-4 transition-all duration-300 ease-in-out`}
+        >
             <span class="text-sub mb-1 text-xs font-bold tracking-widest uppercase">
                 Libraries
             </span>
+            <ExpandableContainer expanded={isExpanded()}>
+                <>
+                    <div class="mt-auto flex w-full flex-col gap-3 overflow-hidden transition-all duration-300 ease-in-out">
+                        <div class="flex max-h-[20vh] flex-col gap-1 overflow-y-auto">
+                            <For each={libraries()}>
+                                {(lib) => <LibraryItem lib={lib} />}
+                            </For>
+                        </div>
 
-            <div class="flex flex-col gap-1">
-                <For each={libraries()}>
-                    {(lib) => <LibraryItem lib={lib} />}
-                </For>
-            </div>
+                        <button
+                            onClick={() =>
+                                setDisplayedModal('ADD_LIBRARY_MODAL')
+                            }
+                            class="text-sub hover:bg-element-lighter hover:text-main mt-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
+                        >
+                            <span class="material-symbols-outlined text-lg">
+                                add
+                            </span>
+                            Add Library
+                        </button>
 
-            <button
-                onClick={() => setDisplayedModal('ADD_LIBRARY_MODAL')}
-                class="text-sub hover:bg-element-lighter hover:text-main mt-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors"
+                        <PushPullSection />
+
+                        <Show when={activeLib()?.type === 'server'}>
+                            <SyncDashboard />
+                        </Show>
+                    </div>
+                </>
+            </ExpandableContainer>
+            <span
+                onClick={() => setIsExpanded(!isExpanded())}
+                class="material-symbols-outlined text-xl transition-transform duration-300 ease-in-out hover:cursor-pointer"
+                classList={{ 'rotate-180': isExpanded() }}
             >
-                <span class="material-symbols-outlined text-lg">add</span>
-                Add Library
-            </button>
-
-            <PushPullSection />
-
-            <Show when={activeLib()?.type === 'server'}>
-                <SyncDashboard />
-            </Show>
+                keyboard_arrow_down
+            </span>
         </div>
     )
 }

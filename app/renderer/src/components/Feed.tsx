@@ -8,7 +8,6 @@ import {
     setDisplayType,
 } from '../modules/globals'
 import {
-    activeLibraryId,
     serverRole,
     setSearchQuery,
     shouldBlurLibraryView,

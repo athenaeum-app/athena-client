@@ -36,7 +36,6 @@ import {
     setIsDownloadingServer,
     type LibraryType,
     setLinkPreviewCache,
-    getActiveLibrary,
 } from './store'
 
 let allLibraryDataRef: Record<string, LibraryDataSnapshot> = {}

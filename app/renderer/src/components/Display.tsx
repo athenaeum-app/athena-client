@@ -12,9 +12,7 @@ const Display: Component = () => (
         <Switch>
             <Match when={libraries().length > 0}>
                 <div class="z-10 order-1 w-full gap-2 md:flex md:flex-col lg:h-full lg:max-w-xs">
-                    <div class="overflow-y-auto">
-                        <LibraryBar />
-                    </div>
+                    <LibraryBar />
                     <div class="overflow-y-auto">
                         <ArchivesBar />
                     </div>
