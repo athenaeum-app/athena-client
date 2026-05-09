@@ -19,6 +19,10 @@
     transition: none !important;
 }
 
+.transition-all {
+    transition-duration: calc(150ms * var(--transition-duration-multiplier, 1));
+}
+
 :root,
 [data-theme='dark'] {
     --theme-bg: var(--color-slate-900);
@@ -159,6 +163,15 @@
 }
 
 @theme {
+    --duration-75: calc(75ms * var(--transition-duration-multiplier, 1));
+    --duration-100: calc(100ms * var(--transition-duration-multiplier, 1));
+    --duration-150: calc(150ms * var(--transition-duration-multiplier, 1));
+    --duration-200: calc(200ms * var(--transition-duration-multiplier, 1));
+    --duration-300: calc(300ms * var(--transition-duration-multiplier, 1));
+    --duration-500: calc(500ms * var(--transition-duration-multiplier, 1));
+    --duration-700: calc(700ms * var(--transition-duration-multiplier, 1));
+    --duration-1000: calc(1000ms * var(--transition-duration-multiplier, 1));
+
     --color-background: var(--theme-bg);
     --color-element-matte: var(--theme-element-matte);
 

@@ -3,6 +3,7 @@ export interface AppSettings {
     fontFamily: string
 
     enableTransitions: boolean
+    transitionSpeed: number
 
     activeTheme: 'light' | 'dark' | 'neutral' | string
 
@@ -17,4 +18,5 @@ export const defaultSettings: AppSettings = {
     activeTheme: 'dark',
     autoBackupEnabled: true,
     maxBackupSizeMB: 500,
+    transitionSpeed: 1,
 }

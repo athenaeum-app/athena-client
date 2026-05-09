@@ -23,8 +23,7 @@ import { ConfirmButton } from './ConfirmButton'
 import { Dynamic } from 'solid-js/web'
 import { Button } from './Button'
 import { getApi } from '../modules/ipc_client'
-import { trackStore } from '@solid-primitives/deep'
-import { unwrap } from 'solid-js/store'
+import { defaultSettings, type AppSettings } from '../modules/settings'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -217,10 +216,10 @@ const GeneralSettingsView: Component = () => {
 
     return (
         <PageContainer>
-            <div>
+            <SectionContainer>
                 <LargeHeader title="General Settings" />
                 <LargeHeaderCaption caption="Configure scaling, fonts, and application behavior." />
-            </div>
+            </SectionContainer>
             <SectionContainer>
                 <SubHeader title="Updates" />
                 <Card
@@ -252,6 +251,52 @@ const GeneralSettingsView: Component = () => {
                 </Card>
             </SectionContainer>
         </PageContainer>
+    )
+}
+
+const SliderSetting: Component<{
+    key: keyof AppSettings
+    min?: number
+    max?: number
+    step?: number
+    label: string
+    caption?: string
+    suffix?: string
+    type?: 'Decimal' | 'Int'
+}> = (props) => {
+    console.assert(typeof defaultSettings[props.key] === 'number')
+    const [scaleBuffer, setScaleBuffer] = createSignal<number>(
+        appSettings()[props.key] as number,
+    )
+    return (
+        <>
+            <div class="flex items-center justify-between">
+                <SubHeader title={props.label} />
+                <span class="text-highlight-strong font-black">
+                    {scaleBuffer()}
+                    {props.suffix}
+                </span>
+            </div>
+            <input
+                type="range"
+                min={props.min ?? 0}
+                max={props.max ?? 100}
+                step={props.step ?? 5}
+                value={scaleBuffer()}
+                onInput={(e) => {
+                    if (props?.type === 'Decimal')
+                        setScaleBuffer(parseFloat(e.target.value))
+                    else setScaleBuffer(parseInt(e.target.value))
+                }}
+                onChange={() => {
+                    updateSetting(props.key, scaleBuffer())
+                }}
+                class="bg-element-accent accent-highlight-strongest h-2 w-full cursor-pointer appearance-none rounded-lg"
+            />
+            <Show when={props.caption}>
+                <SubHeaderCaption caption={props.caption ?? ''} />
+            </Show>
+        </>
     )
 }
 
@@ -311,27 +356,15 @@ const AppearanceSettingsView: Component = () => {
             <SectionContainer>
                 <Header title="Global"></Header>
 
-                <div class="flex items-center justify-between">
-                    <SubHeader title="UI Scale" />
-                    <span class="text-highlight-strong font-black">
-                        {scaleBuffer()}%
-                    </span>
-                </div>
-                <input
-                    type="range"
-                    min="75"
-                    max="150"
-                    step="5"
-                    value={scaleBuffer()}
-                    onInput={(e) => {
-                        setScaleBuffer(parseInt(e.target.value))
-                    }}
-                    onChange={() => {
-                        updateSetting('uiScale', scaleBuffer())
-                    }}
-                    class="bg-element-accent accent-highlight-strongest h-2 w-full cursor-pointer appearance-none rounded-lg"
+                <SliderSetting
+                    key="uiScale"
+                    min={75}
+                    max={150}
+                    step={5}
+                    suffix="%"
+                    label="UI Scale"
+                    caption="Changes may take some time to apply if animations are enabled."
                 />
-                <SubHeaderCaption caption="Changes may take some time to apply if animations are enabled." />
 
                 <SubHeader title="Font" />
                 <select
@@ -378,7 +411,7 @@ const AppearanceSettingsView: Component = () => {
             </SectionContainer>
 
             <SectionContainer>
-                <SubHeader title="Animations"></SubHeader>
+                <Header title="Animations"></Header>
                 <Card
                     componentName="label"
                     title="Enable UI Animations"
@@ -393,6 +426,15 @@ const AppearanceSettingsView: Component = () => {
                         class="accent-highlight-strong h-6 w-6 cursor-pointer rounded"
                     />
                 </Card>
+                <SliderSetting
+                    key="transitionSpeed"
+                    min={0.1}
+                    max={2}
+                    step={0.1}
+                    suffix="x"
+                    label="Transition Speed"
+                    type="Decimal"
+                />
             </SectionContainer>
         </PageContainer>
     )

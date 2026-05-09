@@ -26,6 +26,12 @@ const App: Component = () => {
         root.setAttribute('data-theme', settings.activeTheme)
         root.style.fontSize = `${settings.uiScale}%`
 
+        const durationMultiplier = 1 / settings.transitionSpeed
+        root.style.setProperty(
+            '--transition-duration-multiplier',
+            durationMultiplier.toString(),
+        )
+
         if (!settings.enableTransitions) {
             root.classList.add('disable-animations')
         } else {
