@@ -19,7 +19,7 @@ export const ConfirmButton: Component<
     let buttonRef: HTMLButtonElement | undefined
 
     const handleClick = (e: MouseEvent) => {
-        if (e.target != buttonRef) {
+        if (buttonRef && !buttonRef.contains(e.target as Node)) {
             setIsConfirming(false)
         }
     }
@@ -30,9 +30,11 @@ export const ConfirmButton: Component<
     })
 
     const [
-        { SharedClasses },
+        {
+            SharedClasses = 'bg-plain/20 text-plain/80 hover:text-plain cursor-pointer rounded-lg px-4 py-4 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105',
+        },
         { NonConfirmingClasses },
-        { ConfirmingClasses },
+        { ConfirmingClasses = 'bg-success' },
         _,
         validProps,
     ] = splitProps(

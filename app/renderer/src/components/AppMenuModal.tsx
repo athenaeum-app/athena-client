@@ -6,6 +6,8 @@ import {
     For,
     Show,
     type ComponentProps,
+    splitProps,
+    type ValidComponent,
 } from 'solid-js'
 import {
     appVersion,
@@ -17,6 +19,7 @@ import { ClearWebsiteCache, updateSetting } from '../modules/actions'
 import { linkPreviewCache } from '../modules/store'
 import { Buffer } from 'buffer'
 import { ConfirmButton } from './ConfirmButton'
+import { Dynamic } from 'solid-js/web'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -96,6 +99,35 @@ export const AppMenuModal: Component = () => {
     )
 }
 
+const Card: Component<
+    {
+        componentName?: ValidComponent
+        title: string
+        description: string
+    } & ComponentProps<'label'>
+> = (props) => {
+    const [_, validProps] = splitProps(props, [
+        'title',
+        'description',
+        'class',
+        'componentName',
+    ])
+    return (
+        <Dynamic
+            component={props.componentName ?? 'div'}
+            {...validProps}
+            class={`bg-element border-sub flex items-center justify-between rounded-xl border p-4`}
+        >
+            <div>
+                <span class="text-sub block font-bold">{props.title}</span>
+
+                <span class="text-sub text-sm">{props.description}</span>
+            </div>
+            {props.children}
+        </Dynamic>
+    )
+}
+
 const LargeHeader: Component<{ title: string } & ComponentProps<'div'>> = (
     props,
 ) => <h1 class="text-sub text-3xl font-black tracking-tight">{props.title}</h1>
@@ -157,15 +189,71 @@ const PageContainer: Component<ComponentProps<'div'>> = (props) => {
 }
 
 const GeneralSettingsView: Component = () => {
-    const [scaleBuffer, setScaleBuffer] = createSignal(appSettings().uiScale)
     return (
         <PageContainer>
             <div>
                 <LargeHeader title="General Settings" />
                 <LargeHeaderCaption caption="Configure scaling, fonts, and application behavior." />
             </div>
+            <SectionContainer>
+                <SubHeader title="Updates" />
+                <Card
+                    componentName="div"
+                    title="Check for Updates"
+                    description="Click to check for the latest version of Athena."
+                >
+                    <ConfirmButton onClick={() => {}}>
+                        Check for Updates
+                    </ConfirmButton>
+                </Card>
+            </SectionContainer>
+        </PageContainer>
+    )
+}
+
+const AppearanceSettingsView: Component = () => {
+    const [scaleBuffer, setScaleBuffer] = createSignal(appSettings().uiScale)
+    return (
+        <PageContainer>
+            <SectionContainer>
+                <LargeHeader title="Appearance"></LargeHeader>
+                <LargeHeaderCaption caption="Customize animations and color themes."></LargeHeaderCaption>
+            </SectionContainer>
 
             <SectionContainer>
+                <Header title="Theme"></Header>
+                <div class="flex flex-col gap-6">
+                    <div class="flex flex-col gap-3">
+                        <SubHeader title="System Themes"></SubHeader>
+                        <div class="grid grid-cols-3 gap-4">
+                            <For each={['dark', 'light', 'neutral']}>
+                                {(themeId) => (
+                                    <button
+                                        onClick={() =>
+                                            updateSetting(
+                                                'activeTheme',
+                                                themeId,
+                                            )
+                                        }
+                                        class={`flex items-center justify-center gap-2 rounded-xl border-2 p-4 font-black capitalize transition-all ${
+                                            appSettings().activeTheme ===
+                                            themeId
+                                                ? 'border-highlight-strong bg-element-accent text-sub'
+                                                : 'border-sub text-sub hover:border-highlight hover:text-sub'
+                                        }`}
+                                    >
+                                        {themeId}
+                                    </button>
+                                )}
+                            </For>
+                        </div>
+                    </div>
+                </div>
+            </SectionContainer>
+
+            <SectionContainer>
+                <Header title="Global"></Header>
+
                 <div class="flex items-center justify-between">
                     <SubHeader title="UI Scale" />
                     <span class="text-highlight-strong font-black">
@@ -187,9 +275,8 @@ const GeneralSettingsView: Component = () => {
                     class="bg-element-accent accent-highlight-strongest h-2 w-full cursor-pointer appearance-none rounded-lg"
                 />
                 <SubHeaderCaption caption="Changes may take some time to apply if animations are enabled." />
-            </SectionContainer>
-            <SectionContainer>
-                <SubHeader title="Global Font" />
+
+                <SubHeader title="Font" />
                 <select
                     value={appSettings().fontFamily}
                     onChange={(e) =>
@@ -232,68 +319,27 @@ const GeneralSettingsView: Component = () => {
                     </Show>
                 </select>
             </SectionContainer>
+
+            <SectionContainer>
+                <SubHeader title="Animations"></SubHeader>
+                <Card
+                    componentName="label"
+                    title="Enable UI Animations"
+                    description="Toggle animations for UI property transitions. May affect performance."
+                >
+                    <input
+                        type="checkbox"
+                        checked={appSettings().enableTransitions}
+                        onChange={(e) =>
+                            updateSetting('enableTransitions', e.target.checked)
+                        }
+                        class="accent-highlight-strong h-6 w-6 cursor-pointer rounded"
+                    />
+                </Card>
+            </SectionContainer>
         </PageContainer>
     )
 }
-
-const AppearanceSettingsView: Component = () => (
-    <PageContainer>
-        <SectionContainer>
-            <LargeHeader title="Appearance"></LargeHeader>
-            <LargeHeaderCaption caption="Customize animations and color themes."></LargeHeaderCaption>
-        </SectionContainer>
-
-        <SectionContainer>
-            <Header title="Color Theme"></Header>
-            <div class="flex flex-col gap-6">
-                <div class="flex flex-col gap-3">
-                    <SubHeader title="System Themes"></SubHeader>
-                    <div class="grid grid-cols-3 gap-4">
-                        <For each={['dark', 'light', 'neutral']}>
-                            {(themeId) => (
-                                <button
-                                    onClick={() =>
-                                        updateSetting('activeTheme', themeId)
-                                    }
-                                    class={`flex items-center justify-center gap-2 rounded-xl border-2 p-4 font-black capitalize transition-all ${
-                                        appSettings().activeTheme === themeId
-                                            ? 'border-highlight-strong bg-element-accent text-sub'
-                                            : 'border-sub text-sub hover:border-highlight hover:text-sub'
-                                    }`}
-                                >
-                                    {themeId}
-                                </button>
-                            )}
-                        </For>
-                    </div>
-                </div>
-            </div>
-        </SectionContainer>
-
-        <SectionContainer>
-            <SubHeader title="Animations"></SubHeader>
-            <label class="bg-element border-highlight hover:border-sub flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-colors">
-                <div>
-                    <span class="text-sub block font-bold">
-                        Enable UI Animations
-                    </span>
-                    <span class="text-sub text-sm">
-                        Toggle animations for UI property transitions. May
-                        affect performance.
-                    </span>
-                </div>
-                <input
-                    type="checkbox"
-                    checked={appSettings().enableTransitions}
-                    onChange={(e) =>
-                        updateSetting('enableTransitions', e.target.checked)
-                    }
-                    class="accent-highlight-strong h-6 w-6 cursor-pointer rounded"
-                />
-            </label>
-        </SectionContainer>
-    </PageContainer>
-)
 
 const MediaManagerView: Component = () => {
     const linkPreviewDataSizeInKB = () =>
@@ -307,25 +353,20 @@ const MediaManagerView: Component = () => {
 
             <SectionContainer>
                 <Header title="System"></Header>
-                <div class="bg-element border-sub flex items-center justify-between rounded-xl border p-4">
-                    <div>
-                        <span class="text-sub block font-bold">
-                            Website Cache
-                        </span>
-
-                        <span class="text-sub text-sm">
-                            Clear stored website metadata and images. It is
-                            recommended to only clear when needed as cache is
-                            used to speed up the app and prevent network spam.
-                        </span>
-                    </div>
+                <Card
+                    componentName="div"
+                    title="Website Cache"
+                    description="Clear stored website metadata and images. It is
+                        recommended to only clear when needed as cache is
+                        used to speed up the app and prevent network spam."
+                >
                     <ConfirmButton
                         onConfirm={() => ClearWebsiteCache()}
-                        SharedClasses="bg-danger/50 text-plain/80 hover:text-plain w-xs cursor-pointer rounded-lg px-2 py-2 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105"
+                        SharedClasses="bg-danger/50 text-plain/80 hover:text-plain w-xs cursor-pointer rounded-lg px-2 py-4 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105"
                     >
                         Clear Cache ({linkPreviewDataSizeInKB().toFixed(2)} KB)
                     </ConfirmButton>
-                </div>
+                </Card>
             </SectionContainer>
         </PageContainer>
     )
