@@ -292,3 +292,25 @@ export const loadSystemFonts = async () => {
         console.warn('Local font access denied')
     }
 }
+
+// Helpers
+export const GetContrastingColourForHSL = (hslColour: string) => {
+    const match = hslColour.match(/\d+/g)
+
+    if (!match || match.length < 3) {
+        console.log('Invalid HSL:', hslColour)
+        return hslColour
+    }
+
+    let [h, s, l] = match.map(Number)
+
+    const contrastingHue = (h + 180) % 360
+
+    if (l <= 50) {
+        l = 90
+    } else {
+        l = 10
+    }
+
+    return `hsl(${contrastingHue}, ${s}%, ${l}%)`
+}

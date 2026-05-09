@@ -1,4 +1,10 @@
-import { createMemo, For, Show, type Component } from 'solid-js'
+import {
+    createMemo,
+    For,
+    Show,
+    type Component,
+    type ComponentProps,
+} from 'solid-js'
 import { ClearFilterButton } from './ClearFilterButton'
 import {
     selectedTagIds,
@@ -7,22 +13,37 @@ import {
     type Tag,
     type TagId,
 } from '../modules/data'
-import {
-    animatedIconClasses,
-    getFilteredMoments,
-    sortTags,
-} from '../modules/globals'
+import { getFilteredMoments, sortTags } from '../modules/globals'
+
+export const toggleTag = (tagId: TagId) => {
+    setSelectedTagIds((prev) => {
+        if (prev.includes(tagId)) {
+            return prev.filter((current_tag) => current_tag != tagId)
+        }
+        return [...prev, tagId]
+    })
+}
+
+export const TagButton: Component<
+    { tagId: TagId } & ComponentProps<'button'>
+> = (props) => {
+    const tagData = allTags[props.tagId]
+    return (
+        <button
+            onClick={() => toggleTag(tagData.id)}
+            class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
+                selectedTagIds().includes(tagData.id)
+                    ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
+                    : `over:scale-105 hover:text-plain`
+            }`}
+            style={`background-color: ${tagData.colour}`}
+        >
+            #{tagData.name}
+        </button>
+    )
+}
 
 export const TagBar: Component = () => {
-    const toggleTag = (tagId: TagId) => {
-        setSelectedTagIds((prev) => {
-            if (prev.includes(tagId)) {
-                return prev.filter((current_tag) => current_tag != tagId)
-            }
-            return [...prev, tagId]
-        })
-    }
-
     const availableTags = createMemo(() => {
         const currentSelected = selectedTagIds()
         const filteredMoments = getFilteredMoments()
@@ -54,23 +75,7 @@ export const TagBar: Component = () => {
             </span>
             <For each={availableTags()}>
                 {(tagData) => {
-                    return (
-                        <div
-                            style={`background-color: ${tagData.colour}`}
-                            class="group flex items-center justify-between rounded-xl"
-                        >
-                            <button
-                                onClick={() => toggleTag(tagData.id)}
-                                class={`text-tag-text p-2 text-xs font-extrabold tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
-                                    selectedTagIds().includes(tagData.id)
-                                        ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
-                                        : `over:scale-105 hover:text-sub`
-                                }`}
-                            >
-                                #{tagData.name}
-                            </button>
-                        </div>
-                    )
+                    return <TagButton tagId={tagData.id} />
                 }}
             </For>
             <Show when={selectedTagIds().length > 0}>

@@ -23,6 +23,7 @@ import {
     setMomentToDelete,
     getCurrentLibrary,
     serverRole,
+    selectedTagIds,
 } from '../modules/data'
 import {
     displayedModal,
@@ -35,8 +36,10 @@ import {
     displayType,
     setDisplayedMomentModalId,
     displayedMomentModalId,
+    GetContrastingColourForHSL,
 } from '../modules/globals'
 import { AttachmentPreview } from './AttachmentPreview'
+import { TagButton, toggleTag } from './TagBar'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
@@ -222,19 +225,10 @@ export const Moment: Component<MomentProps> = (props) => {
                 </Show>
                 <Show when={data.tagIds.length > 0}>
                     <Line class="bg-element-accent h-1 w-full" />
-                    <div class="flex flex-wrap items-center gap-2 text-wrap">
+                    <div class="flex flex-wrap items-center gap-1 text-wrap">
                         <For each={data.tagIds}>
                             {(tagId) => {
-                                const tagData = allTags[tagId]
-                                const tagColour = tagData.colour
-                                return (
-                                    <span
-                                        class={`text-dark tracking-tightest rounded-md px-2 py-1 text-center text-xs font-black break-all md:p-2`}
-                                        style={`background-color: ${tagColour}`}
-                                    >
-                                        #{tagData.name}
-                                    </span>
-                                )
+                                return <TagButton tagId={tagId} />
                             }}
                         </For>
                     </div>
