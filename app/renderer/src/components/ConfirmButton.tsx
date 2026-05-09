@@ -14,6 +14,9 @@ export const ConfirmButton: Component<
         SharedClasses?: string
         NonConfirmingClasses?: string
         ConfirmingClasses?: string
+        ConfirmedMessage?: string
+        Cooldown?: number
+        Text: string
     }
 > = (props) => {
     let buttonRef: HTMLButtonElement | undefined
@@ -24,26 +27,34 @@ export const ConfirmButton: Component<
         }
     }
 
+    const [IsInCooldown, setIsInCooldown] = createSignal(false)
+
     document.addEventListener('click', handleClick)
     onCleanup(() => {
         document.removeEventListener('click', handleClick)
     })
 
-    const [
-        {
-            SharedClasses = 'bg-plain/20 text-plain/80 hover:text-plain cursor-pointer rounded-lg px-4 py-4 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105',
-        },
-        { NonConfirmingClasses },
-        { ConfirmingClasses = 'bg-success' },
-        _,
-        validProps,
-    ] = splitProps(
-        props,
-        ['SharedClasses'],
-        ['NonConfirmingClasses'],
-        ['ConfirmingClasses'],
-        ['onClick', 'class', 'classList', 'ref'],
-    )
+    if (!props.SharedClasses) {
+        props.SharedClasses =
+            'bg-plain/20 text-plain/80 hover:text-plain cursor-pointer rounded-lg px-4 py-4 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105'
+    }
+
+    if (!props.ConfirmingClasses) {
+        props.ConfirmingClasses = 'bg-success'
+    }
+
+    const [_, validProps] = splitProps(props, [
+        'onClick',
+        'class',
+        'classList',
+        'ref',
+        'SharedClasses',
+        'NonConfirmingClasses',
+        'ConfirmingClasses',
+        'ConfirmedMessage',
+        'Text',
+        'Cooldown',
+    ])
     const [isConfirming, setIsConfirming] = createSignal(false)
     return (
         <button
@@ -51,17 +62,27 @@ export const ConfirmButton: Component<
             onClick={() => {
                 if (isConfirming()) {
                     setIsConfirming(false)
+                    if (props.Cooldown && props.Cooldown > 0) {
+                        setIsInCooldown(true)
+                        setTimeout(() => {
+                            setIsInCooldown(false)
+                        }, props.Cooldown * 1000)
+                    }
                     return props.onConfirm?.()
                 } else {
                     setIsConfirming(true)
+
                     return props.onReject?.()
                 }
             }}
-            class={`${SharedClasses ?? ''} ${isConfirming() ? ConfirmingClasses : NonConfirmingClasses}`}
+            disabled={IsInCooldown()}
+            class={`${props.SharedClasses ?? ''} ${isConfirming() ? props.ConfirmingClasses : props.NonConfirmingClasses} min-w-[5vw]`}
             {...validProps}
         >
             <Show when={!isConfirming()} fallback={<span>Confirm?</span>}>
-                {props.children}
+                {IsInCooldown()
+                    ? (props.ConfirmedMessage ?? props.Text)
+                    : props.Text}
             </Show>
         </button>
     )

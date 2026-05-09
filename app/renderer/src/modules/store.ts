@@ -121,7 +121,7 @@ export const [inspectingImageExternalLink, setInspectingImageExternalLink] =
 export const [inspectingImage, setInspectingImage] = createSignal<
     string | undefined
 >()
-export const [linkPreviewCache, setLinkPreviewCache] = createSignal<
+export const [linkPreviewCache, setLinkPreviewCache] = createStore<
     Record<string, Awaited<ReturnType<typeof IpcApi.scrapeWebsiteData>>>
 >({})
 

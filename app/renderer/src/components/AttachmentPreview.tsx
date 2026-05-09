@@ -31,6 +31,7 @@ import {
     siteMap,
 } from '../modules/globals'
 import { LocalPDFPreview } from './PDFPreview'
+import { unwrap } from 'solid-js/store'
 
 interface AttachmentPreviewProps extends ComponentProps<'div'> {
     link: string
@@ -85,7 +86,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
         () => (inView() ? cleanUrl() : null),
         async (url) => {
             console.log('Attempting to get data for: ', url)
-            const cache = linkPreviewCache()
+            const cache = unwrap(linkPreviewCache)
             let forceScrape = false
 
             if (isDirectMedia(url)) {
@@ -134,10 +135,7 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
             }
             console.log(`Attempting to scrape ${url}`)
             const result = await api.scrapeWebsiteData(url, forceScrape)
-            setLinkPreviewCache((prev) => ({
-                ...prev,
-                [url]: result,
-            }))
+            setLinkPreviewCache(url, result)
             return result
         },
     )

@@ -47,6 +47,48 @@
     --theme-highlight-alt: var(--color-pink-700);
 }
 
+[data-theme='sunset'] {
+    --theme-bg: #22130d;
+    --theme-element-matte: #332016;
+    --theme-element-accent: #523223;
+    --theme-element-lighter: #704531;
+
+    --theme-text-main: #ffe6cf;
+    --theme-text-sub: #d7a77b;
+    --theme-plain: #fffaf5;
+
+    --theme-highlight: #fb923c;
+    --theme-highlight-alt: #f97316;
+}
+
+[data-theme='arctic'] {
+    --theme-bg: #0f1724;
+    --theme-element-matte: #162235;
+    --theme-element-accent: #24364f;
+    --theme-element-lighter: #35506f;
+
+    --theme-text-main: #e4f1ff;
+    --theme-text-sub: #9fb8d4;
+    --theme-plain: #fcfeff;
+
+    --theme-highlight: #7dd3fc;
+    --theme-highlight-alt: #38bdf8;
+}
+
+[data-theme='rosewood'] {
+    --theme-bg: #1b1110;
+    --theme-element-matte: #2c1b19;
+    --theme-element-accent: #49302d;
+    --theme-element-lighter: #634541;
+
+    --theme-text-main: #f1dfd9;
+    --theme-text-sub: #c2a095;
+    --theme-plain: #fff8f5;
+
+    --theme-highlight: #d9776a;
+    --theme-highlight-alt: #b45345;
+}
+
 [data-theme='neutral'] {
     --theme-bg: #000000;
     --theme-element-matte: #171717;

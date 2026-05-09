@@ -8,6 +8,7 @@ import {
     type ComponentProps,
     splitProps,
     type ValidComponent,
+    createEffect,
 } from 'solid-js'
 import {
     appVersion,
@@ -22,6 +23,8 @@ import { ConfirmButton } from './ConfirmButton'
 import { Dynamic } from 'solid-js/web'
 import { Button } from './Button'
 import { getApi } from '../modules/ipc_client'
+import { trackStore } from '@solid-primitives/deep'
+import { unwrap } from 'solid-js/store'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -194,6 +197,8 @@ const GeneralSettingsView: Component = () => {
     const [updateStatus, setUpdateStatus] =
         createSignal<string>('Check for Updates')
 
+    const handleReset = async () => {}
+
     const handleUpdateCheck = async () => {
         setUpdateStatus('Checking...')
 
@@ -209,6 +214,7 @@ const GeneralSettingsView: Component = () => {
             setTimeout(() => setUpdateStatus('Check for Updates'), 3000)
         }
     }
+
     return (
         <PageContainer>
             <div>
@@ -230,6 +236,21 @@ const GeneralSettingsView: Component = () => {
                     </Button>
                 </Card>
             </SectionContainer>
+            <SectionContainer>
+                <SubHeader title="Reset" />
+                <Card
+                    componentName="div"
+                    title="Reset"
+                    description="Click to reset all settings to their default values."
+                >
+                    <ConfirmButton
+                        onConfirm={handleReset}
+                        Text="Reset"
+                        ConfirmedMessage="Settings reset!"
+                        Cooldown={1}
+                    />
+                </Card>
+            </SectionContainer>
         </PageContainer>
     )
 }
@@ -248,7 +269,7 @@ const AppearanceSettingsView: Component = () => {
                 <div class="flex flex-col gap-6">
                     <div class="flex flex-col gap-3">
                         <SubHeader title="System Themes"></SubHeader>
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="grid grid-cols-5 gap-4">
                             <For
                                 each={[
                                     'dark',
@@ -258,6 +279,9 @@ const AppearanceSettingsView: Component = () => {
                                     'valentine',
                                     'ocean',
                                     'royal blue',
+                                    'sunset',
+                                    'arctic',
+                                    'rosewood',
                                 ]}
                             >
                                 {(themeId) => (
@@ -376,7 +400,8 @@ const AppearanceSettingsView: Component = () => {
 
 const MediaManagerView: Component = () => {
     const linkPreviewDataSizeInKB = () =>
-        Buffer.byteLength(JSON.stringify(linkPreviewCache())) / 1024
+        Buffer.byteLength(JSON.stringify(linkPreviewCache)) / 1024
+
     return (
         <PageContainer>
             <SectionContainer>
@@ -396,9 +421,10 @@ const MediaManagerView: Component = () => {
                     <ConfirmButton
                         onConfirm={() => ClearWebsiteCache()}
                         SharedClasses="bg-danger/50 text-plain/80 hover:text-plain w-xs cursor-pointer rounded-lg px-2 py-4 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105"
-                    >
-                        Clear Cache ({linkPreviewDataSizeInKB().toFixed(2)} KB)
-                    </ConfirmButton>
+                        Text={`Clear Cache (${linkPreviewDataSizeInKB().toFixed(2)} KB)`}
+                        ConfirmedMessage="Cache cleared!"
+                        Cooldown={1}
+                    ></ConfirmButton>
                 </Card>
             </SectionContainer>
         </PageContainer>

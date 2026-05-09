@@ -1,5 +1,5 @@
 import { batch } from 'solid-js'
-import { unwrap } from 'solid-js/store'
+import { reconcile, unwrap } from 'solid-js/store'
 import { getApi } from './ipc_client'
 import {
     archives,
@@ -771,5 +771,5 @@ export const updateSetting = <K extends keyof AppSettings>(
 }
 
 export const ClearWebsiteCache = () => {
-    setLinkPreviewCache({})
+    setLinkPreviewCache(reconcile({}))
 }

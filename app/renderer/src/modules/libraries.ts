@@ -1,8 +1,5 @@
-import { batch, createEffect, createRoot, createSignal } from 'solid-js'
+import { batch } from 'solid-js'
 import { reconcile, unwrap } from 'solid-js/store'
-import { getApi } from './ipc_client'
-import { version } from '../../../../package.json'
-import { migrateOldData } from './data_migrate'
 
 import {
     archives,
@@ -11,7 +8,6 @@ import {
     setAllMoments,
     allTags,
     setAllTags,
-    linkPreviewCache,
     jwtToken,
     libraries,
     setLibraries,
@@ -23,7 +19,6 @@ import {
     defaultArchiveName,
     type Library,
     type LibraryDataSnapshot,
-    type DataSnapshot,
     type ArchiveId,
     type Archive,
     type MomentData,
@@ -35,7 +30,6 @@ import {
     serverDownloadLibName,
     setIsDownloadingServer,
     type LibraryType,
-    setLinkPreviewCache,
 } from './store'
 import { isInitialized } from './boot'
 import { allLibraryDataRef, canSave, setCanSave } from './globals'
@@ -232,68 +226,6 @@ export const switchToLibraryFromId = async (libId: string) => {
         setSwitchingLibrary(false)
     }
 }
-
-const createDebounce = (callback: (...args: any[]) => any, ms: number) => {
-    let timer: number | undefined
-    return (...args: any[]) => {
-        if (timer) window.clearTimeout(timer)
-        timer = window.setTimeout(() => callback(...args), ms)
-    }
-}
-
-let lastSavedString = ''
-
-const writeSave = createDebounce(async (snapshot: DataSnapshot) => {
-    getApi()?.writeMainData?.(snapshot)
-}, 750)
-
-createRoot(() => {
-    createEffect(() => {
-        const currentLibs = libraries()
-        const currentId = activeLibraryId()
-        const currentArchives = archives()
-        const currentCache = linkPreviewCache()
-
-        // Track internal changes
-        JSON.stringify(unwrap(allMoments))
-        JSON.stringify(unwrap(allTags))
-
-        if (!canSave()) return
-
-        if (currentId) {
-            allLibraryDataRef()[currentId] = {
-                archives: currentArchives,
-                moments: structuredClone(unwrap(allMoments)),
-                tags: structuredClone(unwrap(allTags)),
-            }
-        }
-
-        const cleanedLibraryData: Record<string, LibraryDataSnapshot> = {}
-        currentLibs.forEach((lib) => {
-            if (allLibraryDataRef()[lib.id]) {
-                cleanedLibraryData[lib.id] = allLibraryDataRef()[lib.id]
-            }
-        })
-
-        const libsForSave = currentLibs.map((lib) => {
-            const { syncStatus: _, lastSyncTime: __, ...cleanLib } = lib
-            return cleanLib
-        })
-
-        const snapshot: DataSnapshot = {
-            version,
-            libraries: libsForSave,
-            activeLibraryId: currentId,
-            libraryData: cleanedLibraryData,
-            linkPreviewCache: currentCache,
-        }
-
-        const asString = JSON.stringify(snapshot)
-        if (asString === lastSavedString) return
-        lastSavedString = asString
-        writeSave(snapshot)
-    })
-})
 
 export const setActiveLibraryId = (newId: string) => {
     const currentId = activeLibraryId()
