@@ -20,6 +20,7 @@ import { linkPreviewCache } from '../modules/store'
 import { Buffer } from 'buffer'
 import { ConfirmButton } from './ConfirmButton'
 import { Dynamic } from 'solid-js/web'
+import { Button } from './Button'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -202,9 +203,7 @@ const GeneralSettingsView: Component = () => {
                     title="Check for Updates"
                     description="Click to check for the latest version of Athena."
                 >
-                    <ConfirmButton onClick={() => {}}>
-                        Check for Updates
-                    </ConfirmButton>
+                    <Button onClick={() => {}}>Check for Updates</Button>
                 </Card>
             </SectionContainer>
         </PageContainer>
