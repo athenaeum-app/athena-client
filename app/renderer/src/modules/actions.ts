@@ -31,6 +31,7 @@ import {
     setActiveUploadCount,
     getActiveLibrary,
     setInspectingImage,
+    setLinkPreviewCache,
 } from './store'
 import {
     extractBaseURL,
@@ -767,4 +768,8 @@ export const updateSetting = <K extends keyof AppSettings>(
         getApi().writeSettings(next)
         return next
     })
+}
+
+export const ClearWebsiteCache = () => {
+    setLinkPreviewCache({})
 }

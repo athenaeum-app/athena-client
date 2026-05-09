@@ -21,7 +21,6 @@ import {
 import {
     InspectImage,
     linkPreviewCache,
-    setInspectingImage,
     setLinkPreviewCache,
 } from '../modules/data'
 import {

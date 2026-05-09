@@ -13,8 +13,10 @@ import {
     appSettings,
     systemFonts,
 } from '../modules/globals'
-import { updateSetting } from '../modules/actions'
-import { Button } from './Button'
+import { ClearWebsiteCache, updateSetting } from '../modules/actions'
+import { linkPreviewCache } from '../modules/store'
+import { Buffer } from 'buffer'
+import { ConfirmButton } from './ConfirmButton'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -31,18 +33,14 @@ export const AppMenuModal: Component = () => {
             <div class="bg-element-matte border-sub flex h-[80vh] w-full overflow-hidden rounded-3xl border-4 shadow-2xl">
                 <div class="bg-element border-highlight flex w-sm shrink-0 flex-col gap-2 border-r-2 p-6">
                     <div class="mb-4 flex items-center justify-between">
-                        <h2 class="text-sub text-xl font-black tracking-tighter">
-                            Athena
-                        </h2>
+                        <Header title="Athena" />
                         <span class="text-sub text-xs font-bold tracking-widest">
                             {appVersion}
                         </span>
                     </div>
 
-                    <div class="flex flex-col gap-1">
-                        <span class="text-sub mt-2 mb-1 text-xs font-bold tracking-widest uppercase">
-                            Settings
-                        </span>
+                    <SectionContainer>
+                        <SubHeader title="Settings" />
                         <TabButton
                             id="general"
                             icon="settings"
@@ -57,18 +55,15 @@ export const AppMenuModal: Component = () => {
                             active={activeTab() === 'appearance'}
                             onClick={() => setActiveTab('appearance')}
                         />
-
-                        <span class="text-sub mt-4 mb-1 text-xs font-bold tracking-widest uppercase">
-                            Library
-                        </span>
+                        <SubHeader title="Library" />
                         <TabButton
                             id="media"
                             icon="perm_media"
-                            label="Media Manager"
+                            label="Media"
                             active={activeTab() === 'media'}
                             onClick={() => setActiveTab('media')}
                         />
-                    </div>
+                    </SectionContainer>
 
                     <div class="mt-auto">
                         <button
@@ -101,6 +96,40 @@ export const AppMenuModal: Component = () => {
     )
 }
 
+const LargeHeader: Component<{ title: string } & ComponentProps<'div'>> = (
+    props,
+) => <h1 class="text-sub text-3xl font-black tracking-tight">{props.title}</h1>
+
+const LargeHeaderCaption: Component<
+    { caption: string } & ComponentProps<'div'>
+> = (props) => (
+    <p class="text-sub text-md font-medium tracking-tight">{props.caption}</p>
+)
+
+const Header: Component<{ title: string } & ComponentProps<'div'>> = (
+    props,
+) => (
+    <h2 class="text-sub mb-1 text-xl font-bold tracking-tighter">
+        {props.title}
+    </h2>
+)
+
+const SubHeader: Component<{ title: string } & ComponentProps<'div'>> = (
+    props,
+) => (
+    <span class="text-sub mt-2 mb-1 text-xs font-bold tracking-widest uppercase">
+        {props.title}
+    </span>
+)
+
+const SubHeaderCaption: Component<
+    { caption: string } & ComponentProps<'div'>
+> = (props) => <p class="text-sub text-sm italic">{props.caption}</p>
+
+const SectionContainer: Component<ComponentProps<'div'>> = (props) => (
+    <div class="flex flex-col gap-2">{props.children}</div>
+)
+
 const TabButton: Component<{
     id: MenuTab
     icon: string
@@ -121,24 +150,24 @@ const TabButton: Component<{
     </button>
 )
 
+const PageContainer: Component<ComponentProps<'div'>> = (props) => {
+    return (
+        <div class="animate-fade-in flex flex-col gap-10">{props.children}</div>
+    )
+}
+
 const GeneralSettingsView: Component = () => {
     const [scaleBuffer, setScaleBuffer] = createSignal(appSettings().uiScale)
     return (
-        <div class="animate-fade-in flex flex-col gap-10">
+        <PageContainer>
             <div>
-                <h1 class="text-sub text-3xl font-black tracking-tight">
-                    General Settings
-                </h1>
-                <p class="text-sub">
-                    Configure scaling, fonts, and application behavior.
-                </p>
+                <LargeHeader title="General Settings" />
+                <LargeHeaderCaption caption="Configure scaling, fonts, and application behavior." />
             </div>
 
-            <div class="flex flex-col gap-3">
+            <SectionContainer>
                 <div class="flex items-center justify-between">
-                    <span class="text-sub text-xs font-bold tracking-widest uppercase">
-                        UI Scale
-                    </span>
+                    <SubHeader title="UI Scale" />
                     <span class="text-highlight-strong font-black">
                         {scaleBuffer()}%
                     </span>
@@ -157,15 +186,10 @@ const GeneralSettingsView: Component = () => {
                     }}
                     class="bg-element-accent accent-highlight-strongest h-2 w-full cursor-pointer appearance-none rounded-lg"
                 />
-                <p class="text-sub text-sm italic">
-                    Changes may take some time to apply.
-                </p>
-            </div>
-
-            <div class="flex flex-col gap-3">
-                <span class="text-sub text-xs font-bold tracking-widest uppercase">
-                    Global Font
-                </span>
+                <SubHeaderCaption caption="Changes may take some time to apply if animations are enabled." />
+            </SectionContainer>
+            <SectionContainer>
+                <SubHeader title="Global Font" />
                 <select
                     value={appSettings().fontFamily}
                     onChange={(e) =>
@@ -207,29 +231,23 @@ const GeneralSettingsView: Component = () => {
                         </optgroup>
                     </Show>
                 </select>
-            </div>
-        </div>
+            </SectionContainer>
+        </PageContainer>
     )
 }
 
 const AppearanceSettingsView: Component = () => (
-    <div class="animate-fade-in flex flex-col gap-10">
-        <div>
-            <h1 class="text-sub text-3xl font-black tracking-tight">
-                Appearance
-            </h1>
-            <p class="text-sub">Customize animations and color themes.</p>
-        </div>
+    <PageContainer>
+        <SectionContainer>
+            <LargeHeader title="Appearance"></LargeHeader>
+            <LargeHeaderCaption caption="Customize animations and color themes."></LargeHeaderCaption>
+        </SectionContainer>
 
-        <div class="flex flex-col gap-3">
-            <span class="text-sub text-xs font-bold tracking-widest uppercase">
-                Color Theme
-            </span>
+        <SectionContainer>
+            <Header title="Color Theme"></Header>
             <div class="flex flex-col gap-6">
                 <div class="flex flex-col gap-3">
-                    <span class="text-sub text-xs font-bold tracking-widest uppercase">
-                        System Themes
-                    </span>
+                    <SubHeader title="System Themes"></SubHeader>
                     <div class="grid grid-cols-3 gap-4">
                         <For each={['dark', 'light', 'neutral']}>
                             {(themeId) => (
@@ -250,20 +268,18 @@ const AppearanceSettingsView: Component = () => (
                     </div>
                 </div>
             </div>
-        </div>
+        </SectionContainer>
 
-        <div class="flex flex-col gap-3">
-            <span class="text-sub text-xs font-bold tracking-widest uppercase">
-                Animations
-            </span>
-            <label class="bg-element border-sub hover:border-highlight flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-colors">
+        <SectionContainer>
+            <SubHeader title="Animations"></SubHeader>
+            <label class="bg-element border-highlight hover:border-sub flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-colors">
                 <div>
                     <span class="text-sub block font-bold">
-                        Enable UI Transitions
+                        Enable UI Animations
                     </span>
                     <span class="text-sub text-sm">
-                        Smooth fades and expanding menus. Disable for
-                        performance.
+                        Toggle animations for UI property transitions. May
+                        affect performance.
                     </span>
                 </div>
                 <input
@@ -275,57 +291,42 @@ const AppearanceSettingsView: Component = () => (
                     class="accent-highlight-strong h-6 w-6 cursor-pointer rounded"
                 />
             </label>
-        </div>
-    </div>
+        </SectionContainer>
+    </PageContainer>
 )
 
-const MediaManagerView: Component = () => (
-    <div class="animate-fade-in flex flex-col gap-10">
-        <div>
-            <h1 class="text-sub text-3xl font-black tracking-tight">
-                Media Manager
-            </h1>
-            <p class="text-sub">
-                Manage local attachments, orphaned files, and cache data.
-            </p>
-        </div>
+const MediaManagerView: Component = () => {
+    const linkPreviewDataSizeInKB = () =>
+        Buffer.byteLength(JSON.stringify(linkPreviewCache())) / 1024
+    return (
+        <PageContainer>
+            <SectionContainer>
+                <LargeHeader title="Media Manager"></LargeHeader>
+                <LargeHeaderCaption caption="Manage locally stored data."></LargeHeaderCaption>
+            </SectionContainer>
 
-        <div class="flex flex-col gap-3">
-            <span class="text-sub text-xs font-bold tracking-widest uppercase">
-                System Caches
-            </span>
-            <div class="bg-element border-sub flex items-center justify-between rounded-xl border p-4">
-                <div>
-                    <span class="text-sub block font-bold">
-                        Link Preview Cache
-                    </span>
-                    <span class="text-sub text-sm">
-                        Clear stored website metadata and images.
-                    </span>
-                </div>
-                <button class="bg-danger/10 text-danger hover:bg-danger hover:text-sub cursor-pointer rounded-lg px-4 py-2 font-bold transition-colors">
-                    Clear Cache
-                </button>
-            </div>
-        </div>
+            <SectionContainer>
+                <Header title="System"></Header>
+                <div class="bg-element border-sub flex items-center justify-between rounded-xl border p-4">
+                    <div>
+                        <span class="text-sub block font-bold">
+                            Website Cache
+                        </span>
 
-        <div class="flex flex-col gap-3">
-            <span class="text-sub text-xs font-bold tracking-widest uppercase">
-                Local Files
-            </span>
-            <div class="bg-element border-sub flex items-center justify-between rounded-xl border p-4">
-                <div>
-                    <span class="text-sub block font-bold">
-                        Scan for Orphaned Media
-                    </span>
-                    <span class="text-sub text-sm">
-                        Find and delete images/videos not linked to any moment.
-                    </span>
+                        <span class="text-sub text-sm">
+                            Clear stored website metadata and images. It is
+                            recommended to only clear when needed as cache is
+                            used to speed up the app and prevent network spam.
+                        </span>
+                    </div>
+                    <ConfirmButton
+                        onConfirm={() => ClearWebsiteCache()}
+                        SharedClasses="bg-danger/50 text-plain/80 hover:text-plain w-xs cursor-pointer rounded-lg px-2 py-2 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105"
+                    >
+                        Clear Cache ({linkPreviewDataSizeInKB().toFixed(2)} KB)
+                    </ConfirmButton>
                 </div>
-                <button class="bg-highlight-alt/20 text-highlight-alt-strong hover:bg-highlight-alt-strong hover:text-sub cursor-pointer rounded-lg px-4 py-2 font-bold transition-colors">
-                    Scan Drive
-                </button>
-            </div>
-        </div>
-    </div>
-)
+            </SectionContainer>
+        </PageContainer>
+    )
+}
