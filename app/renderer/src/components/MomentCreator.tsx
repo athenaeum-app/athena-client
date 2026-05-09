@@ -54,7 +54,9 @@ export const MomentCreator: Component<
     let archiveInputRef: HTMLInputElement | undefined
     let textInputAreaRef: HTMLTextAreaElement | undefined // not visible
     let textDisplayRef: HTMLDivElement | undefined
+
     const [isPreviewing, setIsPreviewing] = createSignal<boolean>(false)
+    const [isDragging, setIsDragging] = createSignal<boolean>(false)
 
     onMount(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -210,11 +212,69 @@ export const MomentCreator: Component<
         }
     }
 
+    const processFiles = (files: FileList | File[]) => {
+        let hasFiles = false
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            if (file) {
+                hasFiles = true
+                saveFileReference(file, {
+                    Start: textInputAreaRef?.selectionStart,
+                    End: textInputAreaRef?.selectionEnd,
+                })
+            }
+        }
+        return hasFiles
+    }
+
+    const handleDragOver = (e: DragEvent) => {
+        e.preventDefault()
+        if (!props.hide) setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: DragEvent) => {
+        e.preventDefault()
+        if (
+            e.currentTarget &&
+            !(e.currentTarget as Node).contains(e.relatedTarget as Node)
+        ) {
+            setIsDragging(false)
+        }
+    }
+
+    const handleDrop = (e: DragEvent) => {
+        e.preventDefault()
+        setIsDragging(false)
+        if (props.hide) return
+
+        const files = e.dataTransfer?.files
+        if (files && files.length > 0) {
+            processFiles(files)
+        }
+    }
+
     return (
         <ExpandableContainer expanded={!props.hide}>
-            <div class="overflow-hidden">
+            <div class="relative overflow-hidden">
+                <Show when={isDragging() && !props.hide}>
+                    <div class="bg-element/80 pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl backdrop-blur-sm">
+                        <span class="text-highlight text-lg font-bold drop-shadow-md">
+                            Drop files to attach
+                        </span>
+                    </div>
+                </Show>
+
                 <div
-                    class={`bg-element-matte flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'border-element-matte grid-rows-[0fr] border-0' : 'border-highlight-alt grid-rows-[1fr] border p-4'}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    class={`bg-element-matte flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${
+                        props.hide
+                            ? 'border-element-matte grid-rows-[0fr] border-0'
+                            : isDragging()
+                              ? 'border-highlight bg-element-accent/50 grid-rows-[1fr] border-2 border-dashed p-4'
+                              : 'border-highlight-alt grid-rows-[1fr] border p-4'
+                    }`}
                 >
                     <input
                         class="text-sub placeholder-sub bg-transparent px-2 py-1 text-lg font-bold outline-none"
@@ -275,7 +335,7 @@ export const MomentCreator: Component<
                                         e.currentTarget.scrollTop
                                 }
                             }}
-                            class={`${textDisplayClasses} caret-main selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent text-transparent transition-colors outline-none placeholder:italic ${
+                            class={`${textDisplayClasses} caret-plain selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent text-transparent transition-colors outline-none placeholder:italic ${
                                 isPreviewing()
                                     ? 'pointer-events-none cursor-default'
                                     : 'pointer-events-auto cursor-text'
@@ -286,24 +346,20 @@ export const MomentCreator: Component<
                                 if (!clipboardData) return
 
                                 const items = clipboardData.items
-                                let hasFiles = false
+                                const filesToProcess: File[] = []
 
                                 for (let i = 0; i < items.length; i++) {
                                     const item = items[i]
                                     if (item.kind == 'file') {
                                         const file = item.getAsFile()
-
                                         if (file) {
-                                            hasFiles = true
-                                            saveFileReference(file, {
-                                                Start: textInputAreaRef?.selectionStart,
-                                                End: textInputAreaRef?.selectionEnd,
-                                            })
+                                            filesToProcess.push(file)
                                         }
                                     }
                                 }
 
-                                if (hasFiles) {
+                                if (filesToProcess.length > 0) {
+                                    processFiles(filesToProcess)
                                     e.preventDefault()
                                 }
                             }}
