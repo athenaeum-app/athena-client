@@ -56,7 +56,7 @@ export const Feed: Component = () => {
                         onInput={(e) => setSearchQuery(e.currentTarget.value)}
                         onFocusOut={() => setIsSearching(false)}
                         placeholder="Search Moments"
-                        class={`${isSearching() ? 'w-full px-2 py-1' : 'w-0 p-0 opacity-0'} bg-element text-plain/80 border-plain/20 rounded-md border transition-all duration-300 focus:outline-none`}
+                        class={`${isSearching() ? 'w-full px-2 py-1' : 'w-0 p-0 opacity-0'} bg-element text-sub/80 border-plain/20 rounded-md border transition-all duration-300 focus:outline-none`}
                     />
                     <div
                         class="ml-auto flex items-center"

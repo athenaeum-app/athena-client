@@ -44,7 +44,7 @@ export const TagBar: Component = () => {
     })
 
     return (
-      <div class="bg-element z-10 flex w-full flex-wrap items-center justify-center gap-2 p-2 backdrop-blur-md transition-all lg:p-6">
+        <div class="bg-element z-10 flex w-full flex-wrap items-center justify-center gap-2 p-2 backdrop-blur-md transition-all lg:p-6">
             <span class="text-sub text-xs font-black tracking-widest uppercase">
                 Selected Tags:
             </span>
@@ -53,10 +53,10 @@ export const TagBar: Component = () => {
                     return (
                         <button
                             onClick={() => toggleTag(tagData.id)}
-                            class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
+                            class={`text-tag-text rounded-xl p-2 text-xs font-extrabold tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
                                 selectedTagIds().includes(tagData.id)
                                     ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
-                                    : `over:scale-105 hover:text-plain`
+                                    : `over:scale-105 hover:text-sub`
                             }`}
                             style={`background-color: ${tagData.colour}`}
                         >

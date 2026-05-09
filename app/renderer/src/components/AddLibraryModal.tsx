@@ -111,7 +111,7 @@ const AddLibraryModal: Component = () => {
 
     return (
         <div class="border-sub bg-element-matte flex w-xs flex-col gap-6 rounded-4xl border-4 p-8 shadow-2xl md:w-lg">
-            <h1 class="text-plain pt-2 text-center text-xl font-bold">
+            <h1 class="text-sub pt-2 text-center text-xl font-bold">
                 Add Library
             </h1>
             <p class="text-sub text-center font-bold">
@@ -126,7 +126,7 @@ const AddLibraryModal: Component = () => {
                             setType('local')
                             setAuthError('')
                         }}
-                        class={`flex-1 rounded-xl py-2 text-sm font-bold transition-all ${type() === 'local' ? 'bg-element-accent text-plain shadow-sm' : 'text-sub hover:text-plain'}`}
+                        class={`flex-1 rounded-xl py-2 text-sm font-bold transition-all ${type() === 'local' ? 'bg-element-accent text-sub shadow-sm' : 'text-sub hover:text-sub'}`}
                     >
                         Local
                     </button>
@@ -136,7 +136,7 @@ const AddLibraryModal: Component = () => {
                             setType('server')
                             setAuthError('')
                         }}
-                        class={`flex-1 rounded-xl py-2 text-sm font-bold transition-all ${type() === 'server' ? 'bg-element-accent text-plain shadow-sm' : 'text-sub hover:text-plain'}`}
+                        class={`flex-1 rounded-xl py-2 text-sm font-bold transition-all ${type() === 'server' ? 'bg-element-accent text-sub shadow-sm' : 'text-sub hover:text-sub'}`}
                     >
                         Connect to Server
                     </button>
@@ -153,7 +153,7 @@ const AddLibraryModal: Component = () => {
                             }
                             value={name()}
                             onInput={(e) => setName(e.currentTarget.value)}
-                            class="bg-element text-plain border-element-accent focus:border-sub/50 w-full rounded-2xl border-2 px-4 py-3 transition-colors outline-none"
+                            class="bg-element text-sub border-element-accent focus:border-sub/50 w-full rounded-2xl border-2 px-4 py-3 transition-colors outline-none"
                             disabled={isLoading()}
                             autofocus
                         />
@@ -172,7 +172,7 @@ const AddLibraryModal: Component = () => {
                                 placeholder="Server URL (e.g. 192.168.1.50:8080)"
                                 value={url()}
                                 onInput={(e) => setUrl(e.currentTarget.value)}
-                                class="bg-element text-plain border-element-accent focus:border-sub/50 w-full rounded-2xl border-2 px-4 py-3 transition-colors outline-none"
+                                class="bg-element text-sub border-element-accent focus:border-sub/50 w-full rounded-2xl border-2 px-4 py-3 transition-colors outline-none"
                                 disabled={isLoading()}
                             />
                             <input
@@ -182,7 +182,7 @@ const AddLibraryModal: Component = () => {
                                 onInput={(e) =>
                                     setPassword(e.currentTarget.value)
                                 }
-                                class="bg-element text-plain border-element-accent focus:border-sub/50 w-full rounded-2xl border-2 px-4 py-3 transition-colors outline-none"
+                                class="bg-element text-sub border-element-accent focus:border-sub/50 w-full rounded-2xl border-2 px-4 py-3 transition-colors outline-none"
                                 disabled={isLoading()}
                             />
 
@@ -205,7 +205,7 @@ const AddLibraryModal: Component = () => {
                         type="button"
                         onClick={() => setDisplayedModal('NONE')}
                         disabled={isLoading()}
-                        class="bold text-plain bg-danger w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 disabled:pointer-events-none disabled:opacity-50 md:p-4"
+                        class="bold text-sub bg-danger w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 disabled:pointer-events-none disabled:opacity-50 md:p-4"
                     >
                         Cancel
                     </button>
@@ -218,7 +218,7 @@ const AddLibraryModal: Component = () => {
                             (type() === 'server' &&
                                 (!url().trim() || !password().trim()))
                         }
-                        class="bold bg-success text-plain w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 disabled:pointer-events-none disabled:opacity-50 md:p-4"
+                        class="bold bg-success text-sub w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 disabled:pointer-events-none disabled:opacity-50 md:p-4"
                     >
                         <Switch>
                             <Match when={isLoading()}>Connecting...</Match>

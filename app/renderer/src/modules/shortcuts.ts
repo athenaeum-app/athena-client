@@ -1,6 +1,11 @@
 import { onCleanup } from 'solid-js'
 import { setIsSearching } from '../components/Feed'
-import { displayType, setDisplayedModal, setDisplayType } from './globals'
+import {
+    displayedModal,
+    displayType,
+    setDisplayedModal,
+    setDisplayType,
+} from './globals'
 import {
     isLibraryBarExpanded,
     setIsLibraryBarExpanded,
@@ -37,7 +42,11 @@ const handleKeyPress = (event: KeyboardEvent) => {
     }
 
     if (isModifier && event.key.toLowerCase() === 'm' && !event.shiftKey) {
-        setDisplayedModal('APP_MENU_MODAL')
+        if (displayedModal() === 'APP_MENU_MODAL') {
+            setDisplayedModal('NONE')
+        } else {
+            setDisplayedModal('APP_MENU_MODAL')
+        }
     }
 }
 

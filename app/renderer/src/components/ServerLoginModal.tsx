@@ -53,7 +53,7 @@ export const ServerLoginModal: Component = () => {
         <div class="inset-0 flex items-center justify-center">
             <div class="bg-element border-element-accent flex w-100 flex-col gap-4 rounded-xl border p-6 shadow-2xl">
                 <div class="flex flex-col gap-1">
-                    <h2 class="text-main text-lg font-black tracking-wide">
+                    <h2 class="text-sub text-lg font-black tracking-wide">
                         Session Expired
                     </h2>
                     <p class="text-sub text-sm">
@@ -73,7 +73,7 @@ export const ServerLoginModal: Component = () => {
                             if (e.key === 'Enter') handleLogin()
                             if (e.key === 'Escape') setDisplayedModal('NONE')
                         }}
-                        class="bg-element-matte text-plain border-element-accent focus:border-highlight-strong w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
+                        class="bg-element-matte text-sub border-element-accent focus:border-highlight-strong w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
                         autofocus
                     />
                     <Show when={errorMsg()}>
@@ -93,7 +93,7 @@ export const ServerLoginModal: Component = () => {
                     <button
                         onClick={handleLogin}
                         disabled={isLoggingIn() || !password()}
-                        class="bg-highlight hover:bg-highlight-strong text-plain rounded-md px-4 py-2 text-sm font-bold tracking-wider shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                        class="bg-highlight hover:bg-highlight-strong text-sub rounded-md px-4 py-2 text-sm font-bold tracking-wider shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {isLoggingIn() ? 'Authenticating...' : 'Login'}
                     </button>

@@ -499,7 +499,7 @@ const PushPullSection: Component = () => {
                             setSelectedLibraryTargetId(e.currentTarget.value)
                             setIsConfirmingPublishing(false)
                         }}
-                        class="bg-element text-plain border-element-accent focus:border-sub/50 w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
+                        class="bg-element-accent text-sub border-element-accent focus:border-sub/50 w-full rounded-md border px-3 py-2 text-sm transition-colors outline-none"
                         disabled={isPublishing()}
                     >
                         <Switch
@@ -603,7 +603,7 @@ const PushPullSection: Component = () => {
                     disabled={isSubmitDisabled()}
                     class={`mt-1 w-full rounded-md py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                         isConfirmingPublishing() && targetHasData()
-                            ? 'bg-danger text-plain hover:bg-danger/80'
+                            ? 'bg-danger text-sub hover:bg-danger/80'
                             : 'bg-success/20 text-success hover:bg-success/30'
                     }`}
                 >
@@ -769,7 +769,7 @@ const LibraryItem: Component<{ lib: any }> = (props) => {
 }
 
 export const [isLibraryBarExpanded, setIsLibraryBarExpanded] =
-    createSignal(false)
+    createSignal(true)
 
 export const LibraryBar: Component = () => {
     const activeLib = () => libraries().find((l) => l.id === activeLibraryId())

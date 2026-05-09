@@ -194,7 +194,7 @@ export const Moment: Component<MomentProps> = (props) => {
                         </Show>
                     </div>
                     <span
-                        class={`tracking ${displayType() == 'Full' ? 'text-4xl' : 'text-xl'} text-main font-black break-all`}
+                        class={`tracking ${displayType() == 'Full' ? 'text-4xl' : 'text-xl'} text-sub font-black break-all`}
                     >
                         {data.title}
                     </span>

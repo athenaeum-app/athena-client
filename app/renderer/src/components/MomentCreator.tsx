@@ -214,10 +214,10 @@ export const MomentCreator: Component<
         <ExpandableContainer expanded={!props.hide}>
             <div class="overflow-hidden">
                 <div
-                    class={`flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'border-element-matte grid-rows-[0fr] border-0' : 'bg-element-matte border-highlight-alt grid-rows-[1fr] border p-4'}`}
+                    class={`bg-element-matte hover:bg-element-accent/50 flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'border-element-matte grid-rows-[0fr] border-0' : 'border-highlight-alt grid-rows-[1fr] border p-4'}`}
                 >
                     <input
-                        class="text-plain placeholder-sub bg-transparent px-2 py-1 text-lg font-bold outline-none"
+                        class="text-sub placeholder-sub bg-transparent px-2 py-1 text-lg font-bold outline-none"
                         placeholder="Moment Title..."
                         value={props.hide ? '' : title()}
                         onInput={(e) => setTitle(e.currentTarget.value)}
@@ -261,7 +261,7 @@ export const MomentCreator: Component<
                                             {part}
                                         </span>
                                     ) : (
-                                        <span class="text-main">{part}</span>
+                                        <span class="text-sub">{part}</span>
                                     )
                                 }}
                             </For>
@@ -275,7 +275,7 @@ export const MomentCreator: Component<
                                         e.currentTarget.scrollTop
                                 }
                             }}
-                            class={`${textDisplayClasses} caret-main selection:bg-highlight-strong selection:text-main placeholder:text-sub field-sizing-content resize-none bg-transparent text-transparent transition-colors outline-none placeholder:italic ${
+                            class={`${textDisplayClasses} caret-main selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent text-transparent transition-colors outline-none placeholder:italic ${
                                 isPreviewing()
                                     ? 'pointer-events-none cursor-default'
                                     : 'pointer-events-auto cursor-text'

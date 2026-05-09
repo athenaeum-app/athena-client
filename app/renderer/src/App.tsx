@@ -36,7 +36,7 @@ const App: Component = () => {
     return (
         <div>
             <Modals />
-            <div class="bg-background text-main flex h-screen flex-col">
+            <div class="bg-background text-sub flex h-screen flex-col">
                 <header
                     style="-webkit-app-region: drag"
                     class="bg-element m-0 flex shrink-0 items-center justify-center py-2"

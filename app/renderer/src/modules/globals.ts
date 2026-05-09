@@ -57,11 +57,7 @@ export const registerMediaFilter = (url: url) => {
 
         let nickname = domainName
 
-        if (
-            url
-                .toLowerCase()
-                .includes(getActiveLibrary()?.url?.toLowerCase() || '')
-        ) {
+        if (domainName.toLowerCase().endsWith('/uploads')) {
             nickname = 'Server'
         }
 

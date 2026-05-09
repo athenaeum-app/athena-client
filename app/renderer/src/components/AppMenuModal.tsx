@@ -5,6 +5,7 @@ import {
     type Component,
     For,
     Show,
+    type ComponentProps,
 } from 'solid-js'
 import {
     appVersion,
@@ -13,6 +14,7 @@ import {
     systemFonts,
 } from '../modules/globals'
 import { updateSetting } from '../modules/actions'
+import { Button } from './Button'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -26,10 +28,10 @@ export const AppMenuModal: Component = () => {
                 if (e.target === e.currentTarget) setDisplayedModal('NONE')
             }}
         >
-            <div class="bg-element-matte border-sub flex h-[80vh] w-full max-w-5xl overflow-hidden rounded-3xl border-4 shadow-2xl">
-                <div class="bg-element border-highlight flex w-64 shrink-0 flex-col gap-2 border-r-2 p-6">
+            <div class="bg-element-matte border-sub flex h-[80vh] w-full overflow-hidden rounded-3xl border-4 shadow-2xl">
+                <div class="bg-element border-highlight flex w-sm shrink-0 flex-col gap-2 border-r-2 p-6">
                     <div class="mb-4 flex items-center justify-between">
-                        <h2 class="text-main text-xl font-black tracking-tighter">
+                        <h2 class="text-sub text-xl font-black tracking-tighter">
                             Athena
                         </h2>
                         <span class="text-sub text-xs font-bold tracking-widest">
@@ -71,7 +73,7 @@ export const AppMenuModal: Component = () => {
                     <div class="mt-auto">
                         <button
                             onClick={() => setDisplayedModal('NONE')}
-                            class="hover:bg-element-lighter text-sub hover:text-main flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3 font-bold transition-colors"
+                            class="hover:bg-element-lighter text-sub hover:text-sub flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3 font-bold transition-colors"
                         >
                             <span class="material-symbols-outlined text-lg">
                                 close
@@ -81,7 +83,7 @@ export const AppMenuModal: Component = () => {
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-10">
+                <div class="w-4xl flex-1 overflow-y-auto p-10">
                     <Switch>
                         <Match when={activeTab() === 'general'}>
                             <GeneralSettingsView />
@@ -110,8 +112,8 @@ const TabButton: Component<{
         onClick={props.onClick}
         class={`flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
             props.active
-                ? 'bg-element-accent text-plain shadow-md'
-                : 'text-sub hover:bg-element-lighter hover:text-main'
+                ? 'bg-element-accent text-sub shadow-md'
+                : 'text-sub hover:bg-element-lighter hover:text-sub'
         }`}
     >
         <span class="material-symbols-outlined text-lg">{props.icon}</span>
@@ -124,7 +126,7 @@ const GeneralSettingsView: Component = () => {
     return (
         <div class="animate-fade-in flex flex-col gap-10">
             <div>
-                <h1 class="text-main text-3xl font-black tracking-tight">
+                <h1 class="text-sub text-3xl font-black tracking-tight">
                     General Settings
                 </h1>
                 <p class="text-sub">
@@ -153,7 +155,7 @@ const GeneralSettingsView: Component = () => {
                     onChange={() => {
                         updateSetting('uiScale', scaleBuffer())
                     }}
-                    class="bg-element-lighter accent-highlight-strongest h-2 w-full cursor-pointer appearance-none rounded-lg"
+                    class="bg-element-accent accent-highlight-strongest h-2 w-full cursor-pointer appearance-none rounded-lg"
                 />
                 <p class="text-sub text-sm italic">
                     Changes may take some time to apply.
@@ -169,7 +171,7 @@ const GeneralSettingsView: Component = () => {
                     onChange={(e) =>
                         updateSetting('fontFamily', e.target.value)
                     }
-                    class="bg-element text-main cursor-pointer rounded-xl p-3 font-bold transition-colors outline-none"
+                    class="bg-element-accent text-sub cursor-pointer rounded-xl p-3 font-bold transition-colors outline-none"
                 >
                     <optgroup label="Recommended">
                         <option value="Inter, sans-serif">
@@ -213,7 +215,7 @@ const GeneralSettingsView: Component = () => {
 const AppearanceSettingsView: Component = () => (
     <div class="animate-fade-in flex flex-col gap-10">
         <div>
-            <h1 class="text-main text-3xl font-black tracking-tight">
+            <h1 class="text-sub text-3xl font-black tracking-tight">
                 Appearance
             </h1>
             <p class="text-sub">Customize animations and color themes.</p>
@@ -237,8 +239,8 @@ const AppearanceSettingsView: Component = () => (
                                     }
                                     class={`flex items-center justify-center gap-2 rounded-xl border-2 p-4 font-black capitalize transition-all ${
                                         appSettings().activeTheme === themeId
-                                            ? 'border-highlight-strong bg-element-accent text-plain'
-                                            : 'border-sub text-sub hover:border-highlight hover:text-main'
+                                            ? 'border-highlight-strong bg-element-accent text-sub'
+                                            : 'border-sub text-sub hover:border-highlight hover:text-sub'
                                     }`}
                                 >
                                     {themeId}
@@ -256,7 +258,7 @@ const AppearanceSettingsView: Component = () => (
             </span>
             <label class="bg-element border-sub hover:border-highlight flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-colors">
                 <div>
-                    <span class="text-main block font-bold">
+                    <span class="text-sub block font-bold">
                         Enable UI Transitions
                     </span>
                     <span class="text-sub text-sm">
@@ -280,7 +282,7 @@ const AppearanceSettingsView: Component = () => (
 const MediaManagerView: Component = () => (
     <div class="animate-fade-in flex flex-col gap-10">
         <div>
-            <h1 class="text-main text-3xl font-black tracking-tight">
+            <h1 class="text-sub text-3xl font-black tracking-tight">
                 Media Manager
             </h1>
             <p class="text-sub">
@@ -294,14 +296,14 @@ const MediaManagerView: Component = () => (
             </span>
             <div class="bg-element border-sub flex items-center justify-between rounded-xl border p-4">
                 <div>
-                    <span class="text-main block font-bold">
+                    <span class="text-sub block font-bold">
                         Link Preview Cache
                     </span>
                     <span class="text-sub text-sm">
                         Clear stored website metadata and images.
                     </span>
                 </div>
-                <button class="bg-danger/10 text-danger hover:bg-danger hover:text-plain cursor-pointer rounded-lg px-4 py-2 font-bold transition-colors">
+                <button class="bg-danger/10 text-danger hover:bg-danger hover:text-sub cursor-pointer rounded-lg px-4 py-2 font-bold transition-colors">
                     Clear Cache
                 </button>
             </div>
@@ -313,14 +315,14 @@ const MediaManagerView: Component = () => (
             </span>
             <div class="bg-element border-sub flex items-center justify-between rounded-xl border p-4">
                 <div>
-                    <span class="text-main block font-bold">
+                    <span class="text-sub block font-bold">
                         Scan for Orphaned Media
                     </span>
                     <span class="text-sub text-sm">
                         Find and delete images/videos not linked to any moment.
                     </span>
                 </div>
-                <button class="bg-highlight-alt/20 text-highlight-alt-strong hover:bg-highlight-alt-strong hover:text-plain cursor-pointer rounded-lg px-4 py-2 font-bold transition-colors">
+                <button class="bg-highlight-alt/20 text-highlight-alt-strong hover:bg-highlight-alt-strong hover:text-sub cursor-pointer rounded-lg px-4 py-2 font-bold transition-colors">
                     Scan Drive
                 </button>
             </div>

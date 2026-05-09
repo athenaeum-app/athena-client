@@ -11,7 +11,7 @@ export const DownloadServerModal: Component = () => {
     return (
         <div class="inset-0 flex items-center justify-center">
             <div class="bg-element border-element-accent w-full max-w-sm rounded-xl border p-5 shadow-xl">
-                <h3 class="text-main mb-2 text-lg font-bold">
+                <h3 class="text-sub mb-2 text-lg font-bold">
                     Create Local Copy
                 </h3>
                 <p class="text-sub mb-4 text-sm leading-relaxed">
@@ -26,7 +26,7 @@ export const DownloadServerModal: Component = () => {
                     onInput={(e) =>
                         setServerDownloadLibName(e.currentTarget.value)
                     }
-                    class="bg-element-lighter text-main border-element-accent focus:border-sub/50 mb-4 w-full rounded-md border px-3 py-2 text-sm outline-none"
+                    class="bg-element-lighter text-sub border-element-accent focus:border-sub/50 mb-4 w-full rounded-md border px-3 py-2 text-sm outline-none"
                     autofocus
                 />
 

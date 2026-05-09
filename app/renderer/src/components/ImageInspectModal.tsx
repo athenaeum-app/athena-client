@@ -39,7 +39,7 @@ export const ImageInspectModal: Component = () => {
                 }}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="bg-element-matte hover:bg-element-matte/80 text-sub hover:text-main flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
+                class="bg-element-matte hover:bg-element-matte/80 text-sub hover:text-sub flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
             >
                 <span class="material-symbols-outlined text-lg">
                     open_in_new

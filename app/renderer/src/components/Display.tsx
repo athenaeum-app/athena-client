@@ -33,10 +33,10 @@ const Display: Component = () => (
                     <div class="flex h-full w-full items-center justify-center p-4">
                         <div class="bg-element-matte border-sub flex max-w-xl flex-col items-center gap-8 rounded-4xl border-4 p-12 shadow-2xl">
                             <div class="flex flex-col items-center gap-4 text-center">
-                                <span class="material-symbols-outlined text-plain text-4xl">
+                                <span class="material-symbols-outlined text-sub text-4xl">
                                     auto_stories
                                 </span>
-                                <h1 class="text-plain text-3xl font-bold tracking-tighter">
+                                <h1 class="text-sub text-3xl font-bold tracking-tighter">
                                     Welcome to Athena
                                 </h1>
                                 <p class="text-sub text-md max-w-md leading-relaxed font-semibold">
@@ -51,7 +51,7 @@ const Display: Component = () => (
                                 onClick={() =>
                                     setDisplayedModal('ADD_LIBRARY_MODAL')
                                 }
-                                class="bg-element-accent text-plain hover:bg-element-accent-highlight rounded-xl px-8 py-4 text-lg font-bold shadow-lg transition-all hover:scale-105 hover:cursor-pointer active:scale-95"
+                                class="bg-element-accent text-sub hover:bg-element-accent-highlight rounded-xl px-8 py-4 text-lg font-bold shadow-lg transition-all hover:scale-105 hover:cursor-pointer active:scale-95"
                             >
                                 Create Your First Library
                             </button>
