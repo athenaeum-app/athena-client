@@ -214,7 +214,7 @@ export const MomentCreator: Component<
         <ExpandableContainer expanded={!props.hide}>
             <div class="overflow-hidden">
                 <div
-                    class={`bg-element-matte hover:bg-element-accent/50 flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'border-element-matte grid-rows-[0fr] border-0' : 'border-highlight-alt grid-rows-[1fr] border p-4'}`}
+                    class={`bg-element-matte flex flex-col gap-3 overflow-hidden rounded-xl transition-all duration-500 ${props.hide ? 'border-element-matte grid-rows-[0fr] border-0' : 'border-highlight-alt grid-rows-[1fr] border p-4'}`}
                 >
                     <input
                         class="text-sub placeholder-sub bg-transparent px-2 py-1 text-lg font-bold outline-none"
