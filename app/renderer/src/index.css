@@ -40,7 +40,6 @@
     --theme-element-accent: var(--color-slate-300);
     --theme-element-lighter: var(--color-slate-200);
 
-    --theme-text-sub: var(--color-slate-900);
     --theme-text-sub: var(--color-slate-600);
     --theme-plain: var(--color-black);
 
@@ -54,12 +53,67 @@
     --theme-element-accent: #333333;
     --theme-element-lighter: #262626;
 
-    --theme-text-sub: var(--color-slate-200);
     --theme-text-sub: var(--color-slate-400);
     --theme-plain: var(--color-white);
 
     --theme-highlight: var(--color-cyan-400);
     --theme-highlight-alt: var(--color-pink-400);
+}
+
+[data-theme='valentine'] {
+    --theme-bg: var(--color-rose-50);
+    --theme-element-matte: var(--color-white);
+    --theme-element-accent: var(--color-rose-200);
+    --theme-element-lighter: var(--color-rose-100);
+
+    --theme-text-main: var(--color-rose-900);
+    --theme-text-sub: var(--color-rose-600);
+    --theme-plain: var(--color-rose-950);
+
+    --theme-highlight: var(--color-rose-500);
+    --theme-highlight-alt: var(--color-fuchsia-500);
+}
+
+[data-theme='rose'] {
+    --theme-bg: #24131b;
+    --theme-element-matte: #311923;
+    --theme-element-accent: #4a2634;
+    --theme-element-lighter: #3b1f2b;
+
+    --theme-text-main: #f5dbe4;
+    --theme-text-sub: #cfa8b7;
+    --theme-plain: #fff7fa;
+
+    --theme-highlight: #e87993;
+    --theme-highlight-alt: #d16ba5;
+}
+
+[data-theme='ocean'] {
+    --theme-bg: #08131a;
+    --theme-element-matte: #0d1d27;
+    --theme-element-accent: #163242;
+    --theme-element-lighter: #1b4154;
+
+    --theme-text-main: #d6e8f2;
+    --theme-text-sub: #94b4c7;
+    --theme-plain: #f5fbff;
+
+    --theme-highlight: #38bdf8;
+    --theme-highlight-alt: #60a5fa;
+}
+
+[data-theme='royal blue'] {
+    --theme-bg: #13203f;
+    --theme-element-matte: #1b2d57;
+    --theme-element-accent: #2b4478;
+    --theme-element-lighter: #385792;
+
+    --theme-text-main: #fff3c4;
+    --theme-text-sub: #f4d87a;
+    --theme-plain: #fffef9;
+
+    --theme-highlight: #ffd76a;
+    --theme-highlight-alt: #ffbe55;
 }
 
 @theme {
@@ -110,7 +164,7 @@
     --color-highlight-alt-strongest: var(--theme-highlight-alt);
 
     /* Text */
-    --color-main: var(--theme-text-sub);
+    --color-main: var(--theme-text-main);
     --color-sub: var(--theme-text-sub);
     --color-plain: var(--theme-plain);
 

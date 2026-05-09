@@ -118,7 +118,7 @@ const Card: Component<
         <Dynamic
             component={props.componentName ?? 'div'}
             {...validProps}
-            class={`bg-element border-sub flex items-center justify-between rounded-xl border p-4`}
+            class={`${props.componentName == 'label' ? 'hover:bg-element-accent' : ''} bg-element border-sub flex items-center justify-between rounded-xl border p-4`}
         >
             <div>
                 <span class="text-sub block font-bold">{props.title}</span>
@@ -249,7 +249,17 @@ const AppearanceSettingsView: Component = () => {
                     <div class="flex flex-col gap-3">
                         <SubHeader title="System Themes"></SubHeader>
                         <div class="grid grid-cols-3 gap-4">
-                            <For each={['dark', 'light', 'neutral']}>
+                            <For
+                                each={[
+                                    'dark',
+                                    'light',
+                                    'neutral',
+                                    'rose',
+                                    'valentine',
+                                    'ocean',
+                                    'royal blue',
+                                ]}
+                            >
                                 {(themeId) => (
                                     <button
                                         onClick={() =>
