@@ -8,7 +8,6 @@ import {
     type ComponentProps,
     splitProps,
     type ValidComponent,
-    createEffect,
 } from 'solid-js'
 import {
     appVersion,
@@ -16,14 +15,19 @@ import {
     appSettings,
     systemFonts,
 } from '../modules/globals'
-import { ClearWebsiteCache, updateSetting } from '../modules/actions'
-import { linkPreviewCache } from '../modules/store'
+import {
+    ClearWebsiteCache,
+    regenerateAllColours,
+    updateSetting,
+} from '../modules/actions'
+import { allTags, linkPreviewCache, setAllTags } from '../modules/store'
 import { Buffer } from 'buffer'
 import { ConfirmButton } from './ConfirmButton'
 import { Dynamic } from 'solid-js/web'
 import { Button } from './Button'
 import { getApi } from '../modules/ipc_client'
 import { defaultSettings, type AppSettings } from '../modules/settings'
+import { TagBar } from './TagBar'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -107,7 +111,7 @@ const Card: Component<
     {
         componentName?: ValidComponent
         title: string
-        description: string
+        description?: string
     } & ComponentProps<'label'>
 > = (props) => {
     const [_, validProps] = splitProps(props, [
@@ -265,9 +269,11 @@ const SliderSetting: Component<{
     type?: 'Decimal' | 'Int'
 }> = (props) => {
     console.assert(typeof defaultSettings[props.key] === 'number')
+
     const [scaleBuffer, setScaleBuffer] = createSignal<number>(
         appSettings()[props.key] as number,
     )
+
     return (
         <>
             <div class="flex items-center justify-between">
@@ -301,7 +307,75 @@ const SliderSetting: Component<{
 }
 
 const AppearanceSettingsView: Component = () => {
-    const [scaleBuffer, setScaleBuffer] = createSignal(appSettings().uiScale)
+    // thanks https://gist.github.com/xenozauros/f6e185c8de2a04cdfecf?permalink_comment_id=4193442#gistcomment-4193442
+    const hexToHsl = (hex: string, valuesOnly = false) => {
+        let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+        if (!result) {
+            console.log('Failed to parse hex: ' + hex)
+            return hex
+        }
+        let r = parseInt(result[1], 16)
+        let g = parseInt(result[2], 16)
+        let b = parseInt(result[3], 16)
+        let cssString = ''
+        ;((r /= 255), (g /= 255), (b /= 255))
+        let max = Math.max(r, g, b),
+            min = Math.min(r, g, b)
+        let h,
+            s,
+            l = (max + min) / 2
+        if (max == min) {
+            h = s = 0 // achromatic
+        } else {
+            let d = max - min
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+            switch (max) {
+                case r:
+                    h = (g - b) / d + (g < b ? 6 : 0)
+                    break
+                case g:
+                    h = (b - r) / d + 2
+                    break
+                case b:
+                    h = (r - g) / d + 4
+                    break
+            }
+            if (h) {
+                h /= 6
+            }
+        }
+
+        h = Math.round((h ?? 0) * 360)
+        s = Math.round(s * 100)
+        l = Math.round(l * 100)
+
+        cssString = h + ',' + s + '%,' + l + '%'
+        cssString = !valuesOnly ? 'hsl(' + cssString + ')' : cssString
+
+        return cssString
+    }
+
+    const GetContrastingColourForHSL = (hslColour: string) => {
+        const match = hslColour.match(/\d+/g)
+
+        if (!match || match.length < 3) {
+            console.log('Invalid HSL:', hslColour)
+            return hslColour
+        }
+
+        let [h, s, l] = match.map(Number)
+
+        const contrastingHue = (h + 180) % 360
+
+        if (l <= 50) {
+            l = 90
+        } else {
+            l = 10
+        }
+
+        return `hsl(${contrastingHue}, ${s}%, ${l}%)`
+    }
+
     return (
         <PageContainer>
             <SectionContainer>
@@ -435,6 +509,70 @@ const AppearanceSettingsView: Component = () => {
                     label="Transition Speed"
                     type="Decimal"
                 />
+            </SectionContainer>
+
+            <SectionContainer>
+                <SectionContainer>
+                    <LargeHeader title="Tags"></LargeHeader>
+                    <LargeHeaderCaption caption="Customize your tags here."></LargeHeaderCaption>
+                </SectionContainer>
+                <SubHeader title="Colours"></SubHeader>
+                <SubHeaderCaption caption="Customize the colours of your tags!"></SubHeaderCaption>
+                <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+                    <For each={Object.values(allTags)}>
+                        {(tag) => {
+                            const [hexColourBuffer, setHexColourBuffer] =
+                                createSignal('')
+                            return (
+                                <label
+                                    style={{
+                                        'background-color': tag.colour,
+
+                                        color: GetContrastingColourForHSL(
+                                            tag.colour,
+                                        ),
+                                    }}
+                                    class="relative flex cursor-pointer items-center justify-center overflow-hidden rounded-xl p-4 text-sm font-black shadow-sm transition-all hover:scale-105 hover:brightness-110"
+                                >
+                                    <span class="truncate drop-shadow-sm">
+                                        {tag.name}
+                                    </span>
+
+                                    <input
+                                        type="color"
+                                        value={hexColourBuffer()}
+                                        onChange={(e) => {
+                                            console.log(
+                                                'New:',
+                                                hexToHsl(e.target.value),
+                                            )
+                                            setHexColourBuffer(e.target.value)
+                                            console.log(hexColourBuffer())
+                                            setAllTags(tag.id, {
+                                                colour: hexToHsl(
+                                                    e.target.value,
+                                                ),
+                                            })
+                                        }}
+                                        class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                    />
+                                </label>
+                            )
+                        }}
+                    </For>
+                </div>
+            </SectionContainer>
+            <SectionContainer>
+                <SubHeader title="Generator" />
+                <Card
+                    title="Generate vibrant colours"
+                    description="Click the button below to generate vibrant colours for all tags. This will overwrite all tag colours."
+                >
+                    <ConfirmButton
+                        onConfirm={regenerateAllColours}
+                        Text="Generate"
+                    ></ConfirmButton>
+                </Card>
             </SectionContainer>
         </PageContainer>
     )

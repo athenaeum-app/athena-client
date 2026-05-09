@@ -7,7 +7,11 @@ import {
     type Tag,
     type TagId,
 } from '../modules/data'
-import { getFilteredMoments, sortTags } from '../modules/globals'
+import {
+    animatedIconClasses,
+    getFilteredMoments,
+    sortTags,
+} from '../modules/globals'
 
 export const TagBar: Component = () => {
     const toggleTag = (tagId: TagId) => {
@@ -51,17 +55,21 @@ export const TagBar: Component = () => {
             <For each={availableTags()}>
                 {(tagData) => {
                     return (
-                        <button
-                            onClick={() => toggleTag(tagData.id)}
-                            class={`text-tag-text rounded-xl p-2 text-xs font-extrabold tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
-                                selectedTagIds().includes(tagData.id)
-                                    ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
-                                    : `over:scale-105 hover:text-sub`
-                            }`}
+                        <div
                             style={`background-color: ${tagData.colour}`}
+                            class="group flex items-center justify-between rounded-xl"
                         >
-                            #{tagData.name}
-                        </button>
+                            <button
+                                onClick={() => toggleTag(tagData.id)}
+                                class={`text-tag-text p-2 text-xs font-extrabold tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
+                                    selectedTagIds().includes(tagData.id)
+                                        ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
+                                        : `over:scale-105 hover:text-sub`
+                                }`}
+                            >
+                                #{tagData.name}
+                            </button>
+                        </div>
                     )
                 }}
             </For>

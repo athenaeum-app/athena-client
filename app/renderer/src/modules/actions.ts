@@ -773,3 +773,12 @@ export const updateSetting = <K extends keyof AppSettings>(
 export const ClearWebsiteCache = () => {
     setLinkPreviewCache(reconcile({}))
 }
+
+export const regenerateAllColours = () => {
+    console.log('Generating new colors!')
+    for (const tag of Object.values(allTags)) {
+        setAllTags(tag.id, {
+            colour: generateVibrantColour(),
+        })
+    }
+}
