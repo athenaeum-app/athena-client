@@ -21,6 +21,7 @@ import { Buffer } from 'buffer'
 import { ConfirmButton } from './ConfirmButton'
 import { Dynamic } from 'solid-js/web'
 import { Button } from './Button'
+import { getApi } from '../modules/ipc_client'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -190,6 +191,24 @@ const PageContainer: Component<ComponentProps<'div'>> = (props) => {
 }
 
 const GeneralSettingsView: Component = () => {
+    const [updateStatus, setUpdateStatus] =
+        createSignal<string>('Check for Updates')
+
+    const handleUpdateCheck = async () => {
+        setUpdateStatus('Checking...')
+
+        const result = await getApi().requestUpdateCheck()
+
+        if (result === 'AVAILABLE') {
+            setUpdateStatus('Downloading in background...')
+        } else if (result === 'UP_TO_DATE') {
+            setUpdateStatus('Athena is up to date!')
+            setTimeout(() => setUpdateStatus('Check for Updates'), 3000)
+        } else {
+            setUpdateStatus('Update check failed.')
+            setTimeout(() => setUpdateStatus('Check for Updates'), 3000)
+        }
+    }
     return (
         <PageContainer>
             <div>
@@ -203,7 +222,12 @@ const GeneralSettingsView: Component = () => {
                     title="Check for Updates"
                     description="Click to check for the latest version of Athena."
                 >
-                    <Button onClick={() => {}}>Check for Updates</Button>
+                    <Button
+                        disabled={updateStatus() !== 'Check for Updates'}
+                        onClick={handleUpdateCheck}
+                    >
+                        {updateStatus()}
+                    </Button>
                 </Card>
             </SectionContainer>
         </PageContainer>
