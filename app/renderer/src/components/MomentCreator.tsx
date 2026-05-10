@@ -255,7 +255,7 @@ export const MomentCreator: Component<
 
     return (
         <ExpandableContainer expanded={!props.hide}>
-            <div class="relative overflow-hidden">
+            <div class="relative max-w-4xl overflow-hidden">
                 <Show when={isDragging() && !props.hide}>
                     <div class="bg-element/80 pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl backdrop-blur-sm">
                         <span class="text-highlight text-lg font-bold drop-shadow-md">
