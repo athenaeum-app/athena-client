@@ -23,7 +23,6 @@ import {
     setMomentToDelete,
     getCurrentLibrary,
     serverRole,
-    selectedTagIds,
 } from '../modules/data'
 import {
     displayedModal,
@@ -37,6 +36,7 @@ import {
     setDisplayedMomentModalId,
     displayedMomentModalId,
     GetContrastingColourForHSL,
+    appSettings,
 } from '../modules/globals'
 import { AttachmentPreview } from './AttachmentPreview'
 import { TagButton, toggleTag } from './TagBar'
@@ -228,7 +228,15 @@ export const Moment: Component<MomentProps> = (props) => {
                     <div class="flex flex-wrap items-center gap-1 text-wrap">
                         <For each={data.tagIds}>
                             {(tagId) => {
-                                return <TagButton tagId={tagId} />
+                                return (
+                                    <TagButton
+                                        noHighlight={
+                                            !appSettings()
+                                                .highlightSelectedTagsInMoments
+                                        }
+                                        tagId={tagId}
+                                    />
+                                )
                             }}
                         </For>
                     </div>

@@ -25,14 +25,14 @@ export const toggleTag = (tagId: TagId) => {
 }
 
 export const TagButton: Component<
-    { tagId: TagId } & ComponentProps<'button'>
+    { tagId: TagId; noHighlight?: boolean } & ComponentProps<'button'>
 > = (props) => {
     const tagData = allTags[props.tagId]
     return (
         <button
             onClick={() => toggleTag(tagData.id)}
             class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
-                selectedTagIds().includes(tagData.id)
+                selectedTagIds().includes(tagData.id) && !props.noHighlight
                     ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
                     : `over:scale-105 hover:text-plain`
             }`}

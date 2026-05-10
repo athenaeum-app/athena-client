@@ -28,7 +28,6 @@ import { Dynamic } from 'solid-js/web'
 import { Button } from './Button'
 import { getApi } from '../modules/ipc_client'
 import { defaultSettings, type AppSettings } from '../modules/settings'
-import { TagBar } from './TagBar'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
@@ -307,6 +306,17 @@ const SliderSetting: Component<{
     )
 }
 
+const CheckboxSetting: Component<
+    { key: keyof AppSettings } & ComponentProps<'input'>
+> = (props) => (
+    <input
+        type="checkbox"
+        checked={appSettings()[props.key] as boolean}
+        onChange={(e) => updateSetting(props.key, e.target.checked)}
+        class="accent-highlight-strong h-6 w-6 cursor-pointer rounded"
+    />
+)
+
 const AppearanceSettingsView: Component = () => {
     // thanks https://gist.github.com/xenozauros/f6e185c8de2a04cdfecf?permalink_comment_id=4193442#gistcomment-4193442
     const hexToHsl = (hex: string, valuesOnly = false) => {
@@ -471,14 +481,7 @@ const AppearanceSettingsView: Component = () => {
                     title="Enable UI Animations"
                     description="Toggle animations for UI property transitions. May affect performance."
                 >
-                    <input
-                        type="checkbox"
-                        checked={appSettings().enableTransitions}
-                        onChange={(e) =>
-                            updateSetting('enableTransitions', e.target.checked)
-                        }
-                        class="accent-highlight-strong h-6 w-6 cursor-pointer rounded"
-                    />
+                    <CheckboxSetting key="enableTransitions" />
                 </Card>
                 <SliderSetting
                     key="transitionSpeed"
@@ -496,7 +499,29 @@ const AppearanceSettingsView: Component = () => {
                     <LargeHeader title="Tags"></LargeHeader>
                     <LargeHeaderCaption caption="Customize your tags here."></LargeHeaderCaption>
                 </SectionContainer>
-                <SubHeader title="Colours"></SubHeader>
+                <SectionContainer>
+                    <Card
+                        componentName="label"
+                        title="Highlight Selected Tags In Moments"
+                        description="Whether or not selected tags are also highlighted inside moments."
+                    >
+                        <CheckboxSetting key="highlightSelectedTagsInMoments" />
+                    </Card>
+                    c{' '}
+                </SectionContainer>
+                <SectionContainer>
+                    <SubHeader title="Generator" />
+                    <Card
+                        title="Generate vibrant colours"
+                        description="Click the button below to generate vibrant colours for all tags. This will overwrite all tag colours."
+                    >
+                        <ConfirmButton
+                            onConfirm={regenerateAllColours}
+                            Text="Generate"
+                        ></ConfirmButton>
+                    </Card>
+                </SectionContainer>
+                <SubHeader title="S"></SubHeader>
                 <SubHeaderCaption caption="Customize the colours of your tags!"></SubHeaderCaption>
                 <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
                     <For each={Object.values(allTags)}>
@@ -541,18 +566,6 @@ const AppearanceSettingsView: Component = () => {
                         }}
                     </For>
                 </div>
-            </SectionContainer>
-            <SectionContainer>
-                <SubHeader title="Generator" />
-                <Card
-                    title="Generate vibrant colours"
-                    description="Click the button below to generate vibrant colours for all tags. This will overwrite all tag colours."
-                >
-                    <ConfirmButton
-                        onConfirm={regenerateAllColours}
-                        Text="Generate"
-                    ></ConfirmButton>
-                </Card>
             </SectionContainer>
         </PageContainer>
     )
