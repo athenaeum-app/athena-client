@@ -13,7 +13,11 @@ import {
     type Tag,
     type TagId,
 } from '../modules/data'
-import { getFilteredMoments, sortTags } from '../modules/globals'
+import {
+    GetContrastingColourForHSL,
+    getFilteredMoments,
+    sortTags,
+} from '../modules/globals'
 
 export const toggleTag = (tagId: TagId) => {
     setSelectedTagIds((prev) => {
@@ -31,12 +35,15 @@ export const TagButton: Component<
     return (
         <button
             onClick={() => toggleTag(tagData.id)}
-            class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
+            class={`rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
                 selectedTagIds().includes(tagData.id) && !props.noHighlight
                     ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
-                    : `over:scale-105 hover:text-plain`
+                    : `hover:scale-105`
             }`}
-            style={`background-color: ${tagData.colour}`}
+            style={{
+                'background-color': `${tagData.colour}`,
+                color: `${GetContrastingColourForHSL(tagData.colour)}`,
+            }}
         >
             #{tagData.name}
         </button>
