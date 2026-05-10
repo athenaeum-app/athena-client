@@ -507,7 +507,6 @@ const AppearanceSettingsView: Component = () => {
                     >
                         <CheckboxSetting key="highlightSelectedTagsInMoments" />
                     </Card>
-                    c{' '}
                 </SectionContainer>
                 <SectionContainer>
                     <SubHeader title="Generator" />
