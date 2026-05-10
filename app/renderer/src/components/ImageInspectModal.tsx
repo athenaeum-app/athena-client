@@ -19,7 +19,7 @@ export const ImageInspectModal: Component = () => {
             <div class="border-sub bg-element-matte overflow-hidden rounded-2xl border-4 shadow-2xl">
                 <img
                     alt="Expanded Preview"
-                    class="min-w-3xl object-contain"
+                    class="max-h-[80vh] max-w-[80vw] min-w-3xl object-contain"
                     src={inspectingImage()}
                 />
             </div>
