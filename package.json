@@ -1,7 +1,7 @@
 {
     "name": "athena",
     "productName": "Athena",
-    "version": "0.13.0",
+    "version": "1.0.0",
     "description": "A simple app to store your moments in archives. Featuring a special filtering system to easily find what you need.",
     "main": "app/entry.mjs",
     "private": true,
@@ -49,6 +49,7 @@
     },
     "dependencies": {
         "@app/main": "*",
+        "@solid-primitives/deep": "^0.3.5",
         "electron-squirrel-startup": "^1.0.1",
         "update-electron-app": "^3.1.2"
     },

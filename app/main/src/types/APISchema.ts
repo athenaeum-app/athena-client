@@ -19,6 +19,10 @@ export const IpcApi = {
         _: ArrayBuffer,
         __: string,
     ): Promise<string | undefined> => '',
+    readSettings: () => ({}) as any,
+    writeSettings: (_: any) => {},
+    requestUpdateCheck: () =>
+        new Promise<'AVAILABLE' | 'UP_TO_DATE' | 'ERROR'>(() => {}),
 }
 
 export type IPC_API = typeof IpcApi

@@ -15,10 +15,27 @@ export const init = () => {
 
     registerProtocols()
 
-    app.whenReady().then(() => {
+    const lock = app.requestSingleInstanceLock()
+
+    if (!lock) {
+        app.quit()
+        return
+    }
+
+    let window: Electron.BrowserWindow | null = null
+
+    app.on('second-instance', () => {
+        if (window) {
+            if (window.isMinimized()) window.restore()
+            window.show()
+            window.focus()
+        }
+    })
+
+    app.whenReady().then(async () => {
         SetupMenu()
         SetupSession()
-        CreateMainWindow()
+        window = await CreateMainWindow()
     })
 
     app.once('window-all-closed', () => {

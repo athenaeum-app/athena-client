@@ -7,11 +7,20 @@ import {
     type Archive,
     type ArchiveId,
     type DataSnapshot,
+    type LibraryDataSnapshot,
+    type Library,
     type MomentData,
     type MomentId,
     type Tag,
     type TagId,
-} from './data'
+} from './store'
+
+const DEFAULT_LIBRARY_ID = 'local-default'
+const DEFAULT_LIBRARY: Library = {
+    id: DEFAULT_LIBRARY_ID,
+    name: 'My Library',
+    type: 'local',
+}
 
 interface LegacyMomentData {
     title: string
@@ -21,27 +30,43 @@ interface LegacyMomentData {
     archive?: string
 }
 
-export const migrateOldData = async (): Promise<DataSnapshot | null> => {
-    const api = getApi()
-    if (!api) return null
+const migrateSingleLibraryToMulti = (rawData: any): DataSnapshot => {
+    const api = getApi()!
 
-    const rawData = await api.readData()
-
-    if (rawData.version && !Array.isArray(rawData.moments)) {
-        console.log('Save file is already up to date.')
-        return null
+    const libSnapshot: LibraryDataSnapshot = {
+        archives: rawData.archives || {},
+        moments: rawData.moments || {},
+        tags: rawData.tags || {},
     }
 
-    console.log('Attempting to migrate old data.')
-    console.log(
-        'Note: It is recommended to start fresh for stability. Data migration may be partially wrong.',
-    )
+    // Guarantee the default archive is present
+    if (!(libSnapshot.archives as any)[defaultArchiveId]) {
+        ;(libSnapshot.archives as any)[defaultArchiveId] = {
+            uuid: defaultArchiveId,
+            name: defaultArchiveName,
+            momentsIds: [],
+        }
+    }
+
+    const snapshot: DataSnapshot = {
+        version,
+        libraries: [DEFAULT_LIBRARY],
+        activeLibraryId: DEFAULT_LIBRARY_ID,
+        libraryData: { [DEFAULT_LIBRARY_ID]: libSnapshot },
+        linkPreviewCache: rawData.linkPreviewCache || {},
+    }
+
+    api.writeMainData(snapshot)
+    return snapshot
+}
+
+const migrateFirstLegacy = (rawData: any): DataSnapshot => {
+    const api = getApi()!
 
     const oldMoments = (rawData.moments || []) as Array<LegacyMomentData>
     const oldTags = (rawData.tags || []) as Array<string>
     const oldTagColours = (rawData.tagColours || {}) as Record<string, string>
     const oldArchives = (rawData.archives || []) as Array<string>
-    const linkPreviewCache = rawData.linkPreviewCache || {}
 
     const newTags: Record<TagId, Tag> = {}
     const newArchives: Record<ArchiveId, Archive> = {}
@@ -59,14 +84,9 @@ export const migrateOldData = async (): Promise<DataSnapshot | null> => {
 
     for (const archName of oldArchives) {
         if (archName === defaultArchiveName) continue
-
         const id: ArchiveId = `archive_${window.crypto.randomUUID()}`
         archiveNameToId.set(archName, id)
-        newArchives[id] = {
-            uuid: id,
-            name: archName,
-            momentsIds: [],
-        }
+        newArchives[id] = { uuid: id, name: archName, momentsIds: [] }
     }
 
     for (const tagName of oldTags) {
@@ -82,11 +102,9 @@ export const migrateOldData = async (): Promise<DataSnapshot | null> => {
 
     for (const oldMom of oldMoments) {
         const momentId: MomentId = `moment_${window.crypto.randomUUID()}`
-
         const mappedTagIds: Array<TagId> = []
-        const mTags = oldMom.tags || []
 
-        for (const tName of mTags) {
+        for (const tName of oldMom.tags || []) {
             const tId = tagNameToId.get(tName)
             if (tId && newTags[tId]) {
                 mappedTagIds.push(tId)
@@ -112,21 +130,71 @@ export const migrateOldData = async (): Promise<DataSnapshot | null> => {
         }
     }
 
+    // Prune tags that were never referenced
     for (const [tagId, tagData] of Object.entries(newTags)) {
-        if (tagData.refCount <= 0) {
-            delete newTags[tagId as TagId]
-        }
+        if (tagData.refCount <= 0) delete newTags[tagId as TagId]
     }
 
-    const migratedSnapshot: DataSnapshot = {
+    const snapshot: DataSnapshot = {
         version,
-        archives: newArchives,
-        moments: newMoments,
-        tags: newTags,
-        linkPreviewCache,
+        libraries: [DEFAULT_LIBRARY],
+        activeLibraryId: DEFAULT_LIBRARY_ID,
+        libraryData: {
+            [DEFAULT_LIBRARY_ID]: {
+                archives: newArchives,
+                moments: newMoments,
+                tags: newTags,
+            },
+        },
+        linkPreviewCache: {}, // Ancient formats get an empty cache
     }
 
-    api.writeMainData(migratedSnapshot)
+    api.writeMainData(snapshot)
+    return snapshot
+}
 
-    return migratedSnapshot
+export const migrateOldData = async (): Promise<DataSnapshot | null> => {
+    const api = getApi()
+    if (!api) return null
+
+    const rawData = await api.readData()
+
+    if (rawData.libraryData !== undefined) {
+        let needsCacheMigration = false
+        let combinedCache = rawData.linkPreviewCache || {}
+
+        for (const libId in rawData.libraryData) {
+            if (rawData.libraryData[libId].linkPreviewCache) {
+                needsCacheMigration = true
+                combinedCache = {
+                    ...combinedCache,
+                    ...rawData.libraryData[libId].linkPreviewCache,
+                }
+                delete rawData.libraryData[libId].linkPreviewCache
+            }
+        }
+
+        if (needsCacheMigration || !rawData.linkPreviewCache) {
+            console.log('Migrating per-library link cache to global cache...')
+            rawData.linkPreviewCache = combinedCache
+            api.writeMainData(rawData)
+            return rawData as DataSnapshot
+        }
+
+        return null
+    }
+
+    if (rawData.version && !Array.isArray(rawData.moments)) {
+        console.log('Migrating single-library data to multi-library format…')
+        console.log(
+            'Note: It is recommended to start fresh for stability. Data migration may be partially wrong.',
+        )
+        return migrateSingleLibraryToMulti(rawData)
+    }
+
+    console.log('Migrating ancient data format to multi-library format…')
+    console.log(
+        'Note: It is recommended to start fresh for stability. Data migration may be partially wrong.',
+    )
+    return migrateFirstLegacy(rawData)
 }

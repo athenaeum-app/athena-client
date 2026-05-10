@@ -11,7 +11,7 @@ interface ConfirmModalProps {
 const ConfirmModal: Component<ConfirmModalProps> = (props) => {
     return (
         <div class="border-sub bg-element-matte flex w-xs flex-col gap-4 rounded-4xl border-4 p-8 shadow-2xl md:w-lg">
-            <h1 class="text-plain pt-4 text-center text-xl font-bold">
+            <h1 class="text-sub pt-4 text-center text-xl font-bold">
                 {props.title || 'ACTION NAME'}
             </h1>
             <p class="text-sub text-center font-bold">
@@ -23,7 +23,7 @@ const ConfirmModal: Component<ConfirmModalProps> = (props) => {
                         setDisplayedModal('NONE')
                         props.acceptCallback()
                     }}
-                    class="bold bg-success text-plain w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 md:p-4"
+                    class="bold bg-success text-sub w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 md:p-4"
                 >
                     Confirm
                 </button>
@@ -32,7 +32,7 @@ const ConfirmModal: Component<ConfirmModalProps> = (props) => {
                         setDisplayedModal('NONE')
                         props.rejectCallback()
                     }}
-                    class="bold text-plain bg-danger w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 md:p-4"
+                    class="bold text-sub bg-danger w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 md:p-4"
                 >
                     Reject
                 </button>

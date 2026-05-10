@@ -3,6 +3,12 @@ import {
     deleteMoment,
     momentToDelete,
     setMomentToDelete,
+    libraryToDelete,
+    setLibraryToDelete,
+    deleteLibraryData,
+    activeLibraryId,
+    libraries,
+    setActiveLibraryId,
 } from '../modules/data'
 import {
     closeMomentModal,
@@ -11,10 +17,15 @@ import {
     setDisplayedModal,
     type MODAL_NAMES,
 } from '../modules/globals'
+import ImageInspectModal from './ImageInspectModal'
 import ConfirmModal from './ConfirmModal'
 import ModalContainer from './ModalContainer'
 import { MomentCreator } from './MomentCreator'
 import { MomentModal } from './MomentModal'
+import AddLibraryModal from './AddLibraryModal'
+import { ServerLoginModal } from './ServerLoginModal'
+import { DownloadServerModal } from './DownloadServerModal'
+import { AppMenuModal } from './AppMenuModal'
 
 export const Modals = () => {
     createEffect(() => {
@@ -28,11 +39,16 @@ export const Modals = () => {
             stateSetter={setDisplayedModal}
             onClose={() => {
                 closeMomentModal()
+                setLibraryToDelete(null) // Reset on close
             }}
             modals={[
                 {
                     state_name: 'EDIT_MODAL',
                     content: <MomentCreator />,
+                },
+                {
+                    state_name: 'APP_MENU_MODAL',
+                    content: <AppMenuModal />,
                 },
                 {
                     state_name: 'CONFIRM_MOMENT_DELETE',
@@ -59,8 +75,54 @@ export const Modals = () => {
                     ),
                 },
                 {
+                    state_name: 'IMAGE_INSPECT_MODAL',
+                    content: <ImageInspectModal />,
+                },
+                {
+                    state_name: 'CONFIRM_LIBRARY_DELETE',
+                    content: (
+                        <ConfirmModal
+                            title="Remove Library?"
+                            rejectCallback={() => {
+                                setLibraryToDelete(null)
+                                setDisplayedModal('NONE')
+                            }}
+                            acceptCallback={() => {
+                                const targetId = libraryToDelete()
+                                if (targetId) {
+                                    console.log(`Removing library ${targetId}`)
+                                    deleteLibraryData(targetId)
+
+                                    if (activeLibraryId() === targetId) {
+                                        const remaining = libraries().filter(
+                                            (l) => l.id !== targetId,
+                                        )
+                                        if (remaining.length > 0) {
+                                            setActiveLibraryId(remaining[0].id)
+                                        }
+                                    }
+                                }
+                                setLibraryToDelete(null)
+                                setDisplayedModal('NONE')
+                            }}
+                        />
+                    ),
+                },
+                {
                     state_name: 'DISPLAY_MOMENT_MODAL',
                     content: <MomentModal />,
+                },
+                {
+                    state_name: 'ADD_LIBRARY_MODAL',
+                    content: <AddLibraryModal />,
+                },
+                {
+                    state_name: 'SERVER_LOGIN_MODAL',
+                    content: <ServerLoginModal />,
+                },
+                {
+                    state_name: 'DOWNLOAD_SERVER_MODAL',
+                    content: <DownloadServerModal />,
                 },
             ]}
         />

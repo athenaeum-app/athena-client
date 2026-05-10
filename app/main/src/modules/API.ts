@@ -1,5 +1,5 @@
 import type { IPC_API, ScrapeData } from '../types/APISchema'
-import { app, BrowserWindow, shell } from 'electron'
+import { app, autoUpdater, BrowserWindow, shell } from 'electron'
 import * as cheerio from 'cheerio'
 import * as fs from 'node:fs'
 import * as path from 'path'
@@ -11,12 +11,15 @@ import { MAX_BACKUP_COUNT, MAX_BACKUP_SIZE_IN_MB } from './Settings'
 const backupsFolderName = 'backups'
 const devDataFileName = 'dev_athena_data.json'
 const prodDataFileName = 'athena_data.json'
+const settingsFileName = 'settings.json'
 const devDataFilePath = () =>
     path.join(app.getPath('userData'), devDataFileName)
 const prodDataFilePath = () =>
     path.join(app.getPath('userData'), prodDataFileName)
 const backupsFolderPath = () =>
     path.join(app.getPath('userData'), backupsFolderName)
+const settingsFilePath = () =>
+    path.join(app.getPath('userData'), settingsFileName)
 
 const getDataPath = () => {
     if (process.env.DEV) {
@@ -171,6 +174,7 @@ export const Api: IPC_API = {
             console.error(`Failed to save attachment for ${fileName}`, error)
         }
     },
+
     writeMainData: (mainData: dataSnapshot) => {
         try {
             const targetPath = getDataPath()
@@ -352,6 +356,8 @@ export const Api: IPC_API = {
                         },
                     })
 
+                    tempWindow.webContents.setAudioMuted(true)
+
                     try {
                         let tempUserAgent =
                             tempWindow.webContents.getUserAgent()
@@ -442,4 +448,54 @@ export const Api: IPC_API = {
 
         return scrapePromise
     },
+
+    // Settings
+    readSettings: () => {
+        try {
+            const targetPath = settingsFilePath()
+            if (!fs.existsSync(targetPath)) {
+                return {}
+            }
+            const raw = fs.readFileSync(targetPath, 'utf-8')
+            return JSON.parse(raw)
+        } catch (error) {
+            console.warn('Failed to read settings.json:', error)
+            return {}
+        }
+    },
+    writeSettings: (settingsData: any) => {
+        try {
+            const targetPath = settingsFilePath()
+            const bufferPath = targetPath + '.tmp'
+            console.log(`Attempting to save settings to ${targetPath}..`)
+
+            const formattedData = JSON.stringify(settingsData, null, 2)
+            fs.writeFileSync(bufferPath, formattedData, 'utf-8')
+            fs.renameSync(bufferPath, targetPath)
+
+            console.log('Settings saved!')
+        } catch (error) {
+            console.error('Failed to save settings data:', error)
+        }
+    },
+    requestUpdateCheck: async () =>
+        new Promise((resolve) => {
+            autoUpdater.once('update-available', () => {
+                resolve('AVAILABLE')
+            })
+
+            autoUpdater.once('update-not-available', () => {
+                resolve('UP_TO_DATE')
+            })
+
+            autoUpdater.once('error', (error) => {
+                resolve('ERROR')
+            })
+
+            try {
+                autoUpdater.checkForUpdates()
+            } catch (error) {
+                resolve('ERROR')
+            }
+        }),
 }

@@ -1,40 +1,248 @@
 @import 'tailwindcss';
 
-.material-symbols-outlined, .material-icons {
+.material-symbols-outlined,
+.material-icons {
     color: var(--color-icon);
     font-size: var(--text-xl);
 }
 
-.material-symbols-outlined, .material-icons :hover {
+.material-symbols-outlined:hover,
+.material-icons:hover {
     color: var(--color-icon-hover);
 }
 
-
-@theme {
-    --color-element-matte: var(--color-slate-950);
-    --color-element: color-mix(in srgb, var(--color-slate-950) 50%, transparent);
-    --color-dark: var(--color-slate-800);
-    --color-element-lighter: color-mix(in srgb, var(--color-slate-900) 30%, transparent);
-    --color-element-accent-highlight: var(--color-slate-400);
-    --color-highlight-matte: var(--color-cyan-500);
-    --color-highlight: color-mix(in srgb, var(--color-cyan-500) 20%, transparent);
-    --color-highlight-strong: color-mix(in srgb, var(--color-cyan-500) 80%, transparent);
-    --color-highlight-strongest: color-mix(in srgb, var(--color-cyan-500) 100%, transparent);
-    --color-highlight-alt: color-mix(in srgb, var(--color-pink-500) 20%, transparent);
-    --color-highlight-alt-strong: color-mix(in srgb, var(--color-pink-500) 80%, transparent);
-    --color-highlight-alt-strongest: color-mix(in srgb, var(--color-pink-500) 100%, transparent);
-    --color-background: var(--color-slate-900);
-    --color-main: var(--color-slate-300);
-    --color-icon: var(--color-highlight-alt-strong);
-    --color-icon-hover: var(--color-highlight-alt-strongest);
-    --color-sub: var(--color-slate-500);
-    --color-element-accent: var(--color-slate-800);
-    --color-danger: var(--color-red-500);
-    --color-success: var(--color-green-500);
-    --color-plain: var(--color-white);
+.disable-animations,
+.disable-animations *,
+.disable-animations *::before,
+.disable-animations *::after {
+    animation: none !important;
+    transition: none !important;
 }
 
- ::-webkit-scrollbar {
+.transition-all {
+    transition-duration: calc(150ms * var(--transition-duration-multiplier, 1));
+}
+
+:root,
+[data-theme='dark'] {
+    --theme-bg: var(--color-slate-900);
+    --theme-element-matte: var(--color-slate-950);
+    --theme-element-accent: var(--color-slate-800);
+    --theme-element-lighter: var(--color-slate-900);
+
+    --theme-text-sub: var(--color-slate-300);
+    --theme-text-sub: var(--color-slate-500);
+    --theme-plain: var(--color-white);
+
+    --theme-highlight: var(--color-cyan-500);
+    --theme-highlight-alt: var(--color-pink-500);
+}
+
+[data-theme='light'] {
+    --theme-bg: var(--color-slate-100);
+    --theme-element-matte: var(--color-white);
+    --theme-element-accent: var(--color-slate-300);
+    --theme-element-lighter: var(--color-slate-200);
+
+    --theme-text-sub: var(--color-slate-600);
+    --theme-plain: var(--color-black);
+
+    --theme-highlight: var(--color-cyan-500);
+    --theme-highlight-alt: var(--color-pink-700);
+}
+
+[data-theme='sunset'] {
+    --theme-bg: #22130d;
+    --theme-element-matte: #332016;
+    --theme-element-accent: #523223;
+    --theme-element-lighter: #704531;
+
+    --theme-text-main: #ffe6cf;
+    --theme-text-sub: #d7a77b;
+    --theme-plain: #fffaf5;
+
+    --theme-highlight: #fb923c;
+    --theme-highlight-alt: #f97316;
+}
+
+[data-theme='arctic'] {
+    --theme-bg: #0f1724;
+    --theme-element-matte: #162235;
+    --theme-element-accent: #24364f;
+    --theme-element-lighter: #35506f;
+
+    --theme-text-main: #e4f1ff;
+    --theme-text-sub: #9fb8d4;
+    --theme-plain: #fcfeff;
+
+    --theme-highlight: #7dd3fc;
+    --theme-highlight-alt: #38bdf8;
+}
+
+[data-theme='rosewood'] {
+    --theme-bg: #1b1110;
+    --theme-element-matte: #2c1b19;
+    --theme-element-accent: #49302d;
+    --theme-element-lighter: #634541;
+
+    --theme-text-main: #f1dfd9;
+    --theme-text-sub: #c2a095;
+    --theme-plain: #fff8f5;
+
+    --theme-highlight: #d9776a;
+    --theme-highlight-alt: #b45345;
+}
+
+[data-theme='neutral'] {
+    --theme-bg: #000000;
+    --theme-element-matte: #171717;
+    --theme-element-accent: #333333;
+    --theme-element-lighter: #262626;
+
+    --theme-text-sub: var(--color-slate-400);
+    --theme-plain: var(--color-white);
+
+    --theme-highlight: var(--color-cyan-400);
+    --theme-highlight-alt: var(--color-pink-400);
+}
+
+[data-theme='valentine'] {
+    --theme-bg: var(--color-rose-50);
+    --theme-element-matte: var(--color-white);
+    --theme-element-accent: var(--color-rose-200);
+    --theme-element-lighter: var(--color-rose-100);
+
+    --theme-text-main: var(--color-rose-900);
+    --theme-text-sub: var(--color-rose-600);
+    --theme-plain: var(--color-rose-950);
+
+    --theme-highlight: var(--color-rose-500);
+    --theme-highlight-alt: var(--color-fuchsia-500);
+}
+
+[data-theme='rose'] {
+    --theme-bg: #24131b;
+    --theme-element-matte: #311923;
+    --theme-element-accent: #4a2634;
+    --theme-element-lighter: #3b1f2b;
+
+    --theme-text-main: #f5dbe4;
+    --theme-text-sub: #cfa8b7;
+    --theme-plain: #fff7fa;
+
+    --theme-highlight: #e87993;
+    --theme-highlight-alt: #d16ba5;
+}
+
+[data-theme='ocean'] {
+    --theme-bg: #08131a;
+    --theme-element-matte: #0d1d27;
+    --theme-element-accent: #163242;
+    --theme-element-lighter: #1b4154;
+
+    --theme-text-main: #d6e8f2;
+    --theme-text-sub: #94b4c7;
+    --theme-plain: #f5fbff;
+
+    --theme-highlight: #38bdf8;
+    --theme-highlight-alt: #60a5fa;
+}
+
+[data-theme='royal blue'] {
+    --theme-bg: #13203f;
+    --theme-element-matte: #1b2d57;
+    --theme-element-accent: #2b4478;
+    --theme-element-lighter: #385792;
+
+    --theme-text-main: #fff3c4;
+    --theme-text-sub: #f4d87a;
+    --theme-plain: #fffef9;
+
+    --theme-highlight: #ffd76a;
+    --theme-highlight-alt: #ffbe55;
+}
+
+@theme {
+    --duration-75: calc(75ms * var(--transition-duration-multiplier, 1));
+    --duration-100: calc(100ms * var(--transition-duration-multiplier, 1));
+    --duration-150: calc(150ms * var(--transition-duration-multiplier, 1));
+    --duration-200: calc(200ms * var(--transition-duration-multiplier, 1));
+    --duration-300: calc(300ms * var(--transition-duration-multiplier, 1));
+    --duration-500: calc(500ms * var(--transition-duration-multiplier, 1));
+    --duration-700: calc(700ms * var(--transition-duration-multiplier, 1));
+    --duration-1000: calc(1000ms * var(--transition-duration-multiplier, 1));
+
+    --color-background: var(--theme-bg);
+    --color-element-matte: var(--theme-element-matte);
+
+    --color-element: color-mix(
+        in srgb,
+        var(--theme-element-matte) 50%,
+        transparent
+    );
+    --color-element-lighter: color-mix(
+        in srgb,
+        var(--theme-element-lighter) 30%,
+        transparent
+    );
+
+    --color-tag-text: var(--color-slate-800);
+    --color-dark: var(--theme-element-accent);
+    --color-element-accent: var(--theme-element-accent);
+    --color-element-accent-highlight: var(--color-slate-400);
+
+    /* Highlights */
+    --color-highlight-matte: var(--theme-highlight);
+    --color-highlight: color-mix(
+        in srgb,
+        var(--theme-highlight) 20%,
+        transparent
+    );
+    --color-highlight-strong: color-mix(
+        in srgb,
+        var(--theme-highlight) 80%,
+        transparent
+    );
+    --color-highlight-strongest: var(--theme-highlight);
+
+    /* Alt Highlights */
+    --color-highlight-alt: color-mix(
+        in srgb,
+        var(--theme-highlight-alt) 20%,
+        transparent
+    );
+    --color-highlight-alt-strong: color-mix(
+        in srgb,
+        var(--theme-highlight-alt) 80%,
+        transparent
+    );
+    --color-highlight-alt-strongest: var(--theme-highlight-alt);
+
+    /* Text */
+    --color-main: var(--theme-text-main);
+    --color-sub: var(--theme-text-sub);
+    --color-plain: var(--theme-plain);
+
+    --color-icon: var(--color-highlight-alt-strong);
+    --color-icon-hover: var(--color-highlight-alt-strongest);
+
+    /* Status */
+    --color-danger: var(--color-red-500);
+    --color-warning: var(--color-yellow-500);
+    --color-success: var(--color-green-500);
+}
+
+optgroup {
+    color: var(--color-main);
+    background-color: var(--color-element-accent);
+}
+
+option {
+    background-color: var(--color-element-lighter);
+    color: var(--color-main);
+}
+
+::-webkit-scrollbar {
     width: 0.5rem;
 }
 
@@ -46,11 +254,12 @@
     background-color: var(--color-sub);
     border-radius: 0.4em;
     border: 2px solid transparent;
-    background-clip: content-box
+    background-clip: content-box;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-highlight-strong);
     border-radius: 0.4em;
     border: 2px solid transparent;
-    background-clip: content-box
+    background-clip: content-box;
 }

@@ -7,17 +7,19 @@ import {
 } from 'solid-js'
 import * as pdfjs from 'pdfjs-dist'
 import { maxImageHeight } from '../modules/globals'
+import { InspectImage } from '../modules/actions'
+import { setInspectingImageExternalLink } from '../modules/store'
 
 export const LocalPDFPreview: Component<
     ComponentProps<'div'> & {
-        uri: string
+        url: string
     }
 > = (props) => {
     const [thumbnail, setThumbnail] = createSignal<string>('')
 
     onMount(async () => {
         try {
-            const loadingTask = pdfjs.getDocument(props.uri)
+            const loadingTask = pdfjs.getDocument(props.url)
             const pdf = await loadingTask.promise
             const page = await pdf.getPage(1)
 
@@ -62,6 +64,13 @@ export const LocalPDFPreview: Component<
                         }}
                     />
                     <img
+                        onClick={() => {
+                            const imageLink = thumbnail()
+                            if (imageLink) {
+                                InspectImage(imageLink)
+                                setInspectingImageExternalLink(props.url)
+                            }
+                        }}
                         src={thumbnail()}
                         class={`bg-element z-10 ${maxImageHeight()} w-full rounded object-contain shadow-lg hover:cursor-pointer`}
                     />

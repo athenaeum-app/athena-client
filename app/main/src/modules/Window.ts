@@ -68,4 +68,6 @@ export const CreateMainWindow = async () => {
 
     SetChildWindowProperties(window)
     console.log('Created window!')
+
+    return window
 }
