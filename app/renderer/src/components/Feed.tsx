@@ -8,6 +8,7 @@ import {
     setDisplayType,
 } from '../modules/globals'
 import {
+    searchQuery,
     serverRole,
     setSearchQuery,
     shouldBlurLibraryView,
@@ -38,7 +39,7 @@ export const Feed: Component = () => {
     return (
         <div class="bg-element pt flex w-full items-center justify-center gap-2 overflow-x-hidden rounded-xl p-2 lg:p-4">
             <div class={'flex h-full w-[90%] flex-col items-center gap-4'}>
-                <div class="flex w-full items-center gap-2">
+                <div class="flex w-full items-center justify-between gap-2">
                     <i
                         onClick={() => {
                             setIsSearching(true)
@@ -58,8 +59,22 @@ export const Feed: Component = () => {
                         placeholder="Search Moments"
                         class={`${isSearching() ? 'w-full px-2 py-1' : 'w-0 p-0 opacity-0'} bg-element text-sub/80 border-plain/20 rounded-md border transition-all duration-300 focus:outline-none`}
                     />
+                    <span
+                        class={`${!isSearching() ? 'w-full opacity-100' : 'w-0 opacity-0'} text-center transition-opacity duration-300`}
+                    >
+                        {searchQuery() ? (
+                            <>
+                                Results for:{' '}
+                                <span class="text-sub font-bold">
+                                    {searchQuery()}
+                                </span>
+                            </>
+                        ) : (
+                            ''
+                        )}
+                    </span>
                     <div
-                        class="ml-auto flex items-center"
+                        class="flex items-center"
                         onClick={() => {
                             if (displayType() == 'Full') {
                                 setDisplayType('Grid')
