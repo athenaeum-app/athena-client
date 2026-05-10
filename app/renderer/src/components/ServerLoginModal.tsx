@@ -51,7 +51,7 @@ export const ServerLoginModal: Component = () => {
 
     return (
         <div class="inset-0 flex items-center justify-center">
-            <div class="bg-element border-element-accent flex w-100 flex-col gap-4 rounded-xl border p-6 shadow-2xl">
+            <div class="bg-element-matte border-element-accent flex w-100 flex-col gap-4 rounded-xl border p-6 shadow-2xl">
                 <div class="flex flex-col gap-1">
                     <h2 class="text-sub text-lg font-black tracking-wide">
                         Session Expired
