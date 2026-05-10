@@ -521,7 +521,7 @@ const AppearanceSettingsView: Component = () => {
                         ></ConfirmButton>
                     </Card>
                 </SectionContainer>
-                <SubHeader title="S"></SubHeader>
+                <SubHeader title="Tag Colours"></SubHeader>
                 <SubHeaderCaption caption="Customize the colours of your tags!"></SubHeaderCaption>
                 <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
                     <For each={Object.values(allTags)}>
