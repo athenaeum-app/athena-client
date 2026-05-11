@@ -42,6 +42,7 @@ import {
 } from '../modules/globals'
 import { getApi } from '../modules/ipc_client'
 import { ExpandableContainer } from './ExpandableContainer'
+import { TagButton } from './TagBar'
 
 const textDisplayClasses =
     'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
@@ -369,7 +370,7 @@ export const MomentCreator: Component<
                     </div>
                     <div class="mx-2 flex w-full flex-col items-center gap-6">
                         <input
-                            class="bg-element text-highlight-matte placeholder-sub focus:border-highlight-strong w-full rounded border border-transparent px-2 py-1.5 font-mono text-xs outline-none"
+                            class="bg-element text-sub placeholder-sub focus:border-highlight-strong w-full rounded border border-transparent px-2 py-1.5 font-mono text-xs font-bold outline-none"
                             placeholder="Tags (comma separated)... e.g. GAMES, ENTERTAINMENT, ROMANCE"
                             value={props.hide ? '' : tagsString()}
                             onInput={(e) =>
@@ -397,7 +398,7 @@ export const MomentCreator: Component<
                                 </span>
                                 <For each={getSuggestableTags()}>
                                     {(tagData) => (
-                                        <span
+                                        <label
                                             onClick={() => {
                                                 setTagsString((prev) => {
                                                     const tagArray =
@@ -411,11 +412,12 @@ export const MomentCreator: Component<
                                                     )
                                                 })
                                             }}
-                                            style={`background-color: ${tagData.colour}`}
-                                            class="text-dark rounded-lg px-2 py-1.5 text-xs font-black transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
                                         >
-                                            #{tagData.name}
-                                        </span>
+                                            <TagButton
+                                                disabled={true}
+                                                tagId={tagData.id}
+                                            />
+                                        </label>
                                     )}
                                 </For>
                             </div>

@@ -34,7 +34,11 @@ export const TagButton: Component<
     const tagData = allTags[props.tagId]
     return (
         <button
-            onClick={() => toggleTag(tagData.id)}
+            onClick={() => {
+                if (!props.disabled) {
+                    toggleTag(tagData.id)
+                }
+            }}
             class={`rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
                 selectedTagIds().includes(tagData.id) && !props.noHighlight
                     ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
