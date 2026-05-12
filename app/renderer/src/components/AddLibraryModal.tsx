@@ -109,6 +109,11 @@ const AddLibraryModal: Component = () => {
         setPassword('')
     }
 
+    const isNameEmpty = () => {
+        console.log(name())
+        return name().trim() === ''
+    }
+
     return (
         <div class="border-sub bg-element-matte flex w-xs flex-col gap-6 rounded-4xl border-4 p-8 shadow-2xl md:w-lg">
             <h1 class="text-sub pt-2 text-center text-xl font-bold">
@@ -212,7 +217,7 @@ const AddLibraryModal: Component = () => {
                     <button
                         type="submit"
                         disabled={
-                            !name().trim() ||
+                            isNameEmpty() ||
                             isLoading() ||
                             isURLDuplicate() ||
                             (type() === 'server' &&
