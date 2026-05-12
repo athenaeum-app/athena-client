@@ -1,75 +1,74 @@
 name: Create Release
 
 on:
-  workflow_dispatch:
-  push:
-    tags:
-      - 'v*.*.*'
-      
+    workflow_dispatch:
+    push:
+        tags:
+            - 'v*.*.*'
 
 permissions:
-  contents: write
+    contents: write
 
 jobs:
-  cross-platform-release:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    cross-platform-release:
+        name: Build on ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
 
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest] # only tested on my windows pc and fedora laptop, not sure about macos yet.
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest, macos-latest] # only tested on my windows pc and fedora laptop, not sure about macos yet.
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v6
 
-      - name: Install All Dependencies
-        run: npm install
+            - name: Setup Node
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24
 
-      - name: Create Distributables
-        run: npm run make
+            - name: Install All Dependencies
+              run: npm install
 
-      - name: Get Version
-        id: package_version
-        shell: bash
-        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+            - name: Create Distributables
+              run: npm run make
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.package_version.outputs.VERSION }}
-          name: Release v${{ steps.package_version.outputs.VERSION }}
-          generate_release_notes: true
-          body: |
-            # Athena v${{ steps.package_version.outputs.VERSION }}
+            - name: Get Version
+              id: package_version
+              shell: bash
+              run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-            ## Installation
-            - Download the suitable file for your operating system.
-            - Open it
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ steps.package_version.outputs.VERSION }}
+                  name: Release v${{ steps.package_version.outputs.VERSION }}
+                  generate_release_notes: true
+                  body: |
+                      # Athena v${{ steps.package_version.outputs.VERSION }}
 
-            ## Feedback & Support
-            Found a bug or have an idea? Please use the links below:
-            - **[Report a Bug](${{ github.server_url }}/${{ github.repository }}/issues/new?template=bug_report.md)**
-            - **[Request a Feature](${{ github.server_url }}/${{ github.repository }}/issues/new?template=feature_request.md)**
-            - **[General Discussion](${{ github.server_url }}/${{ github.repository }}/issues)**
-            
-            Alternatively, make a pull request
+                      ## Installation
+                      - Download the suitable file for your operating system.
+                      - Open it
 
-            ---
+                      ## Feedback & Support
+                      Found a bug or have an idea? Please use the links below:
+                      - **[Report a Bug](${{ github.server_url }}/${{ github.repository }}/issues/new?template=bug_report.md)**
+                      - **[Request a Feature](${{ github.server_url }}/${{ github.repository }}/issues/new?template=feature_request.md)**
+                      - **[General Discussion](${{ github.server_url }}/${{ github.repository }}/issues)**
 
-            *Note that Athena is just a hobby side project, so don't expect much.*
+                      Alternatively, make a pull request
 
-            ---
-          files: |
-            out/make/**/*.exe
-            out/make/**/*.rpm
-            out/make/**/*.deb
-            out/make/**/*.zip
-            out/make/**/*.dmg
-            out/make/**/*.nupkg
-            out/make/**/*RELEASES
+                      ---
+
+                      *Note that Athena is just a hobby side project, so don't expect much.*
+
+                      ---
+                  files: |
+                      out/make/**/*.exe
+                      out/make/**/*.rpm
+                      out/make/**/*.deb
+                      out/make/**/*.zip
+                      out/make/**/*.dmg
+                      out/make/**/*.nupkg
+                      out/make/**/*RELEASES
