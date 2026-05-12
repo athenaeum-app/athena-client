@@ -5,7 +5,6 @@ import {
     allTags,
     dateFilter,
     defaultArchiveId,
-    getActiveLibrary,
     mediaFilters,
     searchQuery,
     selectedArchiveId,

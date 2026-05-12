@@ -63,7 +63,7 @@ export const loadData = async () => {
         if (api.readData) {
             const migratedData = await migrateOldData()
             const readData = await api.readData()
-            rawData = migratedData ?? readData
+            rawData = migratedData ?? readData ?? ({} as DataSnapshot)
         }
     }
 

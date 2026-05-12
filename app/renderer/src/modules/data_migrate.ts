@@ -158,6 +158,10 @@ export const migrateOldData = async (): Promise<DataSnapshot | null> => {
     if (!api) return null
 
     const rawData = await api.readData()
+    if (!rawData?.libraries) {
+        console.log('Raw data is undefined')
+        return null
+    }
 
     if (rawData.libraryData !== undefined) {
         let needsCacheMigration = false
