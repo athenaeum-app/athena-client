@@ -44,11 +44,11 @@ export const AppMenuModal: Component = () => {
             }}
         >
             <div class="bg-element-matte border-sub flex h-[80vh] w-full flex-col overflow-hidden rounded-3xl border-4 shadow-2xl lg:flex-row">
-                <div class="border-highlight flex flex-col gap-2 border-r-2 lg:max-w-[20vw]">
+                <div class="border-highlight flex flex-col gap-2 overflow-y-auto border-r-2 lg:max-w-[20vw] lg:min-w-[15vw]">
                     <div class="flex w-full shrink-0 flex-col gap-2 p-6">
                         <div class="flex items-baseline justify-between lg:mb-4">
                             <Header title="Athena" />
-                            <span class="text-sub text-xs font-bold tracking-widest lg:text-lg">
+                            <span class="text-sub pl-12 text-xs font-bold tracking-widest lg:text-lg">
                                 {appVersion}
                             </span>
                         </div>
