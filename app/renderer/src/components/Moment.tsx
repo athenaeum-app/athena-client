@@ -41,6 +41,15 @@ import {
 import { AttachmentPreview } from './AttachmentPreview'
 import { TagButton } from './TagBar'
 import { SolidMarkdown } from 'solid-markdown'
+import { micromark } from 'micromark'
+import { gfm, gfmHtml } from 'micromark-extension-gfm'
+import { gfmFootnote, gfmFootnoteHtml } from 'micromark-extension-gfm-footnote'
+import { gfmStrikethrough } from 'micromark-extension-gfm-strikethrough'
+import { gfmTable, gfmTableHtml } from 'micromark-extension-gfm-table'
+import {
+    gfmTaskListItem,
+    gfmTaskListItemHtml,
+} from 'micromark-extension-gfm-task-list-item'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
@@ -204,7 +213,7 @@ export const Moment: Component<MomentProps> = (props) => {
                     </span>
                 </div>
                 <Show when={contentDisplayType() == 'All'}>
-                    <div class="text-element-accent-highlight flex flex-col gap-2 whitespace-pre-line">
+                    <div class="text-element-accent-highlight flex flex-col gap-0 whitespace-pre-line">
                         <For each={contentParts()}>
                             {(text) => {
                                 if (
@@ -213,16 +222,21 @@ export const Moment: Component<MomentProps> = (props) => {
                                 ) {
                                     return <AttachmentPreview link={text} />
                                 }
+                                const rawText = text.trim()
+                                const parsedComponent = micromark(rawText, {
+                                    extensions: [gfm()],
+                                    htmlExtensions: [gfmHtml()],
+                                })
+                                console.log('Parsed:', parsedComponent)
                                 return (
                                     <div
-                                        class={`prose max-w-none leading-normal ${
+                                        class={`prose text-sub flex max-w-none flex-col gap-0 leading-normal ${
                                             displayType() == 'Full'
                                                 ? 'prose-lg'
                                                 : 'prose-base'
-                                        } prose-p:text-sub prose-code:text-sub prose-li:text-sub prose-strong:text-md-strong prose-h1:text-md-heading prose-h2:text-md-heading/95 prose-h3:text-md-heading/90 prose-h4:text-md-heading/85 prose-h5:text-md-heading/80 prose-h6:text-md-heading/75 prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 prose-blockquote:text-sub prose-table:text-sub prose-thead:text-sub prose-tr:text-sub prose-th:text-sub prose-td:text-sub prose-a:text-element-accent-highlight prose-a:hover:text-element-accent-focus prose-a:underline prose-a:decoration-element-accent prose-a:hover:decoration-element-accent-focus prose-img:rounded-lg prose-img:border prose-img:border-element-accent prose-img:shadow-md prose-video:rounded-lg prose-video:border prose-video:border-element-accent prose-video:shadow-md prose-hr:border-element-accent prose-figure:my-2 prose-figcaption:text-sm prose-figcaption:text-sub prose-figcaption:italic prose-figcaption:text-center`}
-                                    >
-                                        <SolidMarkdown children={text.trim()} />
-                                    </div>
+                                        } prose-p:text-sub prose-code:text-sub prose-li:text-sub prose-strong:text-md-strong prose-h1:text-md-heading prose-h2:text-md-heading/95 prose-h3:text-md-heading/90 prose-h4:text-md-heading/85 prose-h5:text-md-heading/80 prose-h6:text-md-heading/75 prose-p:my-0 prose-headings:my-1 prose-ul:-my-3 prose-li:-my-3 prose-blockquote:text-sub prose-table:text-sub prose-thead:text-sub prose-tr:text-sub prose-th:text-sub prose-td:text-sub prose-a:text-element-accent-highlight prose-a:hover:text-element-accent-focus prose-a:underline prose-a:decoration-element-accent prose-a:hover:decoration-element-accent-focus prose-img:rounded-lg prose-img:border prose-img:border-element-accent prose-img:shadow-md prose-video:rounded-lg prose-video:border prose-video:border-element-accent prose-video:shadow-md prose-hr:border-element-accent prose-figure:my-0 prose-figcaption:text-sm prose-figcaption:text-sub prose-figcaption:italic prose-figcaption:text-center`}
+                                        innerHTML={parsedComponent}
+                                    />
                                 )
                             }}
                         </For>
