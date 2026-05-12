@@ -71,9 +71,7 @@ export const loadData = async () => {
     setLinkPreviewCache(loadedCache)
 
     setAllLibraryDataRef(rawData.libraryData ?? {})
-    const savedLibraries: Library[] = rawData.libraries ?? [
-        { id: 'local-default', name: 'My Library', type: 'local' },
-    ]
+    const savedLibraries: Library[] = rawData.libraries
     setLibraries(savedLibraries)
 
     const savedActiveId = rawData.activeLibraryId ?? savedLibraries[0]?.id ?? ''
