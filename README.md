@@ -28,7 +28,7 @@ Drop in your files or paste web links to automatically generate beautiful visual
 | ![Attachments](./assets/athena_attachments.png) | ![Link Previews](./assets/athena_linkpreviews.png) |
 
 ### Self-hosted Online Libraries
-Athena supports online libraries. No accounts needed. Just an IP address and a password. Kept simple on purpose.
+Athena supports online libraries! No accounts needed, just an IP address and a password. Kept simple on purpose.
 ![Online Libraries](./assets/athena_server.png)
 
 ### Example Themes
