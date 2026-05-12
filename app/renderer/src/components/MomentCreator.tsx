@@ -254,6 +254,47 @@ export const MomentCreator: Component<
         }
     }
 
+    const insertMarkdown = (prefix: string, suffix: string = '') => {
+        if (!textInputAreaRef) return
+
+        const start = textInputAreaRef.selectionStart
+        const end = textInputAreaRef.selectionEnd
+        const currentText = content()
+
+        const before = currentText.substring(0, start)
+        const selected = currentText.substring(start, end)
+        const after = currentText.substring(end)
+
+        const newSelectedText = selected
+            ? `${prefix}${selected}${suffix}`
+            : `${prefix}${suffix}`
+        setContent(before + newSelectedText + after)
+
+        setTimeout(() => {
+            textInputAreaRef!.focus()
+            const newCursorPos =
+                start + prefix.length + (selected ? selected.length : 0)
+            textInputAreaRef!.setSelectionRange(newCursorPos, newCursorPos)
+        }, 0)
+    }
+
+    const ToolbarButton: Component<{
+        icon: string
+        title: string
+        onClick: () => void
+    }> = (btnProps) => (
+        <button
+            title={btnProps.title}
+            onClick={btnProps.onClick}
+            onMouseDown={(e) => e.preventDefault()}
+            class="text-sub hover:text-highlight-strong hover:bg-element-accent flex items-center justify-center rounded p-1 transition-colors"
+        >
+            <span class="material-symbols-outlined" style="font-size: 18px;">
+                {btnProps.icon}
+            </span>
+        </button>
+    )
+
     return (
         <ExpandableContainer expanded={!props.hide}>
             <div class="relative max-w-4xl overflow-hidden">
@@ -283,6 +324,57 @@ export const MomentCreator: Component<
                         value={props.hide ? '' : title()}
                         onInput={(e) => setTitle(e.currentTarget.value)}
                     />
+
+                    <div class="border-element-accent flex items-center gap-1 border-b px-2 pb-2">
+                        <ToolbarButton
+                            icon="format_bold"
+                            title="Bold"
+                            onClick={() => insertMarkdown('**', '**')}
+                        />
+                        <ToolbarButton
+                            icon="format_italic"
+                            title="Italic"
+                            onClick={() => insertMarkdown('*', '*')}
+                        />
+                        <ToolbarButton
+                            icon="format_strikethrough"
+                            title="Strikethrough"
+                            onClick={() => insertMarkdown('~~', '~~')}
+                        />
+                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
+                        <ToolbarButton
+                            icon="title"
+                            title="Heading"
+                            onClick={() => insertMarkdown('# ')}
+                        />
+                        <ToolbarButton
+                            icon="format_list_bulleted"
+                            title="Bullet List"
+                            onClick={() => insertMarkdown('- ')}
+                        />
+                        <ToolbarButton
+                            icon="format_quote"
+                            title="Quote"
+                            onClick={() => insertMarkdown('> ')}
+                        />
+                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
+                        <ToolbarButton
+                            icon="code"
+                            title="Code"
+                            onClick={() => insertMarkdown('`', '`')}
+                        />
+                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
+                        <ToolbarButton
+                            icon="table_chart"
+                            title="Table"
+                            onClick={() =>
+                                insertMarkdown(
+                                    '\n| Header 1 | Header 2 |\n| :--- | :--- |\n| Cell 1 | Cell 2 |\n',
+                                )
+                            }
+                        />
+                    </div>
+
                     <div class="relative grid w-full">
                         <div
                             ref={textDisplayRef}
@@ -342,6 +434,37 @@ export const MomentCreator: Component<
                                     : 'pointer-events-auto cursor-text'
                             }`}
                             placeholder="Moment description..."
+                            onKeyDown={(e) => {
+                                if (e.key.toLowerCase() === 'tab') {
+                                    insertMarkdown('    ')
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }
+
+                                if (e.ctrlKey || e.metaKey) {
+                                    let handled = true
+                                    const key = e.key.toLowerCase()
+
+                                    if (key === 'b') {
+                                        insertMarkdown('**', '**')
+                                    } else if (key === 'i') {
+                                        insertMarkdown('*', '*')
+                                    } else if (key === 'k') {
+                                        insertMarkdown('[', '](url)')
+                                    } else if (key === 'd') {
+                                        insertMarkdown('~~', '~~')
+                                    } else if (key === 's' || key === 'enter') {
+                                        attemptSubmit()
+                                    } else {
+                                        handled = false
+                                    }
+
+                                    if (handled) {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                    }
+                                }
+                            }}
                             onPaste={(e) => {
                                 const clipboardData = e.clipboardData
                                 if (!clipboardData) return
