@@ -28,68 +28,52 @@ import { Dynamic } from 'solid-js/web'
 import { Button } from './Button'
 import { getApi } from '../modules/ipc_client'
 import { defaultSettings, type AppSettings } from '../modules/settings'
+import { ExpandableContainer } from './ExpandableContainer'
 
 type MenuTab = 'general' | 'appearance' | 'media' | 'about'
 
-export const AppMenuModal: Component = () => {
-    const [activeTab, setActiveTab] = createSignal<MenuTab>('general')
+const [activeTab, setActiveTab] = createSignal<MenuTab>('general')
+const [isSettingsExpanded, setIsSettingsExpanded] = createSignal(true)
 
+export const AppMenuModal: Component = () => {
     return (
         <div
-            class="flex items-center justify-center p-4 transition-all"
+            class="flex max-w-[80vw] items-center justify-center p-4 transition-all"
             onClick={(e) => {
                 if (e.target === e.currentTarget) setDisplayedModal('NONE')
             }}
         >
-            <div class="bg-element-matte border-sub flex h-[80vh] w-full overflow-hidden rounded-3xl border-4 shadow-2xl">
-                <div class="bg-element border-highlight flex w-sm shrink-0 flex-col gap-2 border-r-2 p-6">
-                    <div class="mb-4 flex items-center justify-between">
-                        <Header title="Athena" />
-                        <span class="text-sub text-xs font-bold tracking-widest">
-                            {appVersion}
+            <div class="bg-element-matte border-sub flex h-[80vh] w-full flex-col overflow-hidden rounded-3xl border-4 shadow-2xl lg:flex-row">
+                <div class="border-highlight flex flex-col gap-2 border-r-2 lg:max-w-[20vw]">
+                    <div class="bg-element flex w-full shrink-0 flex-col gap-2 p-6">
+                        <div class="flex items-center justify-between lg:mb-4">
+                            <Header title="Athena" />
+                            <span class="text-sub text-xs font-bold tracking-widest">
+                                {appVersion}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="block lg:hidden">
+                        <ExpandableContainer expanded={isSettingsExpanded()}>
+                            <Navbar />
+                        </ExpandableContainer>
+                    </div>
+                    <div class="hidden lg:block">
+                        <Navbar></Navbar>
+                    </div>
+                    <div class="align-center w-ful flex items-center lg:hidden">
+                        <span
+                            onClick={() =>
+                                setIsSettingsExpanded(!isSettingsExpanded())
+                            }
+                            class="material-symbols-outlined w-full text-center text-xl transition-transform duration-300 ease-in-out hover:cursor-pointer"
+                            classList={{ 'rotate-180': isSettingsExpanded() }}
+                        >
+                            keyboard_arrow_down
                         </span>
                     </div>
-
-                    <SectionContainer>
-                        <SubHeader title="Settings" />
-                        <TabButton
-                            id="general"
-                            icon="settings"
-                            label="General"
-                            active={activeTab() === 'general'}
-                            onClick={() => setActiveTab('general')}
-                        />
-                        <TabButton
-                            id="appearance"
-                            icon="palette"
-                            label="Appearance"
-                            active={activeTab() === 'appearance'}
-                            onClick={() => setActiveTab('appearance')}
-                        />
-                        <SubHeader title="Library" />
-                        <TabButton
-                            id="media"
-                            icon="perm_media"
-                            label="Media"
-                            active={activeTab() === 'media'}
-                            onClick={() => setActiveTab('media')}
-                        />
-                    </SectionContainer>
-
-                    <div class="mt-auto">
-                        <button
-                            onClick={() => setDisplayedModal('NONE')}
-                            class="hover:bg-element-lighter text-sub hover:text-sub flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3 font-bold transition-colors"
-                        >
-                            <span class="material-symbols-outlined text-lg">
-                                close
-                            </span>
-                            Close Menu
-                        </button>
-                    </div>
                 </div>
-
-                <div class="w-4xl flex-1 overflow-y-auto p-10">
+                <div class="flex-1 overflow-y-auto p-4 lg:w-4xl lg:p-10">
                     <Switch>
                         <Match when={activeTab() === 'general'}>
                             <GeneralSettingsView />
@@ -102,6 +86,50 @@ export const AppMenuModal: Component = () => {
                         </Match>
                     </Switch>
                 </div>
+            </div>
+        </div>
+    )
+}
+
+const Navbar: Component<ComponentProps<'div'>> = () => {
+    return (
+        <div class="bg-element flex max-h-[40vh] shrink-0 flex-col gap-2 overflow-y-hidden px-4 lg:overflow-y-auto lg:p-4 lg:px-6">
+            <SectionContainer>
+                <SubHeader title="Settings" />
+                <TabButton
+                    id="general"
+                    icon="settings"
+                    label="General"
+                    active={activeTab() === 'general'}
+                    onClick={() => setActiveTab('general')}
+                />
+                <TabButton
+                    id="appearance"
+                    icon="palette"
+                    label="Appearance"
+                    active={activeTab() === 'appearance'}
+                    onClick={() => setActiveTab('appearance')}
+                />
+                <SubHeader title="Library" />
+                <TabButton
+                    id="media"
+                    icon="perm_media"
+                    label="Media"
+                    active={activeTab() === 'media'}
+                    onClick={() => setActiveTab('media')}
+                />
+            </SectionContainer>
+
+            <div class="mt-auto">
+                <button
+                    onClick={() => setDisplayedModal('NONE')}
+                    class="hover:bg-element-lighter text-sub hover:text-sub flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition-colors"
+                >
+                    <span class="material-symbols-outlined text-xs lg:text-lg">
+                        close
+                    </span>
+                    Close Menu
+                </button>
             </div>
         </div>
     )
@@ -138,7 +166,11 @@ const Card: Component<
 
 const LargeHeader: Component<{ title: string } & ComponentProps<'div'>> = (
     props,
-) => <h1 class="text-sub text-3xl font-black tracking-tight">{props.title}</h1>
+) => (
+    <h1 class="text-sub text-xl font-black tracking-tight lg:text-3xl">
+        {props.title}
+    </h1>
+)
 
 const LargeHeaderCaption: Component<
     { caption: string } & ComponentProps<'div'>
@@ -179,13 +211,15 @@ const TabButton: Component<{
 }> = (props) => (
     <button
         onClick={props.onClick}
-        class={`flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
+        class={`flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-xs font-bold transition-all lg:text-sm ${
             props.active
                 ? 'bg-element-accent text-sub shadow-md'
                 : 'text-sub hover:bg-element-lighter hover:text-sub'
         }`}
     >
-        <span class="material-symbols-outlined text-lg">{props.icon}</span>
+        <span class="material-symbols-outlined text-xs lg:text-lg">
+            {props.icon}
+        </span>
         {props.label}
     </button>
 )
@@ -401,7 +435,7 @@ const AppearanceSettingsView: Component = () => {
                                                 themeId,
                                             )
                                         }
-                                        class={`flex items-center justify-center gap-2 rounded-xl border-2 p-4 font-black capitalize transition-all ${
+                                        class={`flex items-center justify-center gap-2 rounded border p-2 text-xs font-black capitalize transition-all lg:rounded-xl lg:border-2 lg:p-4 lg:text-sm${
                                             appSettings().activeTheme ===
                                             themeId
                                                 ? 'border-highlight-strong bg-element-accent text-sub'
@@ -507,7 +541,6 @@ const AppearanceSettingsView: Component = () => {
                     >
                         <CheckboxSetting key="highlightSelectedTagsInMoments" />
                     </Card>
-                    c{' '}
                 </SectionContainer>
                 <SectionContainer>
                     <SubHeader title="Generator" />
@@ -521,7 +554,7 @@ const AppearanceSettingsView: Component = () => {
                         ></ConfirmButton>
                     </Card>
                 </SectionContainer>
-                <SubHeader title="S"></SubHeader>
+                <SubHeader title="Tag Colours"></SubHeader>
                 <SubHeaderCaption caption="Customize the colours of your tags!"></SubHeaderCaption>
                 <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
                     <For each={Object.values(allTags)}>

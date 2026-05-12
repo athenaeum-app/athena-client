@@ -5,7 +5,6 @@ import {
     allTags,
     dateFilter,
     defaultArchiveId,
-    getActiveLibrary,
     mediaFilters,
     searchQuery,
     selectedArchiveId,
@@ -307,9 +306,9 @@ export const GetContrastingColourForHSL = (hslColour: string) => {
     const contrastingHue = (h + 180) % 360
 
     if (l <= 50) {
-        l = 90
+        l = 100
     } else {
-        l = 10
+        l = 0
     }
 
     return `hsl(${contrastingHue}, ${s}%, ${l}%)`

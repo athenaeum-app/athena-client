@@ -1,3 +1,5 @@
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css'
 import {
     createEffect,
     createMemo,
@@ -35,11 +37,12 @@ import {
     displayType,
     setDisplayedMomentModalId,
     displayedMomentModalId,
-    GetContrastingColourForHSL,
     appSettings,
 } from '../modules/globals'
 import { AttachmentPreview } from './AttachmentPreview'
-import { TagButton, toggleTag } from './TagBar'
+import { TagButton } from './TagBar'
+import { micromark } from 'micromark'
+import { gfm, gfmHtml } from 'micromark-extension-gfm'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
@@ -58,10 +61,8 @@ export const Moment: Component<MomentProps> = (props) => {
         }
     })
 
-    // keep as memo, or else content is not reactive.
     const contentParts = createMemo(() => extractContentParts(data.content))
 
-    // extract urls
     iterateUrlsInContentParts(contentParts(), (fragment) => {
         if (fragment.match(URL_REGEX)) {
             registerMediaFilter(fragment)
@@ -96,6 +97,21 @@ export const Moment: Component<MomentProps> = (props) => {
             return 'Minimal'
         }
         return 'All'
+    })
+
+    // For code highlighting
+    createEffect(() => {
+        contentParts()
+        contentDisplayType()
+
+        if (containerRef && inView()) {
+            const codeBlocks = containerRef!.querySelectorAll('pre code')
+            codeBlocks.forEach((block) => {
+                if (!block.classList.contains('hljs')) {
+                    hljs.highlightElement(block as HTMLElement)
+                }
+            })
+        }
     })
 
     return (
@@ -158,7 +174,7 @@ export const Moment: Component<MomentProps> = (props) => {
                                 <i
                                     class={animatedIconClasses + 'fa-pencil'}
                                     onClick={(e) => {
-                                        e.stopPropagation() // prevents triggering modal open
+                                        e.stopPropagation()
                                         setDisplayedModal('EDIT_MODAL')
                                         setTitle(data.title)
                                         setContent(data.content)
@@ -203,7 +219,7 @@ export const Moment: Component<MomentProps> = (props) => {
                     </span>
                 </div>
                 <Show when={contentDisplayType() == 'All'}>
-                    <div class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
+                    <div class="text-element-accent-highlight flex flex-col gap-0 whitespace-pre-line">
                         <For each={contentParts()}>
                             {(text) => {
                                 if (
@@ -212,12 +228,20 @@ export const Moment: Component<MomentProps> = (props) => {
                                 ) {
                                     return <AttachmentPreview link={text} />
                                 }
+                                const rawText = text.trim()
+                                const parsedComponent = micromark(rawText, {
+                                    extensions: [gfm()],
+                                    htmlExtensions: [gfmHtml()],
+                                })
                                 return (
-                                    <span
-                                        class={`${displayType() == 'Full' ? 'text-lg' : 'text-md'}`}
-                                    >
-                                        {text.trim()}
-                                    </span>
+                                    <div
+                                        class={`prose text-sub flex max-w-none flex-col gap-0 leading-normal ${
+                                            displayType() == 'Full'
+                                                ? 'prose-lg'
+                                                : 'prose-base'
+                                        } prose-p:text-sub prose-code:text-sub prose-li:text-sub prose-strong:text-md-strong prose-h1:text-md-heading prose-h2:text-md-heading/95 prose-h3:text-md-heading/90 prose-h4:text-md-heading/85 prose-h5:text-md-heading/80 prose-h6:text-md-heading/75 prose-p:my-0 prose-headings:my-1 prose-ul:-my-3 prose-li:-my-3 prose-blockquote:text-sub prose-table:text-sub prose-thead:text-sub prose-tr:text-sub prose-th:text-sub prose-td:text-sub prose-a:text-element-accent-highlight prose-a:hover:text-element-accent-focus prose-a:underline prose-a:decoration-element-accent prose-a:hover:decoration-element-accent-focus prose-img:rounded-lg prose-img:border prose-img:border-element-accent prose-img:shadow-md prose-video:rounded-lg prose-video:border prose-video:border-element-accent prose-video:shadow-md prose-hr:border-element-accent prose-figure:my-0 prose-figcaption:text-sm prose-figcaption:text-sub prose-figcaption:italic prose-figcaption:text-center prose-pre:p-0 prose-pre:my-2 prose-pre:overflow-x-auto`}
+                                        innerHTML={parsedComponent}
+                                    />
                                 )
                             }}
                         </For>

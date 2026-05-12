@@ -13,7 +13,11 @@ import {
     type Tag,
     type TagId,
 } from '../modules/data'
-import { getFilteredMoments, sortTags } from '../modules/globals'
+import {
+    GetContrastingColourForHSL,
+    getFilteredMoments,
+    sortTags,
+} from '../modules/globals'
 
 export const toggleTag = (tagId: TagId) => {
     setSelectedTagIds((prev) => {
@@ -30,13 +34,20 @@ export const TagButton: Component<
     const tagData = allTags[props.tagId]
     return (
         <button
-            onClick={() => toggleTag(tagData.id)}
-            class={`text-element rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
+            onClick={() => {
+                if (!props.disabled) {
+                    toggleTag(tagData.id)
+                }
+            }}
+            class={`rounded-xl p-2 text-xs font-black tracking-wide uppercase transition-all duration-100 hover:cursor-pointer ${
                 selectedTagIds().includes(tagData.id) && !props.noHighlight
                     ? 'shadow-highlight-strongest border-plain border-2 shadow-sm'
-                    : `over:scale-105 hover:text-plain`
+                    : `hover:scale-105`
             }`}
-            style={`background-color: ${tagData.colour}`}
+            style={{
+                'background-color': `${tagData.colour}`,
+                color: `${GetContrastingColourForHSL(tagData.colour)}`,
+            }}
         >
             #{tagData.name}
         </button>
@@ -69,7 +80,7 @@ export const TagBar: Component = () => {
     })
 
     return (
-        <div class="bg-element z-10 flex w-full flex-wrap items-center justify-center gap-2 p-2 backdrop-blur-md transition-all lg:p-6">
+        <div class="bg-element z-10 flex max-h-[20vh] w-full flex-wrap items-center justify-center gap-2 overflow-y-auto p-2 backdrop-blur-md transition-all lg:p-6">
             <span class="text-sub text-xs font-black tracking-widest uppercase">
                 Selected Tags:
             </span>

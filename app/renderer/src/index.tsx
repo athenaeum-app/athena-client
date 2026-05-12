@@ -1,4 +1,5 @@
 /* @refresh reload */
+import 'highlight.js/styles/atom-one-dark.css'
 import { render } from 'solid-js/web'
 import './index.css'
 import App from './App'

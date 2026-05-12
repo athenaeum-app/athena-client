@@ -75,6 +75,7 @@ export interface LibraryDataSnapshot {
     archives: Record<ArchiveId, Archive>
     moments: Record<MomentId, MomentData>
     tags: Record<TagId, Tag>
+    linkPreviewCache?: Record<string, any> // LEGACY, SHOULD NOT BE USED! only to be migrated.
 }
 
 export interface DataSnapshot {
@@ -83,6 +84,7 @@ export interface DataSnapshot {
     activeLibraryId: string
     libraryData: Record<string, LibraryDataSnapshot>
     linkPreviewCache: Record<string, any>
+    moments?: any // LEGACY, SHOULD NOT BE USED! only to be migrated.
 }
 
 export type dataSnapshot = DataSnapshot

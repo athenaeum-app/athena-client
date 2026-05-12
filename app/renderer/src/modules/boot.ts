@@ -1,6 +1,6 @@
 import { version } from '../../../../package.json'
 import { createEffect, createRoot, createSignal } from 'solid-js'
-import { migrateOldData } from './data_migrate'
+import { emptySnapshot, migrateOldData } from './data_migrate'
 import {
     allLibraryDataRef,
     canSave,
@@ -63,7 +63,7 @@ export const loadData = async () => {
         if (api.readData) {
             const migratedData = await migrateOldData()
             const readData = await api.readData()
-            rawData = migratedData ?? readData
+            rawData = migratedData ?? readData ?? emptySnapshot
         }
     }
 
@@ -71,9 +71,7 @@ export const loadData = async () => {
     setLinkPreviewCache(loadedCache)
 
     setAllLibraryDataRef(rawData.libraryData ?? {})
-    const savedLibraries: Library[] = rawData.libraries ?? [
-        { id: 'local-default', name: 'My Library', type: 'local' },
-    ]
+    const savedLibraries: Library[] = rawData.libraries
     setLibraries(savedLibraries)
 
     const savedActiveId = rawData.activeLibraryId ?? savedLibraries[0]?.id ?? ''

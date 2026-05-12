@@ -40,11 +40,11 @@ import {
     setDisplayedModal,
     sortTags,
 } from '../modules/globals'
-import { getApi } from '../modules/ipc_client'
 import { ExpandableContainer } from './ExpandableContainer'
+import { TagButton } from './TagBar'
 
 const textDisplayClasses =
-    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
+    'caret-plain selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent  transition-colors outline-none placeholder:italic col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
 
 export const MomentCreator: Component<
     ComponentProps<'div'> & {
@@ -55,24 +55,7 @@ export const MomentCreator: Component<
     let textInputAreaRef: HTMLTextAreaElement | undefined // not visible
     let textDisplayRef: HTMLDivElement | undefined
 
-    const [isPreviewing, setIsPreviewing] = createSignal<boolean>(false)
     const [isDragging, setIsDragging] = createSignal<boolean>(false)
-
-    onMount(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Control') setIsPreviewing(true)
-        }
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'Control') setIsPreviewing(false)
-        }
-
-        window.addEventListener('keydown', handleKeyDown)
-        window.addEventListener('keyup', handleKeyUp)
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown)
-            window.removeEventListener('keyup', handleKeyUp)
-        }
-    })
 
     const getSuggestableTags = createMemo(() => {
         const allTagDatas = Object.values(allTags)
@@ -253,9 +236,50 @@ export const MomentCreator: Component<
         }
     }
 
+    const insertMarkdown = (prefix: string, suffix: string = '') => {
+        if (!textInputAreaRef) return
+
+        const start = textInputAreaRef.selectionStart
+        const end = textInputAreaRef.selectionEnd
+        const currentText = content()
+
+        const before = currentText.substring(0, start)
+        const selected = currentText.substring(start, end)
+        const after = currentText.substring(end)
+
+        const newSelectedText = selected
+            ? `${prefix}${selected}${suffix}`
+            : `${prefix}${suffix}`
+        setContent(before + newSelectedText + after)
+
+        setTimeout(() => {
+            textInputAreaRef!.focus()
+            const newCursorPos =
+                start + prefix.length + (selected ? selected.length : 0)
+            textInputAreaRef!.setSelectionRange(newCursorPos, newCursorPos)
+        }, 0)
+    }
+
+    const ToolbarButton: Component<{
+        icon: string
+        title: string
+        onClick: () => void
+    }> = (btnProps) => (
+        <button
+            title={btnProps.title}
+            onClick={btnProps.onClick}
+            onMouseDown={(e) => e.preventDefault()}
+            class="text-sub hover:text-highlight-strong hover:bg-element-accent flex items-center justify-center rounded p-1 transition-colors"
+        >
+            <span class="material-symbols-outlined" style="font-size: 18px;">
+                {btnProps.icon}
+            </span>
+        </button>
+    )
+
     return (
         <ExpandableContainer expanded={!props.hide}>
-            <div class="relative overflow-hidden">
+            <div class="relative max-w-4xl overflow-hidden">
                 <Show when={isDragging() && !props.hide}>
                     <div class="bg-element/80 pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl backdrop-blur-sm">
                         <span class="text-highlight text-lg font-bold drop-shadow-md">
@@ -282,51 +306,58 @@ export const MomentCreator: Component<
                         value={props.hide ? '' : title()}
                         onInput={(e) => setTitle(e.currentTarget.value)}
                     />
-                    <div class="relative grid w-full">
-                        <div
-                            ref={textDisplayRef}
-                            aria-hidden="true"
-                            class={textDisplayClasses}
-                        >
-                            <For
-                                each={content().split(
-                                    /(athena:\/\/[^\s]+|https?:\/\/[^\s]+)/g,
-                                )}
-                            >
-                                {(part, index) => {
-                                    const isUrl = index() % 2 === 1
-                                    const isAthena =
-                                        part.startsWith('athena://')
 
-                                    return isUrl ? (
-                                        <span
-                                            onClick={() => {
-                                                if (isAthena) {
-                                                    getApi().openFileFromURI(
-                                                        part,
-                                                    )
-                                                } else {
-                                                    getApi().openExternalBrowser(
-                                                        part,
-                                                    )
-                                                }
-                                            }}
-                                            class="text-highlight-strongest underline hover:cursor-pointer hover:decoration-dotted"
-                                            title={
-                                                isAthena
-                                                    ? 'Open Local File'
-                                                    : 'Open Web Link'
-                                            }
-                                        >
-                                            {part}
-                                        </span>
-                                    ) : (
-                                        <span class="text-sub">{part}</span>
-                                    )
-                                }}
-                            </For>
-                            {content().endsWith('\n') ? <br /> : ''}
-                        </div>
+                    <div class="border-element-accent flex items-center gap-1 border-b px-2 pb-2">
+                        <ToolbarButton
+                            icon="format_bold"
+                            title="Bold"
+                            onClick={() => insertMarkdown('**', '**')}
+                        />
+                        <ToolbarButton
+                            icon="format_italic"
+                            title="Italic"
+                            onClick={() => insertMarkdown('*', '*')}
+                        />
+                        <ToolbarButton
+                            icon="format_strikethrough"
+                            title="Strikethrough"
+                            onClick={() => insertMarkdown('~~', '~~')}
+                        />
+                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
+                        <ToolbarButton
+                            icon="title"
+                            title="Heading"
+                            onClick={() => insertMarkdown('# ')}
+                        />
+                        <ToolbarButton
+                            icon="format_list_bulleted"
+                            title="Bullet List"
+                            onClick={() => insertMarkdown('- ')}
+                        />
+                        <ToolbarButton
+                            icon="format_quote"
+                            title="Quote"
+                            onClick={() => insertMarkdown('> ')}
+                        />
+                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
+                        <ToolbarButton
+                            icon="code"
+                            title="Code"
+                            onClick={() => insertMarkdown('`', '`')}
+                        />
+                        <div class="bg-element-accent mx-1 h-4 w-px"></div>
+                        <ToolbarButton
+                            icon="table_chart"
+                            title="Table"
+                            onClick={() =>
+                                insertMarkdown(
+                                    '\n| Header 1 | Header 2 |\n| :--- | :--- |\n| Cell 1 | Cell 2 |\n',
+                                )
+                            }
+                        />
+                    </div>
+
+                    <div class="relative grid w-full">
                         <textarea
                             ref={textInputAreaRef}
                             onScroll={(e) => {
@@ -335,12 +366,39 @@ export const MomentCreator: Component<
                                         e.currentTarget.scrollTop
                                 }
                             }}
-                            class={`${textDisplayClasses} caret-plain selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent text-transparent transition-colors outline-none placeholder:italic ${
-                                isPreviewing()
-                                    ? 'pointer-events-none cursor-default'
-                                    : 'pointer-events-auto cursor-text'
-                            }`}
+                            class={`${textDisplayClasses} text-sub`}
                             placeholder="Moment description..."
+                            onKeyDown={(e) => {
+                                if (e.key.toLowerCase() === 'tab') {
+                                    insertMarkdown('    ')
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }
+
+                                if (e.ctrlKey || e.metaKey) {
+                                    let handled = true
+                                    const key = e.key.toLowerCase()
+
+                                    if (key === 'b') {
+                                        insertMarkdown('**', '**')
+                                    } else if (key === 'i') {
+                                        insertMarkdown('*', '*')
+                                    } else if (key === 'k') {
+                                        insertMarkdown('[', '](url)')
+                                    } else if (key === 'd') {
+                                        insertMarkdown('~~', '~~')
+                                    } else if (key === 's' || key === 'enter') {
+                                        attemptSubmit()
+                                    } else {
+                                        handled = false
+                                    }
+
+                                    if (handled) {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                    }
+                                }
+                            }}
                             onPaste={(e) => {
                                 const clipboardData = e.clipboardData
                                 if (!clipboardData) return
@@ -369,7 +427,7 @@ export const MomentCreator: Component<
                     </div>
                     <div class="mx-2 flex w-full flex-col items-center gap-6">
                         <input
-                            class="bg-element text-highlight-matte placeholder-sub focus:border-highlight-strong w-full rounded border border-transparent px-2 py-1.5 font-mono text-xs outline-none"
+                            class="bg-element text-sub placeholder-sub focus:border-highlight-strong w-full rounded border border-transparent px-2 py-1.5 font-mono text-xs font-bold outline-none"
                             placeholder="Tags (comma separated)... e.g. GAMES, ENTERTAINMENT, ROMANCE"
                             value={props.hide ? '' : tagsString()}
                             onInput={(e) =>
@@ -397,7 +455,7 @@ export const MomentCreator: Component<
                                 </span>
                                 <For each={getSuggestableTags()}>
                                     {(tagData) => (
-                                        <span
+                                        <label
                                             onClick={() => {
                                                 setTagsString((prev) => {
                                                     const tagArray =
@@ -411,11 +469,12 @@ export const MomentCreator: Component<
                                                     )
                                                 })
                                             }}
-                                            style={`background-color: ${tagData.colour}`}
-                                            class="text-dark rounded-lg px-2 py-1.5 text-xs font-black transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
                                         >
-                                            #{tagData.name}
-                                        </span>
+                                            <TagButton
+                                                disabled={true}
+                                                tagId={tagData.id}
+                                            />
+                                        </label>
                                     )}
                                 </For>
                             </div>

@@ -1,3 +1,5 @@
+import { DataSnapshot } from '@app/renderer/src/modules/store'
+
 export interface ScrapeData {
     title: string
     description: string
@@ -10,7 +12,7 @@ export const IpcApi = {
     status: async () => '',
     openExternalBrowser: async (_: string) => undefined,
     // Add read/write methods
-    readData: () => new Promise(() => {}) as any,
+    readData: () => new Promise<DataSnapshot | undefined>(() => ({})),
     writeMainData: (_: any) => {},
     scrapeWebsiteData: async (_: string, __?: boolean) => ({}) as ScrapeData,
     openFileFromURI: (_: string) => {},

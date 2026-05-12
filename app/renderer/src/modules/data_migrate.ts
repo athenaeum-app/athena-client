@@ -22,6 +22,14 @@ const DEFAULT_LIBRARY: Library = {
     type: 'local',
 }
 
+export const emptySnapshot: DataSnapshot = {
+    version: '',
+    libraries: [],
+    activeLibraryId: '',
+    libraryData: {},
+    linkPreviewCache: {},
+}
+
 interface LegacyMomentData {
     title: string
     content: string
@@ -158,6 +166,9 @@ export const migrateOldData = async (): Promise<DataSnapshot | null> => {
     if (!api) return null
 
     const rawData = await api.readData()
+    if (!rawData?.libraries) {
+        return emptySnapshot
+    }
 
     if (rawData.libraryData !== undefined) {
         let needsCacheMigration = false
