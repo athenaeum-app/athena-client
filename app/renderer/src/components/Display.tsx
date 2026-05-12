@@ -51,10 +51,8 @@ const Display: Component = () => (
                                     Welcome to Athena
                                 </h1>
                                 <p class="text-sub text-md max-w-md leading-relaxed font-semibold">
-                                    Your personal knowledge library is empty.
-                                    Create a local library to store your
-                                    thoughts or connect to a self-hosted server
-                                    to sync across devices.
+                                    You have no libraries created. Create your
+                                    first library to get started!
                                 </p>
                             </div>
 
