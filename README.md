@@ -20,18 +20,20 @@ The official desktop client for Athena. Log your thoughts and ideas in a persona
 
 ### Rich Text & Markdown
 Athena natively supports standard Markdown, custom local file interception, and advanced GFM elements like tables and task lists.
-![Markdown Support](./assets/athena_markdown.png)
-![GFM Blocks](./assets/athena_gfm_block.png)
+| Markdown | GFM |
+| :---: | :---: |
+| ![Markdown](./assets/athena_markdown.png) | ![GFM](./assets/athena_gfm_block.png) |
 
 ### Attachments & Media
 Drop in your files or paste web links to automatically generate beautiful visual cards.
-![Attachments](./assets/athena_attachments.png)
-![Link Previews](./assets/athena_linkpreviews.png)
+| Attachments | Link Previews |
+| :---: | :---: |
+| ![Attachments](./assets/athena_attachments.png) | ![Link Previews](./assets/athena_linkpreviews.png) |
 
 ### Example Themes
 Athena comes with multiple built-in dynamic color themes to suit your aesthetic. 
 
-| Theme 1 | Theme 2 |
+| Theme 1 (Default) | Theme 2 |
 | :---: | :---: |
 | ![Theme 1](./assets/athena_th1.png) | ![Theme 2](./assets/athena_th2.png) |
 | **Theme 3** | **Theme 4** |
