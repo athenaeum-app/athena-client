@@ -40,12 +40,11 @@ import {
     setDisplayedModal,
     sortTags,
 } from '../modules/globals'
-import { getApi } from '../modules/ipc_client'
 import { ExpandableContainer } from './ExpandableContainer'
 import { TagButton } from './TagBar'
 
 const textDisplayClasses =
-    'col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
+    'caret-plain selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent  transition-colors outline-none placeholder:italic col-start-1 row-start-1 h-auto max-h-96 min-h-12 w-full overflow-x-hidden overflow-y-auto border border-transparent px-2 py-1 font-sans text-sm leading-normal break-all whitespace-pre-wrap'
 
 export const MomentCreator: Component<
     ComponentProps<'div'> & {
@@ -56,24 +55,7 @@ export const MomentCreator: Component<
     let textInputAreaRef: HTMLTextAreaElement | undefined // not visible
     let textDisplayRef: HTMLDivElement | undefined
 
-    const [isPreviewing, setIsPreviewing] = createSignal<boolean>(false)
     const [isDragging, setIsDragging] = createSignal<boolean>(false)
-
-    onMount(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Control') setIsPreviewing(true)
-        }
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'Control') setIsPreviewing(false)
-        }
-
-        window.addEventListener('keydown', handleKeyDown)
-        window.addEventListener('keyup', handleKeyUp)
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown)
-            window.removeEventListener('keyup', handleKeyUp)
-        }
-    })
 
     const getSuggestableTags = createMemo(() => {
         const allTagDatas = Object.values(allTags)
@@ -376,50 +358,6 @@ export const MomentCreator: Component<
                     </div>
 
                     <div class="relative grid w-full">
-                        <div
-                            ref={textDisplayRef}
-                            aria-hidden="true"
-                            class={textDisplayClasses}
-                        >
-                            <For
-                                each={content().split(
-                                    /(athena:\/\/[^\s]+|https?:\/\/[^\s]+)/g,
-                                )}
-                            >
-                                {(part, index) => {
-                                    const isUrl = index() % 2 === 1
-                                    const isAthena =
-                                        part.startsWith('athena://')
-
-                                    return isUrl ? (
-                                        <span
-                                            onClick={() => {
-                                                if (isAthena) {
-                                                    getApi().openFileFromURI(
-                                                        part,
-                                                    )
-                                                } else {
-                                                    getApi().openExternalBrowser(
-                                                        part,
-                                                    )
-                                                }
-                                            }}
-                                            class="text-highlight-strongest underline hover:cursor-pointer hover:decoration-dotted"
-                                            title={
-                                                isAthena
-                                                    ? 'Open Local File'
-                                                    : 'Open Web Link'
-                                            }
-                                        >
-                                            {part}
-                                        </span>
-                                    ) : (
-                                        <span class="text-sub">{part}</span>
-                                    )
-                                }}
-                            </For>
-                            {content().endsWith('\n') ? <br /> : ''}
-                        </div>
                         <textarea
                             ref={textInputAreaRef}
                             onScroll={(e) => {
@@ -428,11 +366,7 @@ export const MomentCreator: Component<
                                         e.currentTarget.scrollTop
                                 }
                             }}
-                            class={`${textDisplayClasses} caret-plain selection:bg-highlight-strong selection:text-sub placeholder:text-sub field-sizing-content resize-none bg-transparent text-transparent transition-colors outline-none placeholder:italic ${
-                                isPreviewing()
-                                    ? 'pointer-events-none cursor-default'
-                                    : 'pointer-events-auto cursor-text'
-                            }`}
+                            class={`${textDisplayClasses} text-sub`}
                             placeholder="Moment description..."
                             onKeyDown={(e) => {
                                 if (e.key.toLowerCase() === 'tab') {

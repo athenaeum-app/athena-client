@@ -36,7 +36,7 @@ export const ConfirmButton: Component<
 
     if (!props.SharedClasses) {
         props.SharedClasses =
-            'bg-plain/20 text-plain/80 hover:text-plain cursor-pointer rounded-lg px-4 py-4 text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105'
+            'bg-plain/20 text-plain/80 hover:text-plain cursor-pointer rounded-lg p-2 lg:p-4 lg:text-sm font-bold text-nowrap transition-all duration-100 hover:scale-105'
     }
 
     if (!props.ConfirmingClasses) {
@@ -76,7 +76,7 @@ export const ConfirmButton: Component<
                 }
             }}
             disabled={IsInCooldown()}
-            class={`${props.SharedClasses ?? ''} ${isConfirming() ? props.ConfirmingClasses : props.NonConfirmingClasses} min-w-[5vw]`}
+            class={`${props.SharedClasses ?? ''} ${isConfirming() ? props.ConfirmingClasses : props.NonConfirmingClasses} `}
             {...validProps}
         >
             <Show when={!isConfirming()} fallback={<span>Confirm?</span>}>
