@@ -1,6 +1,4 @@
 # Athena Client
-**Disclaimer:** Please see the disclaimer in the [Organization Profile](https://github.com/athenaeum-app/.github/blob/master/profile/README.md).
-
 The official desktop client for Athena. Log your thoughts and ideas in a personal, easily filterable journal, with full offline/online support.
 
 ![Athena Hero](./assets/athena_th1.png)

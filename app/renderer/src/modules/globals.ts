@@ -26,6 +26,7 @@ import {
     URL_REGEX,
 } from './regex'
 import { defaultSettings, type AppSettings } from './settings'
+import { unwrap } from 'solid-js/store'
 
 // Fix this later lol
 export let [allLibraryDataRef, setAllLibraryDataRef] = createSignal<
@@ -76,7 +77,6 @@ export const sortTags = (
     tagsToSort: Array<Tag>,
     linkedTagNames: string[] = [],
 ) => {
-    const currentFilteredMoments = getFilteredMoments()
     const countMap: Record<string, number> = {}
     const allTagsData = Object.values(allTags)
 
@@ -87,7 +87,7 @@ export const sortTags = (
         )
         .filter(Boolean) as TagId[]
 
-    for (const moment of currentFilteredMoments) {
+    for (const moment of Object.values(unwrap(allMoments))) {
         const sharesLinkedTag =
             linkedTagIds.length > 0 &&
             linkedTagIds.some((id) => moment.tagIds.includes(id))
