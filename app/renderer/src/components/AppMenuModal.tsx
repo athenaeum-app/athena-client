@@ -45,32 +45,38 @@ export const AppMenuModal: Component = () => {
         >
             <div class="bg-element-matte border-sub flex h-[80vh] w-full flex-col overflow-hidden rounded-3xl border-4 shadow-2xl lg:flex-row">
                 <div class="border-highlight flex flex-col gap-2 border-r-2 lg:max-w-[20vw]">
-                    <div class="bg-element flex w-full shrink-0 flex-col gap-2 p-6">
-                        <div class="flex items-center justify-between lg:mb-4">
+                    <div class="flex w-full shrink-0 flex-col gap-2 p-6">
+                        <div class="flex items-baseline justify-between lg:mb-4">
                             <Header title="Athena" />
-                            <span class="text-sub text-xs font-bold tracking-widest">
+                            <span class="text-sub text-xs font-bold tracking-widest lg:text-lg">
                                 {appVersion}
                             </span>
                         </div>
                     </div>
-                    <div class="block lg:hidden">
-                        <ExpandableContainer expanded={isSettingsExpanded()}>
-                            <Navbar />
-                        </ExpandableContainer>
-                    </div>
-                    <div class="hidden lg:block">
-                        <Navbar></Navbar>
-                    </div>
-                    <div class="align-center w-ful flex items-center lg:hidden">
-                        <span
-                            onClick={() =>
-                                setIsSettingsExpanded(!isSettingsExpanded())
-                            }
-                            class="material-symbols-outlined w-full text-center text-xl transition-transform duration-300 ease-in-out hover:cursor-pointer"
-                            classList={{ 'rotate-180': isSettingsExpanded() }}
-                        >
-                            keyboard_arrow_down
-                        </span>
+                    <div class="h-full">
+                        <div class="block lg:hidden">
+                            <ExpandableContainer
+                                expanded={isSettingsExpanded()}
+                            >
+                                <Navbar />
+                            </ExpandableContainer>
+                        </div>
+                        <div class="hidden h-full lg:block">
+                            <Navbar></Navbar>
+                        </div>
+                        <div class="align-center w-ful flex items-center lg:hidden">
+                            <span
+                                onClick={() =>
+                                    setIsSettingsExpanded(!isSettingsExpanded())
+                                }
+                                class="material-symbols-outlined w-full text-center text-xl transition-transform duration-300 ease-in-out hover:cursor-pointer"
+                                classList={{
+                                    'rotate-180': isSettingsExpanded(),
+                                }}
+                            >
+                                keyboard_arrow_down
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <div class="flex-1 overflow-y-auto p-4 lg:w-4xl lg:p-10">
@@ -93,7 +99,7 @@ export const AppMenuModal: Component = () => {
 
 const Navbar: Component<ComponentProps<'div'>> = () => {
     return (
-        <div class="bg-element flex max-h-[40vh] shrink-0 flex-col gap-2 overflow-y-hidden px-4 lg:overflow-y-auto lg:p-4 lg:px-6">
+        <div class="bg-element flex h-full shrink-0 flex-col gap-2 overflow-y-hidden px-4 lg:overflow-y-auto lg:p-4 lg:px-6">
             <SectionContainer>
                 <SubHeader title="Settings" />
                 <TabButton
@@ -181,7 +187,7 @@ const LargeHeaderCaption: Component<
 const Header: Component<{ title: string } & ComponentProps<'div'>> = (
     props,
 ) => (
-    <h2 class="text-sub mb-1 text-xl font-bold tracking-tighter">
+    <h2 class="text-sub mb-1 text-4xl font-bold tracking-tighter">
         {props.title}
     </h2>
 )
@@ -189,7 +195,7 @@ const Header: Component<{ title: string } & ComponentProps<'div'>> = (
 const SubHeader: Component<{ title: string } & ComponentProps<'div'>> = (
     props,
 ) => (
-    <span class="text-sub mt-2 mb-1 text-xs font-bold tracking-widest uppercase">
+    <span class="text-sub mt-2 mb-1 text-xs font-bold tracking-widest uppercase lg:text-base">
         {props.title}
     </span>
 )
@@ -211,7 +217,7 @@ const TabButton: Component<{
 }> = (props) => (
     <button
         onClick={props.onClick}
-        class={`flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-xs font-bold transition-all lg:text-sm ${
+        class={`flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-xs font-bold transition-all lg:text-lg ${
             props.active
                 ? 'bg-element-accent text-sub shadow-md'
                 : 'text-sub hover:bg-element-lighter hover:text-sub'
