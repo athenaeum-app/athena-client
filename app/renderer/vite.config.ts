@@ -14,4 +14,7 @@ export default defineConfig({
             overlay: true,
         },
     },
+    optimizeDeps: {
+        include: ['solid-markdown > micromark', 'solid-markdown > unified'],
+    },
 })

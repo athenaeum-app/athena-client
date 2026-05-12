@@ -39,7 +39,8 @@ import {
     appSettings,
 } from '../modules/globals'
 import { AttachmentPreview } from './AttachmentPreview'
-import { TagButton, toggleTag } from './TagBar'
+import { TagButton } from './TagBar'
+import { SolidMarkdown } from 'solid-markdown'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
@@ -203,7 +204,7 @@ export const Moment: Component<MomentProps> = (props) => {
                     </span>
                 </div>
                 <Show when={contentDisplayType() == 'All'}>
-                    <div class="text-element-accent-highlight flex flex-col gap-2 text-sm whitespace-pre-line">
+                    <div class="text-element-accent-highlight flex flex-col gap-2 whitespace-pre-line">
                         <For each={contentParts()}>
                             {(text) => {
                                 if (
@@ -213,11 +214,15 @@ export const Moment: Component<MomentProps> = (props) => {
                                     return <AttachmentPreview link={text} />
                                 }
                                 return (
-                                    <span
-                                        class={`${displayType() == 'Full' ? 'text-lg' : 'text-md'}`}
+                                    <div
+                                        class={`prose max-w-none leading-normal ${
+                                            displayType() == 'Full'
+                                                ? 'prose-lg'
+                                                : 'prose-base'
+                                        } prose-p:text-sub prose-code:text-sub prose-li:text-sub prose-strong:text-md-strong prose-h1:text-md-heading prose-h2:text-md-heading/95 prose-h3:text-md-heading/90 prose-h4:text-md-heading/85 prose-h5:text-md-heading/80 prose-h6:text-md-heading/75 prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 prose-blockquote:text-sub prose-table:text-sub prose-thead:text-sub prose-tr:text-sub prose-th:text-sub prose-td:text-sub prose-a:text-element-accent-highlight prose-a:hover:text-element-accent-focus prose-a:underline prose-a:decoration-element-accent prose-a:hover:decoration-element-accent-focus prose-img:rounded-lg prose-img:border prose-img:border-element-accent prose-img:shadow-md prose-video:rounded-lg prose-video:border prose-video:border-element-accent prose-video:shadow-md prose-hr:border-element-accent prose-figure:my-2 prose-figcaption:text-sm prose-figcaption:text-sub prose-figcaption:italic prose-figcaption:text-center`}
                                     >
-                                        {text.trim()}
-                                    </span>
+                                        <SolidMarkdown children={text.trim()} />
+                                    </div>
                                 )
                             }}
                         </For>
