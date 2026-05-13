@@ -12,7 +12,7 @@ import {
     type ComponentProps,
 } from 'solid-js'
 import { Line } from './Line'
-import { FILE_REF_REGEX, URL_REGEX } from '../modules/regex'
+import { URL_REGEX } from '../modules/regex'
 import {
     archives,
     defaultArchiveId,
@@ -64,7 +64,7 @@ export const Moment: Component<MomentProps> = (props) => {
     const contentParts = createMemo(() => extractContentParts(data.content))
 
     iterateUrlsInContentParts(contentParts(), (fragment) => {
-        if (fragment.match(URL_REGEX)) {
+        if (fragment != '' && fragment.match(URL_REGEX)) {
             registerMediaFilter(fragment)
         }
     })
@@ -222,13 +222,12 @@ export const Moment: Component<MomentProps> = (props) => {
                     <div class="text-element-accent-highlight flex flex-col gap-0 whitespace-pre-line">
                         <For each={contentParts()}>
                             {(text) => {
-                                if (
-                                    text.match(FILE_REF_REGEX) ||
-                                    text.match(URL_REGEX)
-                                ) {
-                                    return <AttachmentPreview link={text} />
+                                if (text.type === 'url') {
+                                    return (
+                                        <AttachmentPreview link={text.body} />
+                                    )
                                 }
-                                const rawText = text.trim()
+                                const rawText = text.body.trim()
                                 const parsedComponent = micromark(rawText, {
                                     extensions: [gfm()],
                                     htmlExtensions: [gfmHtml()],

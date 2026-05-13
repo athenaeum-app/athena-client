@@ -243,15 +243,15 @@ export const MomentCreator: Component<
         const end = textInputAreaRef.selectionEnd
         const value = textInputAreaRef.value
 
-        const before = value.substring(0, start)
         const selected = value.substring(start, end)
-        const after = value.substring(end)
-
         const newSelectedText = selected
             ? `${prefix}${selected}${suffix}`
             : `${prefix}${suffix}`
 
-        textInputAreaRef.value = before + newSelectedText + after
+        textInputAreaRef.focus()
+        textInputAreaRef.setSelectionRange(start, end)
+
+        document.execCommand('insertText', false, newSelectedText)
 
         if (selected) {
             textInputAreaRef.selectionStart = start + prefix.length
@@ -262,11 +262,7 @@ export const MomentCreator: Component<
             textInputAreaRef.selectionStart = newCursorPos
             textInputAreaRef.selectionEnd = newCursorPos
         }
-
-        textInputAreaRef.dispatchEvent(new Event('input', { bubbles: true }))
-        textInputAreaRef.focus()
     }
-
     const ToolbarButton: Component<{
         icon: string
         title: string
@@ -386,7 +382,6 @@ export const MomentCreator: Component<
                                     const value = target.value
 
                                     if (e.shiftKey) {
-                                        // --- SHIFT+TAB: Multi-line Un-indent ---
                                         const firstLineStart =
                                             value.lastIndexOf('\n', start - 1) +
                                             1
@@ -426,15 +421,17 @@ export const MomentCreator: Component<
                                             .join('\n')
 
                                         if (linesText !== newLinesText) {
-                                            target.value =
-                                                value.substring(
-                                                    0,
-                                                    firstLineStart,
-                                                ) +
-                                                newLinesText +
-                                                value.substring(lastLineEnd)
+                                            // Natively replace the block
+                                            target.setSelectionRange(
+                                                firstLineStart,
+                                                lastLineEnd,
+                                            )
+                                            document.execCommand(
+                                                'insertText',
+                                                false,
+                                                newLinesText,
+                                            )
 
-                                            // Adjust selection to stay attached to the text
                                             target.selectionStart = Math.max(
                                                 firstLineStart,
                                                 start - charsRemovedFirstLine,
@@ -442,12 +439,6 @@ export const MomentCreator: Component<
                                             target.selectionEnd = Math.max(
                                                 firstLineStart,
                                                 end - totalCharsRemoved,
-                                            )
-
-                                            target.dispatchEvent(
-                                                new Event('input', {
-                                                    bubbles: true,
-                                                }),
                                             )
                                         }
                                     } else {
@@ -479,23 +470,19 @@ export const MomentCreator: Component<
                                                 .map((line) => '    ' + line)
                                                 .join('\n')
 
-                                            target.value =
-                                                value.substring(
-                                                    0,
-                                                    firstLineStart,
-                                                ) +
-                                                newLinesText +
-                                                value.substring(lastLineEnd)
+                                            target.setSelectionRange(
+                                                firstLineStart,
+                                                lastLineEnd,
+                                            )
+                                            document.execCommand(
+                                                'insertText',
+                                                false,
+                                                newLinesText,
+                                            )
 
                                             target.selectionStart = start + 4
                                             target.selectionEnd =
                                                 end + lines.length * 4
-
-                                            target.dispatchEvent(
-                                                new Event('input', {
-                                                    bubbles: true,
-                                                }),
-                                            )
                                         } else {
                                             insertMarkdown('    ')
                                         }
@@ -543,17 +530,14 @@ export const MomentCreator: Component<
                                             )
                                             navigator.clipboard.writeText(line)
 
-                                            textArea.value =
-                                                value.substring(0, lineStart) +
-                                                value.substring(lineEnd)
-
-                                            textArea.selectionStart = lineStart
-                                            textArea.selectionEnd = lineStart
-
-                                            textArea.dispatchEvent(
-                                                new Event('input', {
-                                                    bubbles: true,
-                                                }),
+                                            textArea.setSelectionRange(
+                                                lineStart,
+                                                lineEnd,
+                                            )
+                                            document.execCommand(
+                                                'insertText',
+                                                false,
+                                                '',
                                             )
                                         }
                                     } else {

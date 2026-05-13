@@ -191,20 +191,50 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
 }
 
 // Moment Content
-export const extractContentParts = (content: string) => {
+export type ContentType = 'raw' | 'code' | 'url'
+
+export interface ContentPart {
+    type: ContentType
+    body: string
+}
+
+export const extractContentParts = (content: string): Array<ContentPart> => {
+    const CODE_BLOCK_REGEX = /(```[\s\S]*?```|`[^`\n]+`)/g
+
     return content
-        .replace(/(?<!-)--(?!-)/g, '—')
-        .split(URL_FILE_REGEX)
-        .filter((fragment) => fragment && fragment.trim() !== '')
+        .split(CODE_BLOCK_REGEX)
+        .flatMap((part, index): Array<ContentPart> => {
+            if (!part) return []
+
+            if (index % 2 !== 0) {
+                return [{ type: 'code', body: part }]
+            }
+
+            return part
+                .replace(/(?<!-)--(?!-)/g, '—')
+                .split(URL_FILE_REGEX)
+                .filter((fragment) => fragment && fragment.trim() !== '')
+                .map((fragment) => {
+                    URL_FILE_REGEX.lastIndex = 0
+                    const isUrl =
+                        URL_FILE_REGEX.test(fragment) &&
+                        !/\s/.test(fragment.trim())
+
+                    return {
+                        type: isUrl ? 'url' : 'raw',
+                        body: fragment,
+                    }
+                })
+        })
 }
 
 export const iterateUrlsInContentParts = (
-    contentParts: Array<string>,
+    contentParts: Array<ContentPart>,
     callback: (url: string) => any,
 ) => {
     for (const text of contentParts) {
-        if (text.match(URL_REGEX)) {
-            callback(text)
+        if (text.type === 'url') {
+            callback(text.body)
         }
     }
 }
