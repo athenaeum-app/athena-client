@@ -241,23 +241,30 @@ export const MomentCreator: Component<
 
         const start = textInputAreaRef.selectionStart
         const end = textInputAreaRef.selectionEnd
-        const currentText = content()
+        const value = textInputAreaRef.value
 
-        const before = currentText.substring(0, start)
-        const selected = currentText.substring(start, end)
-        const after = currentText.substring(end)
+        const before = value.substring(0, start)
+        const selected = value.substring(start, end)
+        const after = value.substring(end)
 
         const newSelectedText = selected
             ? `${prefix}${selected}${suffix}`
             : `${prefix}${suffix}`
-        setContent(before + newSelectedText + after)
 
-        setTimeout(() => {
-            textInputAreaRef!.focus()
-            const newCursorPos =
-                start + prefix.length + (selected ? selected.length : 0)
-            textInputAreaRef!.setSelectionRange(newCursorPos, newCursorPos)
-        }, 0)
+        textInputAreaRef.value = before + newSelectedText + after
+
+        if (selected) {
+            textInputAreaRef.selectionStart = start + prefix.length
+            textInputAreaRef.selectionEnd =
+                start + prefix.length + selected.length
+        } else {
+            const newCursorPos = start + prefix.length
+            textInputAreaRef.selectionStart = newCursorPos
+            textInputAreaRef.selectionEnd = newCursorPos
+        }
+
+        textInputAreaRef.dispatchEvent(new Event('input', { bubbles: true }))
+        textInputAreaRef.focus()
     }
 
     const ToolbarButton: Component<{
@@ -370,9 +377,129 @@ export const MomentCreator: Component<
                             placeholder="Moment description..."
                             onKeyDown={(e) => {
                                 if (e.key.toLowerCase() === 'tab') {
-                                    insertMarkdown('    ')
                                     e.preventDefault()
                                     e.stopPropagation()
+
+                                    const target = e.currentTarget
+                                    const start = target.selectionStart
+                                    const end = target.selectionEnd
+                                    const value = target.value
+
+                                    if (e.shiftKey) {
+                                        // --- SHIFT+TAB: Multi-line Un-indent ---
+                                        const firstLineStart =
+                                            value.lastIndexOf('\n', start - 1) +
+                                            1
+                                        let lastLineEnd = value.indexOf(
+                                            '\n',
+                                            end,
+                                        )
+                                        if (lastLineEnd === -1)
+                                            lastLineEnd = value.length
+
+                                        const linesText = value.substring(
+                                            firstLineStart,
+                                            lastLineEnd,
+                                        )
+                                        const lines = linesText.split('\n')
+
+                                        let charsRemovedFirstLine = 0
+                                        let totalCharsRemoved = 0
+
+                                        const newLinesText = lines
+                                            .map((line, index) => {
+                                                const match =
+                                                    line.match(/^( {1,4})/)
+                                                if (match) {
+                                                    const removed =
+                                                        match[1].length
+                                                    if (index === 0)
+                                                        charsRemovedFirstLine =
+                                                            removed
+                                                    totalCharsRemoved += removed
+                                                    return line.substring(
+                                                        removed,
+                                                    )
+                                                }
+                                                return line
+                                            })
+                                            .join('\n')
+
+                                        if (linesText !== newLinesText) {
+                                            target.value =
+                                                value.substring(
+                                                    0,
+                                                    firstLineStart,
+                                                ) +
+                                                newLinesText +
+                                                value.substring(lastLineEnd)
+
+                                            // Adjust selection to stay attached to the text
+                                            target.selectionStart = Math.max(
+                                                firstLineStart,
+                                                start - charsRemovedFirstLine,
+                                            )
+                                            target.selectionEnd = Math.max(
+                                                firstLineStart,
+                                                end - totalCharsRemoved,
+                                            )
+
+                                            target.dispatchEvent(
+                                                new Event('input', {
+                                                    bubbles: true,
+                                                }),
+                                            )
+                                        }
+                                    } else {
+                                        if (
+                                            start !== end &&
+                                            value
+                                                .substring(start, end)
+                                                .includes('\n')
+                                        ) {
+                                            const firstLineStart =
+                                                value.lastIndexOf(
+                                                    '\n',
+                                                    start - 1,
+                                                ) + 1
+                                            let lastLineEnd = value.indexOf(
+                                                '\n',
+                                                end,
+                                            )
+                                            if (lastLineEnd === -1)
+                                                lastLineEnd = value.length
+
+                                            const linesText = value.substring(
+                                                firstLineStart,
+                                                lastLineEnd,
+                                            )
+                                            const lines = linesText.split('\n')
+
+                                            const newLinesText = lines
+                                                .map((line) => '    ' + line)
+                                                .join('\n')
+
+                                            target.value =
+                                                value.substring(
+                                                    0,
+                                                    firstLineStart,
+                                                ) +
+                                                newLinesText +
+                                                value.substring(lastLineEnd)
+
+                                            target.selectionStart = start + 4
+                                            target.selectionEnd =
+                                                end + lines.length * 4
+
+                                            target.dispatchEvent(
+                                                new Event('input', {
+                                                    bubbles: true,
+                                                }),
+                                            )
+                                        } else {
+                                            insertMarkdown('    ')
+                                        }
+                                    }
                                 }
 
                                 if (e.ctrlKey || e.metaKey) {
@@ -389,6 +516,46 @@ export const MomentCreator: Component<
                                         insertMarkdown('~~', '~~')
                                     } else if (key === 's' || key === 'enter') {
                                         attemptSubmit()
+                                    } else if (key === 'x') {
+                                        const textArea = textInputAreaRef
+                                        if (textArea) {
+                                            const start =
+                                                textArea.selectionStart
+                                            const end = textArea.selectionEnd
+                                            const value = textArea.value
+
+                                            const lineStart =
+                                                value.lastIndexOf(
+                                                    '\n',
+                                                    start - 1,
+                                                ) + 1
+                                            let lineEnd = value.indexOf(
+                                                '\n',
+                                                end,
+                                            )
+                                            if (lineEnd === -1) {
+                                                lineEnd = value.length
+                                            }
+
+                                            const line = value.substring(
+                                                lineStart,
+                                                lineEnd,
+                                            )
+                                            navigator.clipboard.writeText(line)
+
+                                            textArea.value =
+                                                value.substring(0, lineStart) +
+                                                value.substring(lineEnd)
+
+                                            textArea.selectionStart = lineStart
+                                            textArea.selectionEnd = lineStart
+
+                                            textArea.dispatchEvent(
+                                                new Event('input', {
+                                                    bubbles: true,
+                                                }),
+                                            )
+                                        }
                                     } else {
                                         handled = false
                                     }
