@@ -38,15 +38,18 @@ import {
     setDisplayedMomentModalId,
     displayedMomentModalId,
     appSettings,
+    type ContentPart,
 } from '../modules/globals'
 import { AttachmentPreview } from './AttachmentPreview'
 import { TagButton } from './TagBar'
 import { micromark } from 'micromark'
 import { gfm, gfmHtml } from 'micromark-extension-gfm'
+import { InlineReference } from './InlineReference'
 
 export type MomentProps = ComponentProps<'div'> & {
     data: MomentData
     isInsideModal?: boolean
+    isPreview?: boolean
 }
 
 export const Moment: Component<MomentProps> = (props) => {
@@ -105,10 +108,53 @@ export const Moment: Component<MomentProps> = (props) => {
         contentDisplayType()
 
         if (containerRef && inView()) {
-            const codeBlocks = containerRef!.querySelectorAll('pre code')
-            codeBlocks.forEach((block) => {
-                if (!block.classList.contains('hljs')) {
-                    hljs.highlightElement(block as HTMLElement)
+            const preBlocks = containerRef.querySelectorAll('pre')
+
+            preBlocks.forEach((pre) => {
+                const codeBlock = pre.querySelector('code')
+
+                if (codeBlock && !codeBlock.classList.contains('hljs')) {
+                    hljs.highlightElement(codeBlock as HTMLElement)
+                }
+
+                if (codeBlock && !pre.querySelector('.copy-btn')) {
+                    pre.style.position = 'relative'
+
+                    const btn = document.createElement('button')
+                    btn.className =
+                        'copy-btn absolute top-2 right-2 bg-element/80 hover:bg-highlight text-slate-400 hover:text-slate-800 px-2 py-1 rounded text-xs font-bold transition-all duration-200 opacity-0'
+                    btn.innerText = 'COPY'
+                    btn.title = 'Copy to clipboard'
+
+                    pre.addEventListener(
+                        'mouseenter',
+                        () => (btn.style.opacity = '1'),
+                    )
+                    pre.addEventListener(
+                        'mouseleave',
+                        () => (btn.style.opacity = '0'),
+                    )
+
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation()
+                        navigator.clipboard.writeText(codeBlock.innerText || '')
+
+                        btn.innerText = 'COPIED!'
+                        btn.classList.replace(
+                            'bg-element/80',
+                            'bg-highlight-strong',
+                        )
+
+                        setTimeout(() => {
+                            btn.innerText = 'COPY'
+                            btn.classList.replace(
+                                'bg-highlight-strong',
+                                'bg-element/80',
+                            )
+                        }, 2000)
+                    })
+
+                    pre.appendChild(btn)
                 }
             })
         }
@@ -221,13 +267,28 @@ export const Moment: Component<MomentProps> = (props) => {
                 <Show when={contentDisplayType() == 'All'}>
                     <div class="text-element-accent-highlight flex flex-col gap-0 whitespace-pre-line">
                         <For each={contentParts()}>
-                            {(text) => {
+                            {(text: ContentPart) => {
                                 if (text.type === 'url') {
                                     return (
                                         <AttachmentPreview link={text.body} />
                                     )
                                 }
-                                const rawText = text.body.trim()
+
+                                if (text.type === 'reference') {
+                                    if (props.isPreview) {
+                                        return (
+                                            <button class="bg-element-accent/40 text-highlight mx-1 inline-flex rounded border px-1.5 py-0.5 font-bold">
+                                                <i class="fa-solid fa-link text-[10px] opacity-60"></i>
+                                                {text.body}
+                                            </button>
+                                        )
+                                    }
+                                    return (
+                                        <InlineReference contentPart={text} />
+                                    )
+                                }
+
+                                const rawText = text.body
                                 const parsedComponent = micromark(rawText, {
                                     extensions: [gfm()],
                                     htmlExtensions: [gfmHtml()],

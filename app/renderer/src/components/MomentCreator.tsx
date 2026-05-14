@@ -31,6 +31,7 @@ import {
     title,
     updateMoment,
     type ArchiveId,
+    type MomentData,
     type Tag,
 } from '../modules/data'
 import {
@@ -263,6 +264,7 @@ export const MomentCreator: Component<
             textInputAreaRef.selectionEnd = newCursorPos
         }
     }
+
     const ToolbarButton: Component<{
         icon: string
         title: string
@@ -279,6 +281,50 @@ export const MomentCreator: Component<
             </span>
         </button>
     )
+
+    // Moment references
+    const isTypingReference = createMemo(() => {
+        const text = content()
+        if (!textInputAreaRef) return null
+
+        const cursor = textInputAreaRef.selectionStart
+        const textBeforeCursor = text.substring(0, cursor)
+
+        const lastOpen = textBeforeCursor.lastIndexOf('[[')
+        const lastClose = textBeforeCursor.lastIndexOf(']]')
+
+        if (lastOpen !== -1 && lastOpen > lastClose) {
+            return textBeforeCursor.substring(lastOpen + 2)
+        }
+        return null
+    })
+
+    const suggestedMoments = createMemo(() => {
+        const query = isTypingReference()
+        if (query === null) return []
+
+        const searchLower = query.toLowerCase()
+        return Object.values(allMoments)
+            .filter((m) => m.title.toLowerCase().includes(searchLower))
+            .slice(0, 5)
+    })
+
+    const insertReference = (moment: MomentData) => {
+        if (!textInputAreaRef) return
+
+        const currentContent = content()
+        const cursor = textInputAreaRef.selectionStart
+
+        const textBeforeCursor = currentContent.substring(0, cursor)
+        const openBracketPos = textBeforeCursor.lastIndexOf('[[')
+
+        if (openBracketPos !== -1) {
+            textInputAreaRef.focus()
+            textInputAreaRef.setSelectionRange(openBracketPos + 2, cursor)
+
+            document.execCommand('insertText', false, `${moment.uuid}]] `)
+        }
+    }
 
     return (
         <ExpandableContainer expanded={!props.hide}>
@@ -421,7 +467,6 @@ export const MomentCreator: Component<
                                             .join('\n')
 
                                         if (linesText !== newLinesText) {
-                                            // Natively replace the block
                                             target.setSelectionRange(
                                                 firstLineStart,
                                                 lastLineEnd,
@@ -590,6 +635,35 @@ export const MomentCreator: Component<
                                 }
                             }}
                         />
+
+                        <Show
+                            when={
+                                isTypingReference() !== null &&
+                                suggestedMoments().length > 0 &&
+                                !props.hide
+                            }
+                        >
+                            <div class="flex w-full flex-wrap items-center gap-2 rounded-lg text-sm font-bold tracking-widest">
+                                <span class="text-sub font-black">
+                                    Link to:
+                                </span>
+                                <For each={suggestedMoments()}>
+                                    {(moment) => (
+                                        <button
+                                            onMouseDown={(e) =>
+                                                e.preventDefault()
+                                            }
+                                            onClick={() =>
+                                                insertReference(moment)
+                                            }
+                                            class="bg-element hover:bg-element-accent text-sub border-element-accent hover:border-highlight-strong rounded border px-2 py-1 transition-all hover:scale-105 active:scale-95"
+                                        >
+                                            {moment.title}
+                                        </button>
+                                    )}
+                                </For>
+                            </div>
+                        </Show>
 
                         <Show
                             when={

@@ -23,7 +23,6 @@ import {
     URL_DOMAIN_REGEX,
     URL_FILE_REGEX,
     URL_MAIN_DOMAIN_REGEX,
-    URL_REGEX,
 } from './regex'
 import { defaultSettings, type AppSettings } from './settings'
 import { unwrap } from 'solid-js/store'
@@ -191,19 +190,21 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
 }
 
 // Moment Content
-export type ContentType = 'raw' | 'code' | 'url'
+export type ContentType = 'raw' | 'code' | 'url' | 'reference'
 
 export interface ContentPart {
     type: ContentType
     body: string
+    targetId?: MomentId
 }
 
-export const extractContentParts = (content: string): Array<ContentPart> => {
+export const extractContentParts = (content: string): ContentPart[] => {
     const CODE_BLOCK_REGEX = /(```[\s\S]*?```|`[^`\n]+`)/g
+    const REFERENCE_REGEX = /(\[\[.*?\]\])/g
 
     return content
         .split(CODE_BLOCK_REGEX)
-        .flatMap((part, index): Array<ContentPart> => {
+        .flatMap((part, index): ContentPart[] => {
             if (!part) return []
 
             if (index % 2 !== 0) {
@@ -211,19 +212,43 @@ export const extractContentParts = (content: string): Array<ContentPart> => {
             }
 
             return part
-                .replace(/(?<!-)--(?!-)/g, '—')
-                .split(URL_FILE_REGEX)
-                .filter((fragment) => fragment && fragment.trim() !== '')
-                .map((fragment) => {
-                    URL_FILE_REGEX.lastIndex = 0
-                    const isUrl =
-                        URL_FILE_REGEX.test(fragment) &&
-                        !/\s/.test(fragment.trim())
+                .split(REFERENCE_REGEX)
+                .flatMap((subPart, subIndex): ContentPart[] => {
+                    if (!subPart) return []
 
-                    return {
-                        type: isUrl ? 'url' : 'raw',
-                        body: fragment,
+                    if (subIndex % 2 !== 0) {
+                        const innerText = subPart.replace(/^\[\[|\]\]$/g, '')
+
+                        const [title, targetId] = innerText.split('|')
+
+                        return [
+                            {
+                                type: 'reference',
+                                body: title.trim(),
+                                targetId: (targetId
+                                    ? targetId.trim()
+                                    : title.trim()) as MomentId,
+                            },
+                        ]
                     }
+
+                    return subPart
+                        .replace(/(?<!-)--(?!-)/g, '—')
+                        .split(URL_FILE_REGEX)
+                        .filter(
+                            (fragment) => fragment && fragment.trim() !== '',
+                        )
+                        .map((fragment) => {
+                            URL_FILE_REGEX.lastIndex = 0
+                            const isUrl =
+                                URL_FILE_REGEX.test(fragment) &&
+                                !/\s/.test(fragment.trim())
+
+                            return {
+                                type: isUrl ? 'url' : 'raw',
+                                body: fragment,
+                            }
+                        })
                 })
         })
 }
