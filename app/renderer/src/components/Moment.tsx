@@ -118,6 +118,7 @@ export const Moment: Component<MomentProps> = (props) => {
                 }
 
                 if (codeBlock && !pre.querySelector('.copy-btn')) {
+                    codeBlock.className += ' max-h-[75vh]'
                     pre.style.position = 'relative'
 
                     const btn = document.createElement('button')
