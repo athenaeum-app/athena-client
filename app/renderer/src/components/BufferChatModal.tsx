@@ -167,46 +167,49 @@ export const BufferChatModal: Component = () => {
         <div class="border-element-accent bg-element-matte flex w-full flex-col rounded-xl border">
             <div class="border-element-accent border-b p-3">
                 <h2 class="text-sub text-sm font-bold tracking-widest">
-                    <i class="fa-solid fa-comment text-highlight-strong mr-2"></i>
+                    <i class="fa-solid fa-comment text-highlight mr-2"></i>
                     {getActiveLibrary()?.name} Chat
                 </h2>
             </div>
 
-            <div
-                ref={chatContainerRef}
-                class={`${displayedModal() === 'CHAT_MODAL' ? 'max-h-[70vh]' : 'h-auto'} flex flex-1 flex-col overflow-y-auto scroll-smooth p-4`}
-            >
-                <For each={allMessages}>
-                    {(msg, index) => {
-                        const showHeader = () => shouldShowHeader(msg, index())
+            <Show when={allMessages.length > 0}>
+                <div
+                    ref={chatContainerRef}
+                    class={`${displayedModal() === 'CHAT_MODAL' ? 'max-h-[70vh]' : 'h-auto'} flex flex-1 flex-col overflow-y-auto scroll-smooth p-4`}
+                >
+                    <For each={allMessages}>
+                        {(msg, index) => {
+                            const showHeader = () =>
+                                shouldShowHeader(msg, index())
 
-                        return (
-                            <div
-                                class={`flex flex-col ${showHeader() ? 'mt-4 gap-1' : 'mt-1'}`}
-                            >
-                                <Show when={showHeader()}>
-                                    <div class="flex items-baseline gap-2">
-                                        <span class="text-highlight-strong text-sm font-black">
-                                            {msg.author_name}
-                                        </span>
-                                        <span class="text-sub/50 font-mono text-xs">
-                                            {new Date(
-                                                msg.timestamp,
-                                            ).toLocaleTimeString([], {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                            })}
-                                        </span>
-                                    </div>
-                                </Show>
-                                <span class="text-sub text-sm wrap-break-word whitespace-pre-wrap">
-                                    {msg.content}
-                                </span>
-                            </div>
-                        )
-                    }}
-                </For>
-            </div>
+                            return (
+                                <div
+                                    class={`flex flex-col ${showHeader() ? 'mt-4 gap-1' : 'mt-1'}`}
+                                >
+                                    <Show when={showHeader()}>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-highlight-strong text-sm font-black">
+                                                {msg.author_name}
+                                            </span>
+                                            <span class="text-sub/50 font-mono text-xs">
+                                                {new Date(
+                                                    msg.timestamp,
+                                                ).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </span>
+                                        </div>
+                                    </Show>
+                                    <span class="text-sub text-sm wrap-break-word whitespace-pre-wrap">
+                                        {msg.content}
+                                    </span>
+                                </div>
+                            )
+                        }}
+                    </For>
+                </div>
+            </Show>
 
             <div class="border-element-accent bg-element flex flex-col gap-2 rounded-b-xl border-t p-3">
                 <input
