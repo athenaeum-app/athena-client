@@ -227,11 +227,33 @@ export const BufferChatModal = () => {
                 headers: { Authorization: `Bearer ${lib.token}` },
             })
             if (res.ok) {
-                const data = await res.json()
+                const data: BufferMessage[] = await res.json()
                 if (data && data.length > 0) {
-                    setRenderedMessages(
-                        latestMsg ? [...currentMsgs, ...data] : data,
-                    )
+                    setRenderedMessages((prevMsgs) => {
+                        const msgMap = new Map<string, BufferMessage>()
+                        prevMsgs.forEach((m) => msgMap.set(m.id, m))
+
+                        data.forEach((incomingMsg) => {
+                            if (!incomingMsg.id.startsWith('temp-')) {
+                                for (const [key, val] of msgMap.entries()) {
+                                    if (
+                                        key.startsWith('temp-') &&
+                                        val.content === incomingMsg.content
+                                    ) {
+                                        msgMap.delete(key)
+                                    }
+                                }
+                            }
+                            msgMap.set(incomingMsg.id, incomingMsg)
+                        })
+
+                        return Array.from(msgMap.values()).sort(
+                            (a, b) =>
+                                new Date(a.timestamp).getTime() -
+                                new Date(b.timestamp).getTime(),
+                        )
+                    })
+
                     if (!latestMsg) scrollToBottom()
                 }
             }
