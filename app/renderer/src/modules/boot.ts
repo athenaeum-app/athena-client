@@ -15,6 +15,7 @@ import {
     activeLibraryId,
     allMoments,
     allTags,
+    allMessages,
     archives,
     libraries,
     linkPreviewCache,
@@ -94,6 +95,7 @@ createRoot(() => {
 
         trackStore(allMoments)
         trackStore(allTags)
+        trackStore(allMessages)
         trackStore(linkPreviewCache)
 
         if (!canSave()) return
@@ -103,6 +105,7 @@ createRoot(() => {
                 archives: currentArchives,
                 moments: structuredClone(unwrap(allMoments)),
                 tags: structuredClone(unwrap(allTags)),
+                messages: structuredClone(unwrap(allMessages)),
             }
         }
 

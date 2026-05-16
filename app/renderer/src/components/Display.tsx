@@ -27,6 +27,7 @@ const Display: Component = () => (
                         <div class="overflow-y-auto">
                             <FilterBar />
                         </div>
+
                         <button
                             onClick={() => setDisplayedModal('APP_MENU_MODAL')}
                             class="bg-element hover:text-plain flex items-center justify-center gap-2 rounded-xl p-4 text-center font-bold transition-all duration-100 hover:scale-105 hover:cursor-pointer"

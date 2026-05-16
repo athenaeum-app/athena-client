@@ -8,6 +8,8 @@ import {
     setAllMoments,
     allTags,
     setAllTags,
+    allMessages,
+    setAllMessages,
     jwtToken,
     libraries,
     setLibraries,
@@ -36,7 +38,6 @@ import { allLibraryDataRef, canSave, setCanSave } from './globals'
 
 export const copyLibraryData = (sourceId: string, targetId: string) => {
     if (allLibraryDataRef()[sourceId]) {
-        // Only copy if the target doesn't already have data
         if (!allLibraryDataRef()[targetId]) {
             allLibraryDataRef()[targetId] = structuredClone(
                 allLibraryDataRef()[sourceId],
@@ -63,10 +64,11 @@ export const downloadNewLibrary = () => {
     setIsDownloadingServer(true)
 
     try {
-        const newLib = {
+        const newLib: Library = {
             id: newId,
             name: name,
             type: 'local' as LibraryType,
+            messages: [],
         }
 
         const currentData = allLibraryDataRef()[activeLibraryId()]
@@ -112,6 +114,7 @@ export const deleteLibraryData = (libId: string) => {
                 setArchives({})
                 setAllMoments({})
                 setAllTags({})
+                setAllMessages([])
                 setSelectedArchive(defaultArchiveId)
                 setSelectedTagIds([])
                 setSelectedURLFilters([])
@@ -125,7 +128,6 @@ export const getLibraryFromId = (libId: string) =>
 
 export const getCurrentLibrary = () => getLibraryFromId(activeLibraryId())
 
-// Switch to the new library and load its data
 export const switchToLibraryFromId = async (libId: string) => {
     try {
         if (!libId) return
@@ -139,13 +141,13 @@ export const switchToLibraryFromId = async (libId: string) => {
                 archives: {},
                 moments: {},
                 tags: {},
+                messages: [],
             } as LibraryDataSnapshot
         }
 
         // Pull from Server on load
         if (currentLib?.type === 'server' && jwtToken()) {
             const url = currentLib.url || 'http://localhost:8080'
-            // Check if server is online first
             let isOffline = false
             try {
                 const res = await fetch(`${url}/api/health`)
@@ -171,6 +173,20 @@ export const switchToLibraryFromId = async (libId: string) => {
 
                     if (res.ok) {
                         const serverData: LibraryDataSnapshot = await res.json()
+
+                        try {
+                            const bufRes = await fetch(`${url}/api/buffer`, {
+                                headers: {
+                                    Authorization: `Bearer ${jwtToken()}`,
+                                },
+                            })
+                            serverData.messages = bufRes.ok
+                                ? await bufRes.json()
+                                : localCache.messages || []
+                        } catch (err) {
+                            serverData.messages = localCache.messages || []
+                        }
+
                         localCache = serverData
                     }
                 } catch (e) {
@@ -214,6 +230,9 @@ export const switchToLibraryFromId = async (libId: string) => {
                 }
                 setAllMoments(reconcile(moments))
                 setAllTags(reconcile(libData.tags as Record<TagId, Tag>))
+
+                setAllMessages(reconcile(libData.messages || []))
+
                 setSelectedArchive(defaultArchiveId)
                 setSelectedTagIds([])
                 setSelectedURLFilters([])
@@ -236,6 +255,8 @@ export const setActiveLibraryId = (newId: string) => {
             archives: archives(),
             moments: structuredClone(unwrap(allMoments)),
             tags: structuredClone(unwrap(allTags)),
+
+            messages: structuredClone(unwrap(allMessages)),
         }
     }
 
@@ -256,5 +277,6 @@ export const initializeNewLibrary = (libId: string) => {
         } as Record<ArchiveId, Archive>,
         moments: {},
         tags: {},
+        messages: [],
     }
 }

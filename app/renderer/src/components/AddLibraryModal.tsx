@@ -58,7 +58,11 @@ const AddLibraryModal: Component = () => {
         if (type() === 'server') {
             const rawUrl = url().trim()
 
-            finalUrl = `https://${rawUrl.replace(/^https?:\/\//i, '')}`
+            if (rawUrl.includes('localhost')) {
+                finalUrl = `http://${rawUrl.replace(/^https?:\/\//i, '')}`
+            } else {
+                finalUrl = `https://${rawUrl.replace(/^https?:\/\//i, '')}`
+            }
 
             setUrl(finalUrl)
 

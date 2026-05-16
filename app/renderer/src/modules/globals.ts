@@ -290,6 +290,7 @@ export type MODAL_NAMES =
     | 'DOWNLOAD_SERVER_MODAL'
     | 'IMAGE_INSPECT_MODAL'
     | 'APP_MENU_MODAL'
+    | 'CHAT_MODAL'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')

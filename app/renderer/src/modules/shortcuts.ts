@@ -25,6 +25,14 @@ const handleKeyPress = (event: KeyboardEvent) => {
         setIsSearching(true)
     }
 
+    if (isModifier && event.key.toLowerCase() === 'd' && !event.shiftKey) {
+        if (displayedModal() === 'CHAT_MODAL') {
+            setDisplayedModal('NONE')
+        } else {
+            setDisplayedModal('CHAT_MODAL')
+        }
+    }
+
     if (isModifier && event.key.toLowerCase() === 'q' && !event.shiftKey) {
         setIsLibraryBarExpanded(!isLibraryBarExpanded())
     }
@@ -37,7 +45,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
         }
     }
 
-    if (!isTyping && !isModifier && event.key.toLowerCase() === 'escape') {
+    if (!isModifier && event.key.toLowerCase() === 'escape') {
         setDisplayedModal('NONE')
     }
 
