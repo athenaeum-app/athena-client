@@ -45,6 +45,7 @@ export const BufferChatModal = () => {
     let chatContainerRef: HTMLDivElement | undefined
     let topSentinelRef: HTMLDivElement | undefined
     let bottomSentinelRef: HTMLDivElement | undefined
+    let editTextArea: HTMLTextAreaElement | undefined
 
     const [name, setName] = createSignal(
         localStorage.getItem('athena_chatname') || '',
@@ -56,10 +57,13 @@ export const BufferChatModal = () => {
     const [content, setContent] = createSignal('')
     const [isLoadingOlder, setIsLoadingOlder] = createSignal(false)
     const [isLoadingNewer, setIsLoadingNewer] = createSignal(false)
-    // We add a local upload count to track file progress specific to the chat
     const [activeUploadCount, setActiveUploadCount] = createSignal(0)
 
     const [isAtPresent, setIsAtPresent] = createSignal(true)
+
+    const [lastSyncTime, setLastSyncTime] = createSignal(
+        new Date(0).toISOString(),
+    )
 
     const [showScrollBottom, setShowScrollBottom] = createSignal(false)
     const [editingId, setEditingId] = createSignal<string | null>(null)
@@ -154,21 +158,34 @@ export const BufferChatModal = () => {
 
         setIsLoadingOlder(true)
         try {
-            const oldestMsg = renderedMessages()[0]
-            const url = `${lib.url}/api/buffer?before=${encodeURIComponent(oldestMsg.timestamp)}`
+            let oldestMsg = renderedMessages()[0]
+            let fetchedRealData = false
+            let attempts = 0
 
-            const res = await fetch(url, {
-                headers: { Authorization: `Bearer ${lib.token}` },
-            })
-            if (res.ok) {
-                const data = await res.json()
-                if (data && data.length > 0) {
-                    let combined = [...data, ...renderedMessages()]
+            while (!fetchedRealData && attempts < 3) {
+                const url = `${lib.url}/api/buffer?before=${encodeURIComponent(oldestMsg.timestamp)}`
+                const res = await fetch(url, {
+                    headers: { Authorization: `Bearer ${lib.token}` },
+                })
+
+                if (!res.ok) break
+
+                const data: BufferMessage[] = await res.json()
+                if (!data || data.length === 0) break
+
+                const validMessages = data.filter((m) => !m.deleted)
+
+                if (validMessages.length > 0) {
+                    let combined = [...validMessages, ...renderedMessages()]
                     if (combined.length > MAX_RENDER_COUNT) {
                         combined = combined.slice(0, MAX_RENDER_COUNT)
                         setIsAtPresent(false)
                     }
                     applyAnchoredUpdate(combined)
+                    fetchedRealData = true
+                } else {
+                    oldestMsg = data[0]
+                    attempts++
                 }
             }
         } catch (err) {
@@ -234,6 +251,11 @@ export const BufferChatModal = () => {
                         prevMsgs.forEach((m) => msgMap.set(m.id, m))
 
                         data.forEach((incomingMsg) => {
+                            if (incomingMsg.deleted) {
+                                msgMap.delete(incomingMsg.id)
+                                return
+                            }
+
                             if (!incomingMsg.id.startsWith('temp-')) {
                                 for (const [key, val] of msgMap.entries()) {
                                     if (
@@ -244,7 +266,19 @@ export const BufferChatModal = () => {
                                     }
                                 }
                             }
-                            msgMap.set(incomingMsg.id, incomingMsg)
+
+                            const current = msgMap.get(incomingMsg.id)
+                            if (current) {
+                                if (
+                                    current.content !== incomingMsg.content ||
+                                    current.updated_at !==
+                                        incomingMsg.updated_at
+                                ) {
+                                    msgMap.set(incomingMsg.id, incomingMsg)
+                                }
+                            } else {
+                                msgMap.set(incomingMsg.id, incomingMsg)
+                            }
                         })
 
                         return Array.from(msgMap.values()).sort(
@@ -269,8 +303,10 @@ export const BufferChatModal = () => {
             author_name: name()?.trim() || 'Anonymous',
             content: content().trim(),
         }
+
+        const tempId = 'temp-' + Date.now()
         const newMsg: BufferMessage = {
-            id: 'temp-' + Date.now(),
+            id: tempId,
             author_name: payload.author_name,
             content: payload.content,
             timestamp: new Date().toISOString(),
@@ -278,13 +314,9 @@ export const BufferChatModal = () => {
 
         if (!isAtPresent()) {
             await jumpToPresent()
-            return
         }
 
-        let combined = [...renderedMessages(), newMsg]
-        if (combined.length > MAX_RENDER_COUNT)
-            combined = combined.slice(combined.length - MAX_RENDER_COUNT)
-        setRenderedMessages(combined)
+        setRenderedMessages((prev) => [...prev, newMsg])
         setContent('')
         scrollToBottom()
 
@@ -297,7 +329,21 @@ export const BufferChatModal = () => {
                 },
                 body: JSON.stringify(payload),
             })
-            if (res.ok) fetchMessagesInWindow()
+
+            if (res.ok) {
+                const officialMsg: BufferMessage = await res.json()
+
+                const msgTime = new Date(
+                    officialMsg.updated_at || officialMsg.timestamp,
+                ).getTime()
+                if (msgTime > new Date(lastSyncTime()).getTime()) {
+                    setLastSyncTime(new Date(msgTime).toISOString())
+                }
+
+                setRenderedMessages((prev) =>
+                    prev.map((m) => (m.id === tempId ? officialMsg : m)),
+                )
+            }
         } catch (err) {}
     }
 
@@ -322,6 +368,7 @@ export const BufferChatModal = () => {
     const startEditing = (msg: BufferMessage) => {
         setEditingId(msg.id)
         setEditContent(msg.content)
+        editTextArea?.focus()
     }
 
     const saveEdit = async () => {
@@ -355,6 +402,7 @@ export const BufferChatModal = () => {
         setIsAtPresent(true)
         setContent('')
         setShowScrollBottom(false)
+        setLastSyncTime(new Date(0).toISOString())
 
         if (displayedModal() === 'CHAT_MODAL') {
             untrack(() => {
@@ -566,7 +614,20 @@ export const BufferChatModal = () => {
                                     >
                                         <div class="bg-element-accent/20 border-highlight-strong/30 mt-1 flex flex-col gap-2 rounded-lg border p-2">
                                             <textarea
+                                                ref={(el) =>
+                                                    (editTextArea = el)
+                                                }
                                                 value={editContent()}
+                                                onKeyDown={(e) => {
+                                                    if (
+                                                        e.key.toLowerCase() ===
+                                                            'enter' &&
+                                                        !e.shiftKey
+                                                    ) {
+                                                        e.preventDefault()
+                                                        saveEdit()
+                                                    }
+                                                }}
                                                 onInput={(e) =>
                                                     setEditContent(
                                                         e.currentTarget.value,

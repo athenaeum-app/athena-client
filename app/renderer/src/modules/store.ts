@@ -86,6 +86,8 @@ export interface BufferMessage {
     author_name: string
     content: string
     timestamp: string
+    updated_at?: string
+    deleted?: boolean
 }
 
 export interface DataSnapshot {
