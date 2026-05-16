@@ -412,6 +412,58 @@ export const BufferChatModal = () => {
         }
     })
 
+    const syncLiveChat = async () => {
+        const lib = getActiveLibrary()
+        if (!lib || lib.type !== 'server') return
+
+        try {
+            const url = `${lib.url}/api/buffer?updated_after=${encodeURIComponent(lastSyncTime())}`
+            const res = await fetch(url, {
+                headers: { Authorization: `Bearer ${lib.token}` },
+            })
+            if (res.ok) {
+                const data: BufferMessage[] = await res.json()
+                if (data && data.length > 0) {
+                    let highestTime = new Date(lastSyncTime()).getTime()
+                    data.forEach((m) => {
+                        const msgTime = new Date(
+                            m.updated_at || m.timestamp,
+                        ).getTime()
+                        if (msgTime > highestTime) highestTime = msgTime
+                    })
+                    setLastSyncTime(new Date(highestTime).toISOString())
+
+                    setRenderedMessages((prevMsgs) => {
+                        const msgMap = new Map<string, BufferMessage>()
+                        prevMsgs.forEach((m) => msgMap.set(m.id, m))
+
+                        data.forEach((incomingMsg) => {
+                            if (incomingMsg.deleted) {
+                                msgMap.delete(incomingMsg.id)
+                                return
+                            }
+                            msgMap.set(incomingMsg.id, incomingMsg)
+                        })
+
+                        return Array.from(msgMap.values()).sort(
+                            (a, b) =>
+                                new Date(a.timestamp).getTime() -
+                                new Date(b.timestamp).getTime(),
+                        )
+                    })
+                }
+            }
+        } catch (err) {}
+    }
+
+    onMount(() => {
+        const interval = setInterval(() => {
+            if (displayedModal() === 'CHAT_MODAL' && isAtPresent())
+                syncLiveChat()
+        }, 5000)
+        onCleanup(() => clearInterval(interval))
+    })
+
     createEffect(() => {
         if (!chatContainerRef || !topSentinelRef || !bottomSentinelRef) return
 
