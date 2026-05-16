@@ -82,7 +82,7 @@ export const TagBar: Component = () => {
     return (
         <div class="bg-element z-10 flex max-h-[20vh] w-full flex-wrap items-center justify-center gap-2 overflow-y-auto p-2 backdrop-blur-md transition-all lg:p-6">
             <span class="text-sub text-xs font-black tracking-widest uppercase">
-                Selected Tags:
+                Tags:
             </span>
             <For each={availableTags()}>
                 {(tagData) => {

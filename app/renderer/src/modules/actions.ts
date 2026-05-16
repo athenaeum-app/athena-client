@@ -107,14 +107,14 @@ export const flushActionQueue = async () => {
 
             for (const part of parts) {
                 if (
-                    part.startsWith('blob:') ||
-                    part.startsWith('file://') ||
-                    part.startsWith('athena://')
+                    part.body.startsWith('blob:') ||
+                    part.body.startsWith('file://') ||
+                    part.body.startsWith('athena://')
                 ) {
                     console.log(`Uploading local attachment: ${part}`)
 
                     try {
-                        const fileRes = await fetch(part)
+                        const fileRes = await fetch(part.body)
                         const rawBlob = await fileRes.blob()
 
                         const newServerUrl = await uploadAttachment(

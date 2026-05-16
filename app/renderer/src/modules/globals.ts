@@ -23,7 +23,6 @@ import {
     URL_DOMAIN_REGEX,
     URL_FILE_REGEX,
     URL_MAIN_DOMAIN_REGEX,
-    URL_REGEX,
 } from './regex'
 import { defaultSettings, type AppSettings } from './settings'
 import { unwrap } from 'solid-js/store'
@@ -191,20 +190,76 @@ export const getFilteredMoments: Accessor<Array<MomentData>> = () => {
 }
 
 // Moment Content
-export const extractContentParts = (content: string) => {
+export type ContentType = 'raw' | 'code' | 'url' | 'reference'
+
+export interface ContentPart {
+    type: ContentType
+    body: string
+    targetId?: MomentId
+}
+
+export const extractContentParts = (content: string): ContentPart[] => {
+    const CODE_BLOCK_REGEX = /(```[\s\S]*?```|`[^`\n]+`)/g
+    const REFERENCE_REGEX = /(\[\[.*?\]\])/g
+
     return content
-        .replace(/(?<!-)--(?!-)/g, '—')
-        .split(URL_FILE_REGEX)
-        .filter((fragment) => fragment && fragment.trim() !== '')
+        .split(CODE_BLOCK_REGEX)
+        .flatMap((part, index): ContentPart[] => {
+            if (!part) return []
+
+            if (index % 2 !== 0) {
+                return [{ type: 'code', body: part }]
+            }
+
+            return part
+                .split(REFERENCE_REGEX)
+                .flatMap((subPart, subIndex): ContentPart[] => {
+                    if (!subPart) return []
+
+                    if (subIndex % 2 !== 0) {
+                        const innerText = subPart.replace(/^\[\[|\]\]$/g, '')
+
+                        const [title, targetId] = innerText.split('|')
+
+                        return [
+                            {
+                                type: 'reference',
+                                body: title.trim(),
+                                targetId: (targetId
+                                    ? targetId.trim()
+                                    : title.trim()) as MomentId,
+                            },
+                        ]
+                    }
+
+                    return subPart
+                        .replace(/(?<!-)--(?!-)/g, '—')
+                        .split(URL_FILE_REGEX)
+                        .filter(
+                            (fragment) => fragment && fragment.trim() !== '',
+                        )
+                        .map((fragment) => {
+                            URL_FILE_REGEX.lastIndex = 0
+                            const isUrl =
+                                URL_FILE_REGEX.test(fragment) &&
+                                !/\s/.test(fragment.trim())
+
+                            return {
+                                type: isUrl ? 'url' : 'raw',
+                                body: fragment,
+                            }
+                        })
+                })
+        })
 }
 
 export const iterateUrlsInContentParts = (
-    contentParts: Array<string>,
+    contentParts: Array<ContentPart>,
     callback: (url: string) => any,
 ) => {
     for (const text of contentParts) {
-        if (text.match(URL_REGEX)) {
-            callback(text)
+        if (text.type === 'url') {
+            callback(text.body)
         }
     }
 }
@@ -235,6 +290,7 @@ export type MODAL_NAMES =
     | 'DOWNLOAD_SERVER_MODAL'
     | 'IMAGE_INSPECT_MODAL'
     | 'APP_MENU_MODAL'
+    | 'CHAT_MODAL'
 
 export const [displayedModal, setDisplayedModal] =
     createSignal<MODAL_NAMES>('NONE')

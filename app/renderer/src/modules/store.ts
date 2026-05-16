@@ -27,6 +27,8 @@ export interface Library {
 
     syncStatus?: 'synced' | 'dirty' | 'syncing' | 'conflict' | 'offline'
     lastSyncTime?: string
+
+    messages: Array<BufferMessage>
 }
 
 export type MomentId = `moment_${string}`
@@ -76,6 +78,14 @@ export interface LibraryDataSnapshot {
     moments: Record<MomentId, MomentData>
     tags: Record<TagId, Tag>
     linkPreviewCache?: Record<string, any> // LEGACY, SHOULD NOT BE USED! only to be migrated.
+    messages: Array<BufferMessage>
+}
+
+export interface BufferMessage {
+    id: string
+    author_name: string
+    content: string
+    timestamp: string
 }
 
 export interface DataSnapshot {
@@ -90,6 +100,9 @@ export interface DataSnapshot {
 export type dataSnapshot = DataSnapshot
 
 // Signals & Stores
+
+// Messages
+export const [allMessages, setAllMessages] = createStore<BufferMessage[]>([])
 
 // Reference Files
 export const [refFiles, setRefFiles] = createSignal<FileRefs>({})

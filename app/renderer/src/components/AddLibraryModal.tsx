@@ -57,7 +57,14 @@ const AddLibraryModal: Component = () => {
 
         if (type() === 'server') {
             const rawUrl = url().trim()
-            finalUrl = rawUrl.startsWith('http') ? rawUrl : `http://${rawUrl}`
+
+            if (rawUrl.includes('localhost')) {
+                finalUrl = `http://${rawUrl.replace(/^https?:\/\//i, '')}`
+            } else {
+                finalUrl = `https://${rawUrl.replace(/^https?:\/\//i, '')}`
+            }
+
+            setUrl(finalUrl)
 
             try {
                 const res = await fetch(`${finalUrl}/auth/login`, {
@@ -109,8 +116,14 @@ const AddLibraryModal: Component = () => {
         setPassword('')
     }
 
+    const IsURLInvalid = () => {
+        if (type() !== 'server') return false
+        const trimmed = url().trim()
+        if (trimmed === '') return false
+        return trimmed.startsWith('http://')
+    }
+
     const isNameEmpty = () => {
-        console.log(name())
         return name().trim() === ''
     }
 
@@ -162,7 +175,6 @@ const AddLibraryModal: Component = () => {
                             disabled={isLoading()}
                             autofocus
                         />
-
                         <Show when={isNameDuplicate()}>
                             <span class="text-danger px-2 text-xs font-bold">
                                 A library with this name already exists.
@@ -174,7 +186,7 @@ const AddLibraryModal: Component = () => {
                         <div class="flex flex-col gap-3">
                             <input
                                 type="text"
-                                placeholder="Server URL (e.g. 192.168.1.50:8080)"
+                                placeholder="Server URL (ex:  https://myathenaserver.com)"
                                 value={url()}
                                 onInput={(e) => setUrl(e.currentTarget.value)}
                                 class="bg-element text-sub border-element-accent focus:border-sub/50 w-full rounded-2xl border-2 px-4 py-3 transition-colors outline-none"
@@ -191,11 +203,26 @@ const AddLibraryModal: Component = () => {
                                 disabled={isLoading()}
                             />
 
-                            <Show when={isURLDuplicate()}>
+                            <Show when={IsURLInvalid() || isURLDuplicate()}>
                                 <span class="text-danger px-2 text-xs font-bold">
-                                    You are already connected to this server.
+                                    <Switch>
+                                        <Match when={IsURLInvalid()}>
+                                            <br />
+                                            Http is not supported. Use https
+                                            instead.
+                                            <br />
+                                            https://athena-server.com
+                                            <br />
+                                            athena-server.com
+                                        </Match>
+                                        <Match when={isURLDuplicate()}>
+                                            You are already connected to this
+                                            server.
+                                        </Match>
+                                    </Switch>
                                 </span>
                             </Show>
+
                             <Show when={authError()}>
                                 <span class="text-danger px-2 text-xs font-bold">
                                     {authError()}
@@ -218,10 +245,13 @@ const AddLibraryModal: Component = () => {
                         type="submit"
                         disabled={
                             isNameEmpty() ||
+                            isNameDuplicate() ||
                             isLoading() ||
-                            isURLDuplicate() ||
                             (type() === 'server' &&
-                                (!url().trim() || !password().trim()))
+                                (url().trim() === '' ||
+                                    password().trim() === '' ||
+                                    IsURLInvalid() ||
+                                    isURLDuplicate()))
                         }
                         class="bold bg-success text-sub w-1/3 rounded-2xl p-3 font-bold shadow-sm transition-all hover:-translate-y-1 hover:cursor-pointer hover:shadow-md active:scale-95 disabled:pointer-events-none disabled:opacity-50 md:p-4"
                     >

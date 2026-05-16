@@ -60,7 +60,7 @@ const ModalContainer = <T extends string>(props: ModalContainerData<T>) => {
                             } `}
                         >
                             <ExpandableContainer expanded={isVisible()}>
-                                <div class="flex max-w-full items-center justify-center overflow-hidden">
+                                <div class="flex max-w-[90vw] items-center justify-center overflow-hidden">
                                     {item.content}
                                 </div>
                             </ExpandableContainer>

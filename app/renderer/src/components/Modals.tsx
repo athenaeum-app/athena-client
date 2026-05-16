@@ -26,6 +26,7 @@ import AddLibraryModal from './AddLibraryModal'
 import { ServerLoginModal } from './ServerLoginModal'
 import { DownloadServerModal } from './DownloadServerModal'
 import { AppMenuModal } from './AppMenuModal'
+import { BufferChatModal } from './BufferChatModal'
 
 export const Modals = () => {
     createEffect(() => {
@@ -77,6 +78,14 @@ export const Modals = () => {
                 {
                     state_name: 'IMAGE_INSPECT_MODAL',
                     content: <ImageInspectModal />,
+                },
+                {
+                    state_name: 'CHAT_MODAL',
+                    content: (
+                        <div class="w-6xl">
+                            <BufferChatModal />
+                        </div>
+                    ),
                 },
                 {
                     state_name: 'CONFIRM_LIBRARY_DELETE',

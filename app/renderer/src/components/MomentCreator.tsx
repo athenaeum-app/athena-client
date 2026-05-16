@@ -31,6 +31,7 @@ import {
     title,
     updateMoment,
     type ArchiveId,
+    type MomentData,
     type Tag,
 } from '../modules/data'
 import {
@@ -241,23 +242,27 @@ export const MomentCreator: Component<
 
         const start = textInputAreaRef.selectionStart
         const end = textInputAreaRef.selectionEnd
-        const currentText = content()
+        const value = textInputAreaRef.value
 
-        const before = currentText.substring(0, start)
-        const selected = currentText.substring(start, end)
-        const after = currentText.substring(end)
-
+        const selected = value.substring(start, end)
         const newSelectedText = selected
             ? `${prefix}${selected}${suffix}`
             : `${prefix}${suffix}`
-        setContent(before + newSelectedText + after)
 
-        setTimeout(() => {
-            textInputAreaRef!.focus()
-            const newCursorPos =
-                start + prefix.length + (selected ? selected.length : 0)
-            textInputAreaRef!.setSelectionRange(newCursorPos, newCursorPos)
-        }, 0)
+        textInputAreaRef.focus()
+        textInputAreaRef.setSelectionRange(start, end)
+
+        document.execCommand('insertText', false, newSelectedText)
+
+        if (selected) {
+            textInputAreaRef.selectionStart = start + prefix.length
+            textInputAreaRef.selectionEnd =
+                start + prefix.length + selected.length
+        } else {
+            const newCursorPos = start + prefix.length
+            textInputAreaRef.selectionStart = newCursorPos
+            textInputAreaRef.selectionEnd = newCursorPos
+        }
     }
 
     const ToolbarButton: Component<{
@@ -276,6 +281,50 @@ export const MomentCreator: Component<
             </span>
         </button>
     )
+
+    // Moment references
+    const isTypingReference = createMemo(() => {
+        const text = content()
+        if (!textInputAreaRef) return null
+
+        const cursor = textInputAreaRef.selectionStart
+        const textBeforeCursor = text.substring(0, cursor)
+
+        const lastOpen = textBeforeCursor.lastIndexOf('[[')
+        const lastClose = textBeforeCursor.lastIndexOf(']]')
+
+        if (lastOpen !== -1 && lastOpen > lastClose) {
+            return textBeforeCursor.substring(lastOpen + 2)
+        }
+        return null
+    })
+
+    const suggestedMoments = createMemo(() => {
+        const query = isTypingReference()
+        if (query === null) return []
+
+        const searchLower = query.toLowerCase()
+        return Object.values(allMoments)
+            .filter((m) => m.title.toLowerCase().includes(searchLower))
+            .slice(0, 5)
+    })
+
+    const insertReference = (moment: MomentData) => {
+        if (!textInputAreaRef) return
+
+        const currentContent = content()
+        const cursor = textInputAreaRef.selectionStart
+
+        const textBeforeCursor = currentContent.substring(0, cursor)
+        const openBracketPos = textBeforeCursor.lastIndexOf('[[')
+
+        if (openBracketPos !== -1) {
+            textInputAreaRef.focus()
+            textInputAreaRef.setSelectionRange(openBracketPos + 2, cursor)
+
+            document.execCommand('insertText', false, `${moment.uuid}]] `)
+        }
+    }
 
     return (
         <ExpandableContainer expanded={!props.hide}>
@@ -370,9 +419,119 @@ export const MomentCreator: Component<
                             placeholder="Moment description..."
                             onKeyDown={(e) => {
                                 if (e.key.toLowerCase() === 'tab') {
-                                    insertMarkdown('    ')
                                     e.preventDefault()
                                     e.stopPropagation()
+
+                                    const target = e.currentTarget
+                                    const start = target.selectionStart
+                                    const end = target.selectionEnd
+                                    const value = target.value
+
+                                    if (e.shiftKey) {
+                                        const firstLineStart =
+                                            value.lastIndexOf('\n', start - 1) +
+                                            1
+                                        let lastLineEnd = value.indexOf(
+                                            '\n',
+                                            end,
+                                        )
+                                        if (lastLineEnd === -1)
+                                            lastLineEnd = value.length
+
+                                        const linesText = value.substring(
+                                            firstLineStart,
+                                            lastLineEnd,
+                                        )
+                                        const lines = linesText.split('\n')
+
+                                        let charsRemovedFirstLine = 0
+                                        let totalCharsRemoved = 0
+
+                                        const newLinesText = lines
+                                            .map((line, index) => {
+                                                const match =
+                                                    line.match(/^( {1,4})/)
+                                                if (match) {
+                                                    const removed =
+                                                        match[1].length
+                                                    if (index === 0)
+                                                        charsRemovedFirstLine =
+                                                            removed
+                                                    totalCharsRemoved += removed
+                                                    return line.substring(
+                                                        removed,
+                                                    )
+                                                }
+                                                return line
+                                            })
+                                            .join('\n')
+
+                                        if (linesText !== newLinesText) {
+                                            target.setSelectionRange(
+                                                firstLineStart,
+                                                lastLineEnd,
+                                            )
+                                            document.execCommand(
+                                                'insertText',
+                                                false,
+                                                newLinesText,
+                                            )
+
+                                            target.selectionStart = Math.max(
+                                                firstLineStart,
+                                                start - charsRemovedFirstLine,
+                                            )
+                                            target.selectionEnd = Math.max(
+                                                firstLineStart,
+                                                end - totalCharsRemoved,
+                                            )
+                                        }
+                                    } else {
+                                        if (
+                                            start !== end &&
+                                            value
+                                                .substring(start, end)
+                                                .includes('\n')
+                                        ) {
+                                            const firstLineStart =
+                                                value.lastIndexOf(
+                                                    '\n',
+                                                    start - 1,
+                                                ) + 1
+                                            let lastLineEnd = value.indexOf(
+                                                '\n',
+                                                end,
+                                            )
+                                            if (lastLineEnd === -1)
+                                                lastLineEnd = value.length
+
+                                            const linesText = value.substring(
+                                                firstLineStart,
+                                                lastLineEnd,
+                                            )
+                                            const lines = linesText.split('\n')
+
+                                            const newLinesText = lines
+                                                .map((line) => '    ' + line)
+                                                .join('\n')
+
+                                            target.setSelectionRange(
+                                                firstLineStart,
+                                                lastLineEnd,
+                                            )
+                                            document.execCommand(
+                                                'insertText',
+                                                false,
+                                                newLinesText,
+                                            )
+
+                                            target.selectionStart = start + 4
+                                            target.selectionEnd =
+                                                end + lines.length * 4
+                                        } else {
+                                            insertMarkdown('    ')
+                                        }
+                                    }
                                 }
 
                                 if (e.ctrlKey || e.metaKey) {
@@ -389,6 +548,43 @@ export const MomentCreator: Component<
                                         insertMarkdown('~~', '~~')
                                     } else if (key === 's' || key === 'enter') {
                                         attemptSubmit()
+                                    } else if (key === 'x') {
+                                        const textArea = textInputAreaRef
+                                        if (textArea) {
+                                            const start =
+                                                textArea.selectionStart
+                                            const end = textArea.selectionEnd
+                                            const value = textArea.value
+
+                                            const lineStart =
+                                                value.lastIndexOf(
+                                                    '\n',
+                                                    start - 1,
+                                                ) + 1
+                                            let lineEnd = value.indexOf(
+                                                '\n',
+                                                end,
+                                            )
+                                            if (lineEnd === -1) {
+                                                lineEnd = value.length
+                                            }
+
+                                            const line = value.substring(
+                                                lineStart,
+                                                lineEnd,
+                                            )
+                                            navigator.clipboard.writeText(line)
+
+                                            textArea.setSelectionRange(
+                                                lineStart,
+                                                lineEnd,
+                                            )
+                                            document.execCommand(
+                                                'insertText',
+                                                false,
+                                                '',
+                                            )
+                                        }
                                     } else {
                                         handled = false
                                     }
@@ -439,6 +635,35 @@ export const MomentCreator: Component<
                                 }
                             }}
                         />
+
+                        <Show
+                            when={
+                                isTypingReference() !== null &&
+                                suggestedMoments().length > 0 &&
+                                !props.hide
+                            }
+                        >
+                            <div class="flex w-full flex-wrap items-center gap-2 rounded-lg text-sm font-bold tracking-widest">
+                                <span class="text-sub font-black">
+                                    Link to:
+                                </span>
+                                <For each={suggestedMoments()}>
+                                    {(moment) => (
+                                        <button
+                                            onMouseDown={(e) =>
+                                                e.preventDefault()
+                                            }
+                                            onClick={() =>
+                                                insertReference(moment)
+                                            }
+                                            class="bg-element hover:bg-element-accent text-sub border-element-accent hover:border-highlight-strong rounded border px-2 py-1 transition-all hover:scale-105 active:scale-95"
+                                        >
+                                            {moment.title}
+                                        </button>
+                                    )}
+                                </For>
+                            </div>
+                        </Show>
 
                         <Show
                             when={

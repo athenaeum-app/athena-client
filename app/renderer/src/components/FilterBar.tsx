@@ -104,7 +104,7 @@ export const FilterBar: Component = () => {
                 </span>
                 <ClearFilterButton onClick={() => setSelectedURLFilters([])} />
             </div>
-            <div class="flex flex-col gap-2">
+            <div class="flex max-h-[20vh] flex-col gap-2 overflow-y-auto">
                 <For each={getMediaFilterArray()}>
                     {([url, mediaFilterData]) => (
                         <div class="group p-1">

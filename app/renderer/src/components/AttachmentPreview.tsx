@@ -1,3 +1,5 @@
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css'
 import {
     createMemo,
     createResource,
@@ -7,6 +9,7 @@ import {
     onMount,
     Show,
     Switch,
+    createEffect,
     type Component,
     type ComponentProps,
 } from 'solid-js'
@@ -32,9 +35,21 @@ import {
 } from '../modules/globals'
 import { LocalPDFPreview } from './PDFPreview'
 import { unwrap } from 'solid-js/store'
+import { PrefabExpandableContainer } from './PrefabExpandableContainer'
 
 interface AttachmentPreviewProps extends ComponentProps<'div'> {
     link: string
+}
+
+const getGithubRawUrl = (url: string) => {
+    if (url.startsWith('https://raw.githubusercontent.com/')) return url
+    const match = url.match(
+        /^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/,
+    )
+    if (match) {
+        return `https://raw.githubusercontent.com/${match[1]}/${match[2]}/${match[3]}/${match[4]}`
+    }
+    return null
 }
 
 export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
@@ -140,6 +155,34 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
         },
     )
 
+    const githubRawUrl = createMemo(() => getGithubRawUrl(cleanUrl()))
+    let githubCodeRef: HTMLElement | undefined
+
+    const [githubCode] = createResource(
+        () => (inView() && githubRawUrl() ? githubRawUrl() : null),
+        async (rawUrl) => {
+            if (!rawUrl) return null
+            try {
+                const res = await fetch(rawUrl)
+                if (!res.ok) return null
+                return await res.text()
+            } catch (e) {
+                console.error('Failed to fetch github raw code', e)
+                return null
+            }
+        },
+    )
+
+    createEffect(() => {
+        if (
+            githubCode() &&
+            githubCodeRef &&
+            !githubCodeRef.classList.contains('hljs')
+        ) {
+            hljs.highlightElement(githubCodeRef)
+        }
+    })
+
     const getVideoLink = (url: string) => {
         const match = url.match(YOUTUBE_ID_REGEX)
         const id = match?.groups?.id
@@ -193,215 +236,330 @@ export const AttachmentPreview: Component<AttachmentPreviewProps> = (props) => {
     )
 
     return (
-        <Switch>
-            <Match when={isFile()}>
-                <div>
-                    <div class="group bg-highlight border-sub hover:border-highlight-strongest flex w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300">
-                        <Switch
-                            fallback={
-                                <div
-                                    onClick={() =>
-                                        getApi().openFileFromURI(props.link)
-                                    }
-                                    class="group flex w-full items-center justify-between gap-2 p-2 group-hover:cursor-pointer"
-                                >
-                                    <span class="text-highlight-alt-strong text-lg font-black">
-                                        File
-                                    </span>
-                                    <span class="text-highlight-strong text-xs font-bold">
-                                        {fileName()}
-                                    </span>
-                                </div>
-                            }
-                        >
-                            <Match when={isImage()}>
-                                <div
-                                    class="hover:cursor-pointer"
-                                    onClick={() => {
-                                        const url = props.link
-                                        if (url) {
-                                            InspectImage(url)
-                                        }
-                                    }}
-                                >
-                                    <div class="flex w-full flex-col gap-2 p-2">
-                                        <span class="text-highlight-alt-strong text-lg font-black">
-                                            Local Image
-                                        </span>
-                                        <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
-                                            <div
-                                                class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
-                                                style={{
-                                                    'background-image': `url(${props.link || ''})`,
-                                                    'background-size':
-                                                        'contain',
-                                                    'background-position':
-                                                        'center',
-                                                }}
-                                            />
-                                            <img
-                                                src={props.link}
-                                                class={`bg-element z-10 ${maxImageHeight()} w-full rounded object-contain hover:cursor-pointer`}
-                                            ></img>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Match>
-                            <Match when={isPDF()}>
-                                <div
-                                    class="hover:cursor-pointer"
-                                    onClick={() => {
-                                        getApi().openFileFromURI(props.link)
-                                    }}
-                                >
-                                    <LocalPDFPreview url={props.link} />
-                                </div>
-                            </Match>
-                        </Switch>
-                    </div>
-                </div>
-            </Match>
-            <Match when={isURL()}>
-                <div
-                    ref={containerRef}
-                    class={`bg-highlight border-sub hover:border-highlight-strongest flex ${hasMediaData() ? 'min-h-20 p-2' : 'p-1'} w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300`}
-                >
-                    <Show
-                        when={hasMediaData() && inView()}
-                        fallback={
-                            <div
-                                onClick={() =>
-                                    getApi().openExternalBrowser(cleanUrl())
-                                }
-                                class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border p-2 hover:cursor-pointer"
-                            >
-                                <div class="flex w-full justify-between gap-2">
-                                    <span class="text-highlight-strong group font-black break-all">
-                                        {websiteData()?.title || cleanUrl()}
-                                    </span>
-                                    <span class="text-element-accent-highlight group font-black">
-                                        No Media Data
-                                    </span>
-                                </div>
-                            </div>
-                        }
-                    >
-                        <div class="flex justify-between">
-                            <div class="flex min-w-0 items-center gap-3 pr-2">
-                                <Show
-                                    when={!isDirectMedia(cleanUrl())}
-                                    fallback={
-                                        <div class="bg-element text-sub flex h-5 w-5 items-center justify-center rounded text-lg">
-                                            <i
-                                                class={
-                                                    fixedIconClasses +
-                                                    (isVideoFile(cleanUrl())
-                                                        ? 'fa-file-video'
-                                                        : 'fa-image')
-                                                }
-                                            />
-                                        </div>
-                                    }
-                                >
-                                    <img
-                                        class={`bg-element ${maxImageHeight()} rounded object-contain`}
-                                        src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${cleanUrl()}`}
-                                    />
-                                </Show>
-                                <span class="text-highlight-alt-strong flex-1 truncate text-lg font-black">
-                                    {filterTitle(websiteData()?.title)}
-                                </span>
-                            </div>
-                            <button
-                                onClick={() =>
-                                    getApi().openExternalBrowser(cleanUrl())
-                                }
-                                class="hover:text-highlight-strongest text-highlight-strong text-md wrap-break-all max-w-sm text-right font-black tracking-widest transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
-                            >
-                                {(() => {
-                                    const basic = websiteData()
-                                        ?.siteLink.match(URL_MAIN_DOMAIN_REGEX)
-                                        ?.at(0)
-                                    if (basic) {
-                                        return basic
-                                    }
-                                    return websiteData()?.siteLink || ''
-                                })()}
-                            </button>
-                        </div>
-                        <Switch>
-                            <Match when={isPDF()}>
-                                <LocalPDFPreview
-                                    url={cleanUrl()}
-                                ></LocalPDFPreview>
-                            </Match>
-                            <Match when={!videoLink() && !websiteData()?.video}>
-                                <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+        <div class="my-4">
+            <Switch>
+                <Match when={isFile()}>
+                    <div>
+                        <div class="group bg-highlight border-sub hover:border-highlight-strongest flex w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300">
+                            <Switch
+                                fallback={
                                     <div
-                                        class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
-                                        style={{
-                                            'background-image': `url(${websiteData()?.image || ''})`,
-                                            'background-size': 'contain',
-                                            'background-position': 'center',
-                                        }}
-                                    />
-                                    <img
+                                        onClick={() =>
+                                            getApi().openFileFromURI(props.link)
+                                        }
+                                        class="group flex w-full items-center justify-between gap-2 p-2 group-hover:cursor-pointer"
+                                    >
+                                        <span class="text-highlight-alt-strong text-lg font-black">
+                                            File
+                                        </span>
+                                        <span class="text-highlight-strong text-xs font-bold">
+                                            {fileName()}
+                                        </span>
+                                    </div>
+                                }
+                            >
+                                <Match when={isImage()}>
+                                    <div
+                                        class="hover:cursor-pointer"
                                         onClick={() => {
-                                            const url = websiteData()?.image
+                                            const url = props.link
                                             if (url) {
                                                 InspectImage(url)
                                             }
                                         }}
-                                        class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
-                                        src={`${websiteData()?.image || ''}`}
-                                    />
-                                </div>
-                            </Match>
-                            <Match when={videoLink() || websiteData()?.video}>
-                                {(link) => {
-                                    const videoSource = websiteData()?.video
-                                    if (videoSource && !videoLink()) {
-                                        return (
-                                            <video
-                                                ref={(video) =>
-                                                    (video.volume = 0.1)
+                                    >
+                                        <div class="flex w-full flex-col gap-2 p-2">
+                                            <span class="text-highlight-alt-strong text-lg font-black">
+                                                Local Image
+                                            </span>
+                                            <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+                                                <div
+                                                    class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
+                                                    style={{
+                                                        'background-image': `url(${props.link || ''})`,
+                                                        'background-size':
+                                                            'contain',
+                                                        'background-position':
+                                                            'center',
+                                                    }}
+                                                />
+                                                <img
+                                                    src={props.link}
+                                                    class={`bg-element z-10 ${maxImageHeight()} w-full rounded object-contain hover:cursor-pointer`}
+                                                ></img>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Match>
+                                <Match when={isPDF()}>
+                                    <div
+                                        class="hover:cursor-pointer"
+                                        onClick={() => {
+                                            getApi().openFileFromURI(props.link)
+                                        }}
+                                    >
+                                        <LocalPDFPreview url={props.link} />
+                                    </div>
+                                </Match>
+                            </Switch>
+                        </div>
+                    </div>
+                </Match>
+                <Match when={isURL()}>
+                    <div ref={containerRef} class="w-full">
+                        <Show
+                            when={githubRawUrl()}
+                            fallback={
+                                <div
+                                    class={`bg-highlight border-sub hover:border-highlight-strongest flex ${hasMediaData() ? 'min-h-20 p-2' : 'p-1'} w-full flex-col justify-center gap-1 rounded border-2 transition-all duration-300`}
+                                >
+                                    <Show
+                                        when={hasMediaData() && inView()}
+                                        fallback={
+                                            <div
+                                                onClick={() =>
+                                                    getApi().openExternalBrowser(
+                                                        cleanUrl(),
+                                                    )
                                                 }
-                                                class="aspect-video w-full rounded"
-                                                controls
+                                                class="group bg-element-accent border-sub hover:border-highlight-strongest flex flex-col rounded border p-2 hover:cursor-pointer"
                                             >
-                                                <source src={videoSource} />
-                                                Your browser does not support
-                                                the video tag.
-                                            </video>
-                                        )
-                                    }
-                                    if (videoLink()) {
-                                        console.log(
-                                            `Displaying ${link()} as iframe.`,
-                                        )
-                                        return (
-                                            <iframe
-                                                loading="lazy"
-                                                class="aspect-video h-full w-full"
-                                                src={link() as string}
-                                                title="YouTube video player"
-                                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                referrerpolicy="strict-origin-when-cross-origin"
-                                                allowfullscreen
-                                            ></iframe>
-                                        )
-                                    }
-                                }}
-                            </Match>
-                        </Switch>
-                        <Show when={websiteData()?.description}>
-                            <div class="flex justify-between">
-                                <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>
+                                                <div class="flex w-full justify-between gap-2">
+                                                    <span class="text-highlight-strong group font-black break-all">
+                                                        {websiteData()?.title ||
+                                                            cleanUrl()}
+                                                    </span>
+                                                    <span class="text-element-accent-highlight group font-black">
+                                                        No Media Data
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        }
+                                    >
+                                        <div class="flex justify-between">
+                                            <div class="flex min-w-0 items-center gap-3 pr-2">
+                                                <Show
+                                                    when={
+                                                        !isDirectMedia(
+                                                            cleanUrl(),
+                                                        )
+                                                    }
+                                                    fallback={
+                                                        <div class="bg-element text-sub flex h-5 w-5 items-center justify-center rounded text-lg">
+                                                            <i
+                                                                class={
+                                                                    fixedIconClasses +
+                                                                    (isVideoFile(
+                                                                        cleanUrl(),
+                                                                    )
+                                                                        ? 'fa-file-video'
+                                                                        : 'fa-image')
+                                                                }
+                                                            />
+                                                        </div>
+                                                    }
+                                                >
+                                                    <img
+                                                        class={`bg-element ${maxImageHeight()} rounded object-contain`}
+                                                        src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${cleanUrl()}`}
+                                                    />
+                                                </Show>
+                                                <span class="text-highlight-alt-strong flex-1 truncate text-lg font-black">
+                                                    {filterTitle(
+                                                        websiteData()?.title,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() =>
+                                                    getApi().openExternalBrowser(
+                                                        cleanUrl(),
+                                                    )
+                                                }
+                                                class="hover:text-highlight-strongest text-highlight-strong text-md wrap-break-all max-w-sm text-right font-black tracking-widest transition-all duration-100 hover:scale-105 hover:cursor-pointer active:scale-95"
+                                            >
+                                                {(() => {
+                                                    const basic = websiteData()
+                                                        ?.siteLink.match(
+                                                            URL_MAIN_DOMAIN_REGEX,
+                                                        )
+                                                        ?.at(0)
+                                                    if (basic) {
+                                                        return basic
+                                                    }
+                                                    return (
+                                                        websiteData()
+                                                            ?.siteLink || ''
+                                                    )
+                                                })()}
+                                            </button>
+                                        </div>
+                                        <Switch>
+                                            <Match when={isPDF()}>
+                                                <LocalPDFPreview
+                                                    url={cleanUrl()}
+                                                ></LocalPDFPreview>
+                                            </Match>
+                                            <Match
+                                                when={
+                                                    !videoLink() &&
+                                                    !websiteData()?.video
+                                                }
+                                            >
+                                                <div class="border-highlight-alt bg-element-matte group relative flex w-full items-center justify-center overflow-hidden rounded-xl border">
+                                                    <div
+                                                        class="pointer-events-none absolute inset-0 scale-150 opacity-40 blur-xl transition-all group-hover:opacity-60"
+                                                        style={{
+                                                            'background-image': `url(${websiteData()?.image || ''})`,
+                                                            'background-size':
+                                                                'contain',
+                                                            'background-position':
+                                                                'center',
+                                                        }}
+                                                    />
+                                                    <img
+                                                        onClick={() => {
+                                                            const url =
+                                                                websiteData()
+                                                                    ?.image
+                                                            if (url) {
+                                                                InspectImage(
+                                                                    url,
+                                                                )
+                                                            }
+                                                        }}
+                                                        class={`border-highlight-alt-strongest bg-element z-10 ${maxImageHeight()} rounded object-contain hover:cursor-pointer`}
+                                                        src={`${websiteData()?.image || ''}`}
+                                                    />
+                                                </div>
+                                            </Match>
+                                            <Match
+                                                when={
+                                                    videoLink() ||
+                                                    websiteData()?.video
+                                                }
+                                            >
+                                                {(link) => {
+                                                    const videoSource =
+                                                        websiteData()?.video
+                                                    if (
+                                                        videoSource &&
+                                                        !videoLink()
+                                                    ) {
+                                                        return (
+                                                            <video
+                                                                ref={(video) =>
+                                                                    (video.volume = 0.1)
+                                                                }
+                                                                class="aspect-video w-full rounded"
+                                                                controls
+                                                            >
+                                                                <source
+                                                                    src={
+                                                                        videoSource
+                                                                    }
+                                                                />
+                                                                Your browser
+                                                                does not support
+                                                                the video tag.
+                                                            </video>
+                                                        )
+                                                    }
+                                                    if (videoLink()) {
+                                                        console.log(
+                                                            `Displaying ${link()} as iframe.`,
+                                                        )
+                                                        return (
+                                                            <iframe
+                                                                loading="lazy"
+                                                                class="aspect-video h-full w-full"
+                                                                src={
+                                                                    link() as string
+                                                                }
+                                                                title="YouTube video player"
+                                                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                                referrerpolicy="strict-origin-when-cross-origin"
+                                                                allowfullscreen
+                                                            ></iframe>
+                                                        )
+                                                    }
+                                                }}
+                                            </Match>
+                                        </Switch>
+                                        <Show when={websiteData()?.description}>
+                                            <div class="flex justify-between">
+                                                <span class="text-element-accent-highlight line-clamp-3 text-sm italic">{`${websiteData()?.description || ''}`}</span>
+                                            </div>
+                                        </Show>
+                                    </Show>
+                                </div>
+                            }
+                        >
+                            <div class="bg-element-matte border-element-accent hover:border-highlight relative my-2 flex w-full flex-col gap-2 rounded-xl border p-4 transition-all duration-300">
+                                <Show when={githubCode.loading}>
+                                    <div class="text-sub animate-pulse py-2 text-sm font-bold tracking-widest">
+                                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+                                        FETCHING GITHUB FILE...
+                                    </div>
+                                </Show>
+                                <Show when={githubCode()}>
+                                    <div class="border-element-accent flex items-center justify-between border-b pb-2">
+                                        <span class="text-highlight-strong flex items-center gap-2 font-mono text-sm font-bold">
+                                            <i class="fa-brands fa-github text-lg"></i>
+                                            {cleanUrl().split('/').pop()}
+                                        </span>
+                                        <button
+                                            onClick={() =>
+                                                getApi().openExternalBrowser(
+                                                    cleanUrl(),
+                                                )
+                                            }
+                                            class="text-sub hover:text-highlight-strongest text-xs font-bold tracking-widest transition-colors hover:cursor-pointer"
+                                        >
+                                            OPEN ON GITHUB
+                                        </button>
+                                    </div>
+                                    <div class="group/code relative">
+                                        <pre class="bg-element my-0 overflow-x-auto rounded p-4 text-sm">
+                                            <code
+                                                ref={githubCodeRef}
+                                                class={`language-${cleanUrl().split('.').pop() || 'plaintext'} max-h-[30vh]`}
+                                            >
+                                                {githubCode()}
+                                            </code>
+                                        </pre>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                navigator.clipboard.writeText(
+                                                    githubCode() || '',
+                                                )
+                                                const btn = e.currentTarget
+                                                btn.innerText = 'COPIED!'
+                                                btn.classList.replace(
+                                                    'bg-element/80',
+                                                    'bg-highlight-strong',
+                                                )
+
+                                                setTimeout(() => {
+                                                    btn.innerText = 'COPY'
+                                                    btn.classList.replace(
+                                                        'bg-highlight-strong',
+                                                        'bg-element/80',
+                                                    )
+                                                }, 2000)
+                                            }}
+                                            class="bg-highlight-matte/20 hover:bg-highlight-strongest text-sub hover:text-dark absolute top-8 right-8 rounded px-2 py-1 text-xs font-bold opacity-0 transition-all duration-200 group-hover/code:opacity-100"
+                                        >
+                                            COPY
+                                        </button>
+                                    </div>
+                                </Show>
                             </div>
                         </Show>
-                    </Show>
-                </div>
-            </Match>
-        </Switch>
+                    </div>
+                </Match>
+            </Switch>
+        </div>
     )
 }
