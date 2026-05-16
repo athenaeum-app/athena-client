@@ -69,7 +69,7 @@ export const BufferChatModal: Component = () => {
             timestamp: new Date().toISOString(),
         }
 
-        setAllMessages([...unwrap(allMessages), newMsg])
+        setAllMessages([...unwrap(allMessages), newMsg].slice(-500))
         setContent('')
         scrollToBottom()
 
@@ -174,7 +174,6 @@ export const BufferChatModal: Component = () => {
 
             <div
                 ref={chatContainerRef}
-                // ✨ Removed gap-4 so we can dynamically control the margin-top per message
                 class={`${displayedModal() === 'CHAT_MODAL' ? 'max-h-[70vh]' : 'h-auto'} flex flex-1 flex-col overflow-y-auto scroll-smooth p-4`}
             >
                 <For each={allMessages}>
