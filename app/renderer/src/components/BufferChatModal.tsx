@@ -27,7 +27,7 @@ export const GetLastBufferMessage = () => allMessages[allMessages.length - 1]
 
 export const BufferChatModal: Component = () => {
     const [name, setName] = createSignal(
-        localStorage.getItem(activeLibraryId() + '_chatname') || 'Anonymous',
+        localStorage.getItem(activeLibraryId() + '_chatname') || '',
     )
     const [content, setContent] = createSignal('')
     let chatTextAreaRef: HTMLTextAreaElement | undefined
@@ -99,7 +99,7 @@ export const BufferChatModal: Component = () => {
         const lib = getCurrentLibrary()
 
         const savedName = localStorage.getItem(libId + '_chatname')
-        setName(savedName || 'Anonymous')
+        setName(savedName || '')
 
         if (lib && lib.type === 'server') {
             fetchMessages()
@@ -211,7 +211,7 @@ export const BufferChatModal: Component = () => {
             <div class="border-element-accent bg-element flex flex-col gap-2 rounded-b-xl border-t p-3">
                 <input
                     type="text"
-                    placeholder="Name"
+                    placeholder="Your Name"
                     value={name() ?? ''}
                     onInput={handleNameChange}
                     class="bg-element-matte border-element-accent focus:border-sub/50 text-sub w-full rounded p-2 font-bold transition-all outline-none"
