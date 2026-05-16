@@ -27,6 +27,9 @@ interface BufferMessage {
 
 export const GetLastBufferMessage = () => allMessages[allMessages.length - 1]
 
+const WINDOW_SIZE = 80
+const SHIFT_SIZE = 40
+
 export const BufferChatModal: Component = () => {
     const [name, setName] = createSignal(
         localStorage.getItem(activeLibraryId() + '_chatname') || '',
@@ -38,25 +41,59 @@ export const BufferChatModal: Component = () => {
     const [hasMoreOlder, setHasMoreOlder] = createSignal(true)
     const [isAtPresent, setIsAtPresent] = createSignal(true)
     const [showScrollBottom, setShowScrollBottom] = createSignal(false)
-
-    const [windowSize, setWindowSize] = createSignal(50)
     const [windowStart, setWindowStart] = createSignal(0)
 
+    const [editingId, setEditingId] = createSignal<string | null>(null)
+    const [editContent, setEditContent] = createSignal('')
+    const [confirmDeleteId, setConfirmDeleteId] = createSignal<string | null>(
+        null,
+    )
+
     const windowEnd = createMemo(() =>
-        Math.min(allMessages.length, windowStart() + windowSize()),
+        Math.min(allMessages.length, windowStart() + WINDOW_SIZE),
     )
     const visibleItems = createMemo(() =>
         allMessages.slice(windowStart(), windowEnd()),
     )
-    const shiftDelta = createMemo(() => Math.floor(windowSize() / 2))
 
     let chatTextAreaRef: HTMLTextAreaElement | undefined
     let chatContainerRef: HTMLDivElement | undefined
     let topSentinelRef: HTMLDivElement | undefined
     let bottomSentinelRef: HTMLDivElement | undefined
 
+    let isShifting = false
+
+    const mergeAndSortMessages = (
+        existing: BufferMessage[],
+        incoming: BufferMessage[],
+    ): BufferMessage[] => {
+        const msgMap = new Map<string, BufferMessage>()
+
+        existing.forEach((m) => msgMap.set(m.id, m))
+        incoming.forEach((m) => {
+            if (!m.id.startsWith('temp-')) {
+                for (const [key, value] of msgMap.entries()) {
+                    if (
+                        key.startsWith('temp-') &&
+                        value.content === m.content
+                    ) {
+                        msgMap.delete(key)
+                    }
+                }
+            }
+            msgMap.set(m.id, m)
+        })
+
+        return Array.from(msgMap.values()).sort(
+            (a, b) =>
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime(),
+        )
+    }
+
     const shiftWindow = (delta: number) => {
-        if (!chatContainerRef) return
+        if (!chatContainerRef || isShifting) return
+        isShifting = true
 
         const anchorMsg =
             visibleItems().find((m) => {
@@ -72,10 +109,7 @@ export const BufferChatModal: Component = () => {
 
         setWindowStart((prev) => {
             let next = prev + delta
-            return Math.max(
-                0,
-                Math.min(allMessages.length - windowSize(), next),
-            )
+            return Math.max(0, Math.min(allMessages.length - WINDOW_SIZE, next))
         })
 
         setTimeout(() => {
@@ -83,6 +117,7 @@ export const BufferChatModal: Component = () => {
                 const el = document.getElementById(`msg-${anchorMsg.id}`)
                 if (el) chatContainerRef.scrollTop = el.offsetTop - anchorOffset
             }
+            isShifting = false
         }, 0)
     }
 
@@ -92,11 +127,14 @@ export const BufferChatModal: Component = () => {
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
+                    if (isShifting || isLoadingOlder() || isLoadingNewer())
+                        return
+
                     if (
                         entry.target === topSentinelRef &&
                         entry.isIntersecting
                     ) {
-                        if (windowStart() > 0) shiftWindow(-shiftDelta())
+                        if (windowStart() > 0) shiftWindow(-SHIFT_SIZE)
                         else fetchOlderMessages()
                     }
                     if (
@@ -104,12 +142,12 @@ export const BufferChatModal: Component = () => {
                         entry.isIntersecting
                     ) {
                         if (windowEnd() < allMessages.length)
-                            shiftWindow(shiftDelta())
+                            shiftWindow(SHIFT_SIZE)
                         else fetchNewerMessages()
                     }
                 })
             },
-            { root: chatContainerRef, rootMargin: '400px' },
+            { root: chatContainerRef, rootMargin: '300px' },
         )
 
         observer.observe(topSentinelRef)
@@ -124,8 +162,8 @@ export const BufferChatModal: Component = () => {
 
         const latestMsg = allMessages[allMessages.length - 1]
         const url = latestMsg
-            ? `${lib.url}/api/buffer?after=${encodeURIComponent(latestMsg.timestamp)}?`
-            : `${lib.url}/api/buffer?`
+            ? `${lib.url}/api/buffer?after=${encodeURIComponent(latestMsg.timestamp)}`
+            : `${lib.url}/api/buffer`
 
         try {
             const res = await fetch(url, {
@@ -139,7 +177,9 @@ export const BufferChatModal: Component = () => {
                         el &&
                         el.scrollHeight - el.scrollTop <= el.clientHeight + 100
 
-                    setAllMessages([...unwrap(allMessages), ...data])
+                    setAllMessages(
+                        mergeAndSortMessages(unwrap(allMessages), data),
+                    )
                     if (isAtBottom) scrollToBottom()
                 }
             }
@@ -153,6 +193,15 @@ export const BufferChatModal: Component = () => {
         if (!lib || lib.type !== 'server') return
 
         setIsLoadingOlder(true)
+
+        const el = chatContainerRef
+        const anchorMsg = visibleItems()[0]
+        let anchorOffset = 0
+        if (el && anchorMsg) {
+            const msgEl = document.getElementById(`msg-${anchorMsg.id}`)
+            if (msgEl) anchorOffset = msgEl.offsetTop - el.scrollTop
+        }
+
         const oldestMsg = allMessages[0]
 
         try {
@@ -165,8 +214,25 @@ export const BufferChatModal: Component = () => {
                 if (!data || data.length === 0) {
                     setHasMoreOlder(false)
                 } else {
-                    setAllMessages([...data, ...unwrap(allMessages)])
-                    setWindowStart((prev) => prev + data.length)
+                    const oldTotal = allMessages.length
+                    const merged = mergeAndSortMessages(
+                        unwrap(allMessages),
+                        data,
+                    )
+                    const newUniqueItemsAdded = merged.length - oldTotal
+
+                    setAllMessages(merged)
+                    setWindowStart((prev) => prev + newUniqueItemsAdded)
+
+                    setTimeout(() => {
+                        if (el && anchorMsg) {
+                            const msgEl = document.getElementById(
+                                `msg-${anchorMsg.id}`,
+                            )
+                            if (msgEl)
+                                el.scrollTop = msgEl.offsetTop - anchorOffset
+                        }
+                    }, 0)
                 }
             }
         } catch (err) {
@@ -192,7 +258,9 @@ export const BufferChatModal: Component = () => {
             if (res.ok) {
                 const data = await res.json()
                 if (data && data.length > 0) {
-                    setAllMessages([...unwrap(allMessages), ...data])
+                    setAllMessages(
+                        mergeAndSortMessages(unwrap(allMessages), data),
+                    )
                     if (data.length < 50) setIsAtPresent(true)
                 } else {
                     setIsAtPresent(true)
@@ -231,7 +299,7 @@ export const BufferChatModal: Component = () => {
             content: content().trim(),
         }
         const newMsg: BufferMessage = {
-            id: (lib.type === 'server' ? 'temp-' : 'local-') + Date.now(),
+            id: 'temp-' + Date.now(),
             author_name: payload.author_name,
             content: payload.content,
             timestamp: new Date().toISOString(),
@@ -248,7 +316,7 @@ export const BufferChatModal: Component = () => {
 
         if (lib.type === 'server') {
             try {
-                fetch(`${lib.url}/api/buffer`, {
+                const res = await fetch(`${lib.url}/api/buffer`, {
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${lib.token}`,
@@ -256,8 +324,56 @@ export const BufferChatModal: Component = () => {
                     },
                     body: JSON.stringify(payload),
                 })
+                if (res.ok) fetchLiveMessages()
             } catch (err) {}
         }
+    }
+
+    const deleteMessage = async (id: string) => {
+        const lib = getCurrentLibrary()
+        if (!lib || lib.type !== 'server') return
+
+        try {
+            const res = await fetch(`${lib.url}/api/buffer/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${lib.token}` },
+            })
+            if (res.ok) {
+                setAllMessages(unwrap(allMessages).filter((m) => m.id !== id))
+                setConfirmDeleteId(null)
+            }
+        } catch (err) {}
+    }
+
+    const startEditing = (msg: BufferMessage) => {
+        setEditingId(msg.id)
+        setEditContent(msg.content)
+    }
+
+    const saveEdit = async () => {
+        const id = editingId()
+        if (!id) return
+        const lib = getCurrentLibrary()
+        if (!lib) return
+
+        try {
+            const res = await fetch(`${lib.url}/api/buffer/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `Bearer ${lib.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: editContent() }),
+            })
+            if (res.ok) {
+                setAllMessages(
+                    unwrap(allMessages).map((m) =>
+                        m.id === id ? { ...m, content: editContent() } : m,
+                    ),
+                )
+                setEditingId(null)
+            }
+        } catch (err) {}
     }
 
     createEffect(() => {
@@ -286,7 +402,7 @@ export const BufferChatModal: Component = () => {
 
     const scrollToBottom = () => {
         if (allMessages.length === 0) return
-        setWindowStart(Math.max(0, allMessages.length - windowSize()))
+        setWindowStart(Math.max(0, allMessages.length - WINDOW_SIZE))
         setTimeout(() => {
             if (chatContainerRef)
                 chatContainerRef.scrollTop = chatContainerRef.scrollHeight
@@ -359,46 +475,41 @@ export const BufferChatModal: Component = () => {
                 </Show>
 
                 <div
-                    ref={(el) => {
-                        chatContainerRef = el
-
-                        const ro = new ResizeObserver((entries) => {
-                            const target = entries[0].target as HTMLDivElement
-                            const visibleCount = visibleItems().length
-                            if (visibleCount > 0) {
-                                const avgHeight =
-                                    target.scrollHeight / visibleCount
-
-                                let idealSize = Math.ceil(
-                                    (target.clientHeight * 3) / avgHeight,
-                                )
-
-                                idealSize = Math.max(
-                                    15,
-                                    Math.min(idealSize, 100),
-                                )
-
-                                if (Math.abs(idealSize - windowSize()) > 5) {
-                                    setWindowSize(idealSize)
-                                }
-                            }
-                        })
-                        ro.observe(el)
-                        onCleanup(() => ro.disconnect())
-                    }}
+                    ref={chatContainerRef}
                     onScroll={(e) => {
+                        if (isShifting || isLoadingOlder() || isLoadingNewer())
+                            return
+
                         const target = e.currentTarget
+                        const currentScrollTop = target.scrollTop
                         const dist =
                             target.scrollHeight -
-                            target.scrollTop -
+                            currentScrollTop -
                             target.clientHeight
+
                         setShowScrollBottom(dist > 200)
 
-                        if (dist < 100 && !isAtPresent()) fetchNewerMessages()
+                        if (currentScrollTop < 200) {
+                            if (windowStart() > 0) shiftWindow(-SHIFT_SIZE)
+                            else if (hasMoreOlder()) fetchOlderMessages()
+                        }
+
+                        if (dist < 200) {
+                            if (windowEnd() < allMessages.length)
+                                shiftWindow(SHIFT_SIZE)
+                            else if (!isAtPresent()) fetchNewerMessages()
+                        }
                     }}
-                    class="h-full w-full flex-1 overflow-y-auto pt-4 pb-4"
+                    class="h-full w-full flex-1 overflow-y-auto pt-2 pb-4"
                 >
-                    <div ref={topSentinelRef} class="h-2 w-full shrink-0" />
+                    <div
+                        ref={topSentinelRef}
+                        class="flex h-8 w-full shrink-0 items-center justify-center py-2"
+                    >
+                        <Show when={isLoadingOlder()}>
+                            <i class="fa-solid fa-circle-notch text-highlight animate-spin text-sm"></i>
+                        </Show>
+                    </div>
 
                     <For each={visibleItems()}>
                         {(msg, localIndex) => {
@@ -406,12 +517,58 @@ export const BufferChatModal: Component = () => {
                                 windowStart() + localIndex()
                             const showHeader = () =>
                                 shouldShowHeader(msg, globalIndex())
+                            const isEditing = () => editingId() === msg.id
 
                             return (
                                 <div
                                     id={`msg-${msg.id}`}
-                                    class={`flex flex-col px-4 ${showHeader() ? 'gap-1 pt-4' : 'pt-1'}`}
+                                    class={`group relative flex flex-col px-4 transition-colors hover:bg-white/5 ${showHeader() ? 'gap-1 pt-4' : 'pt-1'}`}
                                 >
+                                    <Show when={!isEditing()}>
+                                        <div class="bg-element-matte border-element-accent absolute top-2 right-4 z-10 hidden gap-1 rounded-lg border p-1 shadow-xl group-hover:flex">
+                                            <button
+                                                onClick={() =>
+                                                    startEditing(msg)
+                                                }
+                                                class="hover:bg-highlight-strong/20 text-sub hover:text-highlight-strong rounded p-1 px-2 transition-all"
+                                                title="Edit Message"
+                                            >
+                                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                            </button>
+
+                                            <button
+                                                onClick={() =>
+                                                    confirmDeleteId() === msg.id
+                                                        ? deleteMessage(msg.id)
+                                                        : setConfirmDeleteId(
+                                                              msg.id,
+                                                          )
+                                                }
+                                                onMouseLeave={() =>
+                                                    setConfirmDeleteId(null)
+                                                }
+                                                class={`rounded p-1 px-2 transition-all ${confirmDeleteId() === msg.id ? 'bg-red-500/20 text-[10px] font-bold text-red-400' : 'text-sub hover:bg-red-500/20 hover:text-red-400'}`}
+                                                title={
+                                                    confirmDeleteId() === msg.id
+                                                        ? 'Click again to confirm'
+                                                        : 'Delete Message'
+                                                }
+                                            >
+                                                <Show
+                                                    when={
+                                                        confirmDeleteId() ===
+                                                        msg.id
+                                                    }
+                                                    fallback={
+                                                        <i class="fa-solid fa-trash text-xs"></i>
+                                                    }
+                                                >
+                                                    Confirm?
+                                                </Show>
+                                            </button>
+                                        </div>
+                                    </Show>
+
                                     <Show when={showHeader()}>
                                         <div class="flex items-baseline gap-2">
                                             <span class="text-highlight-strong text-sm font-black">
@@ -422,16 +579,58 @@ export const BufferChatModal: Component = () => {
                                             </span>
                                         </div>
                                     </Show>
-                                    <FancyTextRenderer
-                                        content={msg.content}
-                                        compact={true}
-                                    />
+
+                                    <Show
+                                        when={isEditing()}
+                                        fallback={
+                                            <FancyTextRenderer
+                                                content={msg.content}
+                                                compact={true}
+                                            />
+                                        }
+                                    >
+                                        <div class="bg-element-accent/20 border-highlight-strong/30 mt-1 flex flex-col gap-2 rounded-lg border p-2">
+                                            <textarea
+                                                value={editContent()}
+                                                onInput={(e) =>
+                                                    setEditContent(
+                                                        e.currentTarget.value,
+                                                    )
+                                                }
+                                                class="text-sub field-sizing-content max-h-[50vh] w-full resize-none overflow-y-auto bg-transparent outline-none"
+                                                rows="1"
+                                            />
+                                            <div class="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() =>
+                                                        setEditingId(null)
+                                                    }
+                                                    class="text-sub/50 hover:text-sub text-xs font-bold"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={saveEdit}
+                                                    class="text-highlight-strong text-xs font-bold hover:underline"
+                                                >
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </Show>
                                 </div>
                             )
                         }}
                     </For>
 
-                    <div ref={bottomSentinelRef} class="h-2 w-full shrink-0" />
+                    <div
+                        ref={bottomSentinelRef}
+                        class="flex h-8 w-full shrink-0 items-center justify-center py-2"
+                    >
+                        <Show when={isLoadingNewer()}>
+                            <i class="fa-solid fa-circle-notch text-highlight animate-spin text-sm"></i>
+                        </Show>
+                    </div>
                 </div>
 
                 <Show when={showScrollBottom() || !isAtPresent()}>
