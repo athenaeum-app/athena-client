@@ -11,6 +11,7 @@ import {
     setDateFilter,
     setSelectedURLFilters,
 } from '../modules/data'
+import { FormatDate } from '../modules/globals'
 
 export const FilterBar: Component = () => {
     const updateFilter = (
@@ -38,20 +39,6 @@ export const FilterBar: Component = () => {
             start: BeginningOfTime,
             end: EndOfTime,
         })
-    }
-
-    const formatDate = (date: Date) => {
-        if (
-            date.getTime() == BeginningOfTime.getTime() ||
-            date.getTime() == EndOfTime.getTime()
-        ) {
-            return ''
-        } else {
-            const year = date.getFullYear()
-            const month = `${date.getMonth()}`.padStart(2, '0')
-            const day = `${date.getDate()}`.padStart(2, '0')
-            return `${year}-${month}-${day}`
-        }
     }
 
     const toggleMediaFilter = (url: string) => {
@@ -84,7 +71,7 @@ export const FilterBar: Component = () => {
                         type="date"
                         label="Date"
                         onInput={(e) => updateFilter(e, 'start')}
-                        value={formatDate(dateFilter().start)}
+                        value={FormatDate(dateFilter().start)}
                     />
                 </div>
                 <div class="flex flex-col gap-2">
@@ -92,7 +79,7 @@ export const FilterBar: Component = () => {
                     <InputFrame
                         type="date"
                         label="Date"
-                        value={formatDate(dateFilter().end)}
+                        value={FormatDate(dateFilter().end)}
                         onInput={(e) => updateFilter(e, 'end')}
                     />
                 </div>
