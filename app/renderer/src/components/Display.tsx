@@ -27,16 +27,28 @@ const Display: Component = () => (
                         <div class="overflow-y-auto">
                             <FilterBar />
                         </div>
-
-                        <button
-                            onClick={() => setDisplayedModal('APP_MENU_MODAL')}
-                            class="bg-element hover:text-plain flex items-center justify-center gap-2 rounded-xl p-4 text-center font-bold transition-all duration-100 hover:scale-105 hover:cursor-pointer"
-                        >
-                            <span class="material-symbols-outlined text-xl">
-                                settings
-                            </span>
-                            <span class="text-sub">Settings</span>
-                        </button>
+                        <div class="flex flex-col gap-2">
+                            <button
+                                onClick={() => setDisplayedModal('CHAT_MODAL')}
+                                class="bg-element hover:text-plain flex items-center justify-center gap-2 rounded-xl p-4 text-center font-bold transition-all duration-100 hover:scale-105 hover:cursor-pointer"
+                            >
+                                <span class="material-symbols-outlined text-xl">
+                                    chat
+                                </span>
+                                <span class="text-sub">Chat</span>
+                            </button>
+                            <button
+                                onClick={() =>
+                                    setDisplayedModal('APP_MENU_MODAL')
+                                }
+                                class="bg-element hover:text-plain flex items-center justify-center gap-2 rounded-xl p-4 text-center font-bold transition-all duration-100 hover:scale-105 hover:cursor-pointer"
+                            >
+                                <span class="material-symbols-outlined text-xl">
+                                    settings
+                                </span>
+                                <span class="text-sub">Settings</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </Match>

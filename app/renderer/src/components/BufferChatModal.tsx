@@ -167,8 +167,8 @@ export const BufferChatModal: Component = () => {
         <div class="border-element-accent bg-element-matte flex w-full flex-col rounded-xl border">
             <div class="border-element-accent border-b p-3">
                 <h2 class="text-sub text-sm font-bold tracking-widest">
-                    <i class="fa-solid fa-bolt text-highlight mr-2"></i>
-                    BUFFER CHAT
+                    <i class="fa-solid fa-comment text-highlight-strong mr-2"></i>
+                    {getActiveLibrary()?.name} Chat
                 </h2>
             </div>
 
