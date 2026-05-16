@@ -1,166 +1,223 @@
 import {
     createSignal,
-    onMount,
     onCleanup,
-    For,
-    Show,
-    type Component,
     createEffect,
-    createMemo,
+    Show,
+    untrack,
+    type Component,
+    type ComponentProps,
+    For,
+    onMount,
 } from 'solid-js'
 import {
-    activeLibraryId,
+    allMessages,
     getActiveLibrary,
-    getCurrentLibrary,
-} from '../modules/data'
+    type BufferMessage,
+} from '../modules/store'
 import { displayedModal, FormatChatDate } from '../modules/globals'
-import { allMessages, setAllMessages } from '../modules/store'
-import { unwrap } from 'solid-js/store'
 import { FancyTextRenderer } from './FancyTextRenderer'
+import { saveFileReference } from '../modules/data'
 
-interface BufferMessage {
-    id: string
-    author_name: string
-    content: string
-    timestamp: string
-}
+const BATCH_SIZE = 250
+const MAX_RENDER_COUNT = 500
 
 export const GetLastBufferMessage = () => allMessages[allMessages.length - 1]
 
-const WINDOW_SIZE = 80
-const SHIFT_SIZE = 40
+const Sentinel: Component<
+    {
+        ref: HTMLDivElement | undefined
+        disabled: boolean
+        loading?: boolean
+    } & ComponentProps<'div'>
+> = (props) => (
+    <div
+        ref={props.ref}
+        class={`${props.disabled ? 'hidden' : ''} flex w-full shrink-0 items-center justify-center ${props.loading ? 'h-8 py-2' : 'h-1'}`}
+    >
+        <Show when={props.loading}>
+            <i class="fa-solid fa-circle-notch text-highlight animate-spin text-sm"></i>
+        </Show>
+    </div>
+)
 
-export const BufferChatModal: Component = () => {
+export const BufferChatModal = () => {
+    let chatTextAreaRef: HTMLTextAreaElement | undefined
+    let chatContainerRef: HTMLDivElement | undefined
+    let topSentinelRef: HTMLDivElement | undefined
+    let bottomSentinelRef: HTMLDivElement | undefined
+
     const [name, setName] = createSignal(
-        localStorage.getItem(activeLibraryId() + '_chatname') || '',
+        localStorage.getItem('athena_chatname') || '',
     )
-    const [content, setContent] = createSignal('')
+    const [renderedMessages, setRenderedMessages] = createSignal<
+        Array<BufferMessage>
+    >([])
 
+    const [content, setContent] = createSignal('')
     const [isLoadingOlder, setIsLoadingOlder] = createSignal(false)
     const [isLoadingNewer, setIsLoadingNewer] = createSignal(false)
-    const [hasMoreOlder, setHasMoreOlder] = createSignal(true)
-    const [isAtPresent, setIsAtPresent] = createSignal(true)
-    const [showScrollBottom, setShowScrollBottom] = createSignal(false)
-    const [windowStart, setWindowStart] = createSignal(0)
+    // We add a local upload count to track file progress specific to the chat
+    const [activeUploadCount, setActiveUploadCount] = createSignal(0)
 
+    const [isAtPresent, setIsAtPresent] = createSignal(true)
+
+    const [showScrollBottom, setShowScrollBottom] = createSignal(false)
     const [editingId, setEditingId] = createSignal<string | null>(null)
     const [editContent, setEditContent] = createSignal('')
     const [confirmDeleteId, setConfirmDeleteId] = createSignal<string | null>(
         null,
     )
 
-    const windowEnd = createMemo(() =>
-        Math.min(allMessages.length, windowStart() + WINDOW_SIZE),
-    )
-    const visibleItems = createMemo(() =>
-        allMessages.slice(windowStart(), windowEnd()),
-    )
-
-    let chatTextAreaRef: HTMLTextAreaElement | undefined
-    let chatContainerRef: HTMLDivElement | undefined
-    let topSentinelRef: HTMLDivElement | undefined
-    let bottomSentinelRef: HTMLDivElement | undefined
-
-    let isShifting = false
-
-    const mergeAndSortMessages = (
-        existing: BufferMessage[],
-        incoming: BufferMessage[],
-    ): BufferMessage[] => {
-        const msgMap = new Map<string, BufferMessage>()
-
-        existing.forEach((m) => msgMap.set(m.id, m))
-        incoming.forEach((m) => {
-            if (!m.id.startsWith('temp-')) {
-                for (const [key, value] of msgMap.entries()) {
-                    if (
-                        key.startsWith('temp-') &&
-                        value.content === m.content
-                    ) {
-                        msgMap.delete(key)
-                    }
-                }
+    const processFiles = (files: FileList | File[]) => {
+        let hasFiles = false
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            if (file) {
+                hasFiles = true
+                saveFileReference(
+                    file,
+                    {
+                        Start: chatTextAreaRef?.selectionStart,
+                        End: chatTextAreaRef?.selectionEnd,
+                    },
+                    {
+                        getContent: content,
+                        setContent: setContent,
+                        setActiveUploadCount: setActiveUploadCount,
+                    },
+                )
             }
-            msgMap.set(m.id, m)
-        })
-
-        return Array.from(msgMap.values()).sort(
-            (a, b) =>
-                new Date(a.timestamp).getTime() -
-                new Date(b.timestamp).getTime(),
-        )
+        }
+        return hasFiles
     }
 
-    const shiftWindow = (delta: number) => {
-        if (!chatContainerRef || isShifting) return
-        isShifting = true
-
-        const anchorMsg =
-            visibleItems().find((m) => {
-                const el = document.getElementById(`msg-${m.id}`)
-                return el && el.offsetTop >= chatContainerRef!.scrollTop
-            }) || visibleItems()[0]
-
-        let anchorOffset = 0
-        if (anchorMsg) {
-            const el = document.getElementById(`msg-${anchorMsg.id}`)
-            if (el) anchorOffset = el.offsetTop - chatContainerRef.scrollTop
+    const applyAnchoredUpdate = (newMessages: BufferMessage[]) => {
+        if (!chatContainerRef) {
+            setRenderedMessages(newMessages)
+            return
         }
 
-        setWindowStart((prev) => {
-            let next = prev + delta
-            return Math.max(0, Math.min(allMessages.length - WINDOW_SIZE, next))
-        })
+        const children = Array.from(
+            chatContainerRef.querySelectorAll('[id^="message-"]'),
+        ) as HTMLElement[]
+        const anchorEl =
+            children.find(
+                (el) => el.offsetTop >= chatContainerRef!.scrollTop,
+            ) || children[0]
+
+        const anchorId = anchorEl ? anchorEl.id : null
+        const anchorOffset = anchorEl
+            ? anchorEl.offsetTop - chatContainerRef.scrollTop
+            : 0
+
+        setRenderedMessages(newMessages)
 
         setTimeout(() => {
-            if (anchorMsg && chatContainerRef) {
-                const el = document.getElementById(`msg-${anchorMsg.id}`)
-                if (el) chatContainerRef.scrollTop = el.offsetTop - anchorOffset
+            if (anchorId && chatContainerRef) {
+                const newAnchorEl = document.getElementById(anchorId)
+                if (newAnchorEl) {
+                    chatContainerRef.scrollTop =
+                        newAnchorEl.offsetTop - anchorOffset
+                }
             }
-            isShifting = false
         }, 0)
     }
 
-    createEffect(() => {
-        if (!chatContainerRef || !topSentinelRef || !bottomSentinelRef) return
+    const scrollToBottom = () => {
+        setTimeout(() => {
+            if (chatContainerRef)
+                chatContainerRef.scrollTop = chatContainerRef.scrollHeight
+        }, 50)
+    }
 
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (isShifting || isLoadingOlder() || isLoadingNewer())
-                        return
+    const jumpToPresent = async () => {
+        const lib = getActiveLibrary()
+        if (!lib || lib.type !== 'server') return
+        setIsAtPresent(true)
 
-                    if (
-                        entry.target === topSentinelRef &&
-                        entry.isIntersecting
-                    ) {
-                        if (windowStart() > 0) shiftWindow(-SHIFT_SIZE)
-                        else fetchOlderMessages()
-                    }
-                    if (
-                        entry.target === bottomSentinelRef &&
-                        entry.isIntersecting
-                    ) {
-                        if (windowEnd() < allMessages.length)
-                            shiftWindow(SHIFT_SIZE)
-                        else fetchNewerMessages()
-                    }
-                })
-            },
-            { root: chatContainerRef, rootMargin: '300px' },
-        )
+        try {
+            const res = await fetch(`${lib.url}/api/buffer`, {
+                headers: { Authorization: `Bearer ${lib.token}` },
+            })
+            if (res.ok) {
+                const data = await res.json()
+                setRenderedMessages(data)
+                scrollToBottom()
+            }
+        } catch (err) {}
+    }
 
-        observer.observe(topSentinelRef)
-        observer.observe(bottomSentinelRef)
-        onCleanup(() => observer.disconnect())
-    })
-
-    const fetchLiveMessages = async () => {
-        if (!isAtPresent()) return
-        const lib = getCurrentLibrary()
+    const fetchOlderMessages = async () => {
+        if (isLoadingOlder() || renderedMessages().length === 0) return
+        const lib = getActiveLibrary()
         if (!lib || lib.type !== 'server') return
 
-        const latestMsg = allMessages[allMessages.length - 1]
+        setIsLoadingOlder(true)
+        try {
+            const oldestMsg = renderedMessages()[0]
+            const url = `${lib.url}/api/buffer?before=${encodeURIComponent(oldestMsg.timestamp)}`
+
+            const res = await fetch(url, {
+                headers: { Authorization: `Bearer ${lib.token}` },
+            })
+            if (res.ok) {
+                const data = await res.json()
+                if (data && data.length > 0) {
+                    let combined = [...data, ...renderedMessages()]
+                    if (combined.length > MAX_RENDER_COUNT) {
+                        combined = combined.slice(0, MAX_RENDER_COUNT)
+                        setIsAtPresent(false)
+                    }
+                    applyAnchoredUpdate(combined)
+                }
+            }
+        } catch (err) {
+        } finally {
+            setIsLoadingOlder(false)
+        }
+    }
+
+    const fetchNewerMessages = async () => {
+        if (isLoadingNewer() || renderedMessages().length === 0) return
+        const lib = getActiveLibrary()
+        if (!lib || lib.type !== 'server') return
+
+        setIsLoadingNewer(true)
+        try {
+            const currentMsgs = renderedMessages()
+            const latestMsg = currentMsgs[currentMsgs.length - 1]
+            const url = `${lib.url}/api/buffer?after=${encodeURIComponent(latestMsg.timestamp)}`
+
+            const res = await fetch(url, {
+                headers: { Authorization: `Bearer ${lib.token}` },
+            })
+            if (res.ok) {
+                const data = await res.json()
+                if (data && data.length > 0) {
+                    let combined = [...currentMsgs, ...data]
+                    if (combined.length > MAX_RENDER_COUNT) {
+                        combined = combined.slice(
+                            combined.length - MAX_RENDER_COUNT,
+                        )
+                    }
+                    applyAnchoredUpdate(combined)
+                    if (data.length < BATCH_SIZE) setIsAtPresent(true)
+                } else {
+                    setIsAtPresent(true)
+                }
+            }
+        } catch (err) {
+        } finally {
+            setIsLoadingNewer(false)
+        }
+    }
+
+    const fetchMessagesInWindow = async () => {
+        const lib = getActiveLibrary()
+        if (!lib || lib.type !== 'server') return
+
+        const currentMsgs = renderedMessages()
+        const latestMsg = currentMsgs[currentMsgs.length - 1]
         const url = latestMsg
             ? `${lib.url}/api/buffer?after=${encodeURIComponent(latestMsg.timestamp)}`
             : `${lib.url}/api/buffer`
@@ -172,127 +229,19 @@ export const BufferChatModal: Component = () => {
             if (res.ok) {
                 const data = await res.json()
                 if (data && data.length > 0) {
-                    const el = chatContainerRef
-                    const isAtBottom =
-                        el &&
-                        el.scrollHeight - el.scrollTop <= el.clientHeight + 100
-
-                    setAllMessages(
-                        mergeAndSortMessages(unwrap(allMessages), data),
+                    setRenderedMessages(
+                        latestMsg ? [...currentMsgs, ...data] : data,
                     )
-                    if (isAtBottom) scrollToBottom()
+                    if (!latestMsg) scrollToBottom()
                 }
-            }
-        } catch (err) {}
-    }
-
-    const fetchOlderMessages = async () => {
-        if (isLoadingOlder() || !hasMoreOlder() || allMessages.length === 0)
-            return
-        const lib = getCurrentLibrary()
-        if (!lib || lib.type !== 'server') return
-
-        setIsLoadingOlder(true)
-
-        const el = chatContainerRef
-        const anchorMsg = visibleItems()[0]
-        let anchorOffset = 0
-        if (el && anchorMsg) {
-            const msgEl = document.getElementById(`msg-${anchorMsg.id}`)
-            if (msgEl) anchorOffset = msgEl.offsetTop - el.scrollTop
-        }
-
-        const oldestMsg = allMessages[0]
-
-        try {
-            const res = await fetch(
-                `${lib.url}/api/buffer?before=${encodeURIComponent(oldestMsg.timestamp)}`,
-                { headers: { Authorization: `Bearer ${lib.token}` } },
-            )
-            if (res.ok) {
-                const data = await res.json()
-                if (!data || data.length === 0) {
-                    setHasMoreOlder(false)
-                } else {
-                    const oldTotal = allMessages.length
-                    const merged = mergeAndSortMessages(
-                        unwrap(allMessages),
-                        data,
-                    )
-                    const newUniqueItemsAdded = merged.length - oldTotal
-
-                    setAllMessages(merged)
-                    setWindowStart((prev) => prev + newUniqueItemsAdded)
-
-                    setTimeout(() => {
-                        if (el && anchorMsg) {
-                            const msgEl = document.getElementById(
-                                `msg-${anchorMsg.id}`,
-                            )
-                            if (msgEl)
-                                el.scrollTop = msgEl.offsetTop - anchorOffset
-                        }
-                    }, 0)
-                }
-            }
-        } catch (err) {
-        } finally {
-            setIsLoadingOlder(false)
-        }
-    }
-
-    const fetchNewerMessages = async () => {
-        if (isLoadingNewer() || isAtPresent() || allMessages.length === 0)
-            return
-        const lib = getCurrentLibrary()
-        if (!lib || lib.type !== 'server') return
-
-        setIsLoadingNewer(true)
-        const newestMsg = allMessages[allMessages.length - 1]
-
-        try {
-            const res = await fetch(
-                `${lib.url}/api/buffer?after=${encodeURIComponent(newestMsg.timestamp)}`,
-                { headers: { Authorization: `Bearer ${lib.token}` } },
-            )
-            if (res.ok) {
-                const data = await res.json()
-                if (data && data.length > 0) {
-                    setAllMessages(
-                        mergeAndSortMessages(unwrap(allMessages), data),
-                    )
-                    if (data.length < 50) setIsAtPresent(true)
-                } else {
-                    setIsAtPresent(true)
-                }
-            }
-        } catch (err) {
-        } finally {
-            setIsLoadingNewer(false)
-        }
-    }
-
-    const jumpToPresent = async () => {
-        const lib = getCurrentLibrary()
-        if (!lib || lib.type !== 'server') return
-
-        setIsAtPresent(true)
-        try {
-            const res = await fetch(`${lib.url}/api/buffer`, {
-                headers: { Authorization: `Bearer ${lib.token}` },
-            })
-            if (res.ok) {
-                const data = await res.json()
-                setAllMessages(data)
-                scrollToBottom()
             }
         } catch (err) {}
     }
 
     const sendMessage = async () => {
         if (!content().trim()) return
-        const lib = getCurrentLibrary()
-        if (!lib) return
+        const lib = getActiveLibrary()
+        if (!lib || lib.type !== 'server') return
 
         const payload = {
             author_name: name()?.trim() || 'Anonymous',
@@ -310,27 +259,28 @@ export const BufferChatModal: Component = () => {
             return
         }
 
-        setAllMessages([...unwrap(allMessages), newMsg])
+        let combined = [...renderedMessages(), newMsg]
+        if (combined.length > MAX_RENDER_COUNT)
+            combined = combined.slice(combined.length - MAX_RENDER_COUNT)
+        setRenderedMessages(combined)
         setContent('')
         scrollToBottom()
 
-        if (lib.type === 'server') {
-            try {
-                const res = await fetch(`${lib.url}/api/buffer`, {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${lib.token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload),
-                })
-                if (res.ok) fetchLiveMessages()
-            } catch (err) {}
-        }
+        try {
+            const res = await fetch(`${lib.url}/api/buffer`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${lib.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            })
+            if (res.ok) fetchMessagesInWindow()
+        } catch (err) {}
     }
 
     const deleteMessage = async (id: string) => {
-        const lib = getCurrentLibrary()
+        const lib = getActiveLibrary()
         if (!lib || lib.type !== 'server') return
 
         try {
@@ -339,7 +289,9 @@ export const BufferChatModal: Component = () => {
                 headers: { Authorization: `Bearer ${lib.token}` },
             })
             if (res.ok) {
-                setAllMessages(unwrap(allMessages).filter((m) => m.id !== id))
+                setRenderedMessages(
+                    renderedMessages().filter((m) => m.id !== id),
+                )
                 setConfirmDeleteId(null)
             }
         } catch (err) {}
@@ -353,8 +305,8 @@ export const BufferChatModal: Component = () => {
     const saveEdit = async () => {
         const id = editingId()
         if (!id) return
-        const lib = getCurrentLibrary()
-        if (!lib) return
+        const lib = getActiveLibrary()
+        if (!lib || lib.type !== 'server') return
 
         try {
             const res = await fetch(`${lib.url}/api/buffer/${id}`, {
@@ -366,8 +318,8 @@ export const BufferChatModal: Component = () => {
                 body: JSON.stringify({ content: editContent() }),
             })
             if (res.ok) {
-                setAllMessages(
-                    unwrap(allMessages).map((m) =>
+                setRenderedMessages(
+                    renderedMessages().map((m) =>
                         m.id === id ? { ...m, content: editContent() } : m,
                     ),
                 )
@@ -377,59 +329,62 @@ export const BufferChatModal: Component = () => {
     }
 
     createEffect(() => {
-        const libId = activeLibraryId()
-        const lib = getCurrentLibrary()
-        setName(localStorage.getItem(libId + '_chatname') || '')
-        setHasMoreOlder(true)
+        setRenderedMessages([])
         setIsAtPresent(true)
-        if (lib && lib.type === 'server') jumpToPresent()
-    })
+        setContent('')
+        setShowScrollBottom(false)
 
-    const handleNameChange = (
-        e: Event & { currentTarget: HTMLInputElement },
-    ) => {
-        const newName = e.currentTarget.value
-        setName(newName)
-        localStorage.setItem(activeLibraryId() + '_chatname', newName)
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            sendMessage()
+        if (displayedModal() === 'CHAT_MODAL') {
+            untrack(() => {
+                fetchMessagesInWindow()
+                scrollToBottom()
+            })
         }
-    }
-
-    const scrollToBottom = () => {
-        if (allMessages.length === 0) return
-        setWindowStart(Math.max(0, allMessages.length - WINDOW_SIZE))
-        setTimeout(() => {
-            if (chatContainerRef)
-                chatContainerRef.scrollTop = chatContainerRef.scrollHeight
-        }, 50)
-    }
-
-    onMount(() => {
-        const interval = setInterval(fetchLiveMessages, 5000)
-        onCleanup(() => clearInterval(interval))
     })
 
     createEffect(() => {
-        if (displayedModal() === 'CHAT_MODAL') {
-            if (chatTextAreaRef) chatTextAreaRef.focus()
-            if (
-                chatContainerRef &&
-                chatContainerRef.scrollHeight - chatContainerRef.scrollTop <=
-                    chatContainerRef.clientHeight + 100
-            ) {
-                scrollToBottom()
-            }
+        if (!chatContainerRef || !topSentinelRef || !bottomSentinelRef) return
+
+        const topObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoadingOlder())
+                fetchOlderMessages()
+        })
+
+        const bottomObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoadingNewer())
+                fetchNewerMessages()
+        })
+
+        topObserver.observe(topSentinelRef)
+        bottomObserver.observe(bottomSentinelRef)
+
+        onCleanup(() => {
+            topObserver.disconnect()
+            bottomObserver.disconnect()
+        })
+    })
+
+    createEffect(() => {
+        const isOpen = displayedModal() === 'CHAT_MODAL'
+        if (isOpen) {
+            untrack(() => {
+                fetchMessagesInWindow()
+                if (chatTextAreaRef) chatTextAreaRef.focus()
+            })
         }
+    })
+
+    onMount(() => {
+        const interval = setInterval(() => {
+            if (displayedModal() === 'CHAT_MODAL' && isAtPresent())
+                fetchMessagesInWindow()
+        }, 5000)
+        onCleanup(() => clearInterval(interval))
     })
 
     const shouldShowHeader = (msg: BufferMessage, index: number) => {
         if (index === 0) return true
-        const prevMsg = allMessages[index - 1]
+        const prevMsg = renderedMessages()[index - 1]
         if (!prevMsg) return true
         if (msg.author_name !== prevMsg.author_name) return true
 
@@ -444,12 +399,31 @@ export const BufferChatModal: Component = () => {
         return currTime !== prevTime
     }
 
+    createEffect(() => {
+        if (!chatContainerRef) return
+
+        const handleImageLoad = (e: Event) => {
+            const target = e.target as HTMLElement
+
+            if (target.tagName === 'IMG' || target.tagName === 'VIDEO') {
+                if (!showScrollBottom()) {
+                    chatContainerRef!.scrollTop = chatContainerRef!.scrollHeight
+                }
+            }
+        }
+
+        chatContainerRef.addEventListener('load', handleImageLoad, true)
+
+        onCleanup(() => {
+            chatContainerRef.removeEventListener('load', handleImageLoad, true)
+        })
+    })
+
     return (
         <div class="border-element-accent bg-element-matte flex w-full flex-col rounded-xl border">
             <div class="border-element-accent flex items-center justify-between border-b p-3">
                 <h2 class="text-sub text-sm font-bold tracking-widest">
-                    <i class="fa-solid fa-message text-highlight mr-2"></i>
-                    Chat
+                    <i class="fa-solid fa-message text-highlight mr-2"></i> Chat
                 </h2>
                 <Show when={!isAtPresent()}>
                     <span class="text-highlight-strong bg-highlight-strong/10 animate-pulse rounded px-2 py-1 text-xs font-bold">
@@ -459,14 +433,11 @@ export const BufferChatModal: Component = () => {
             </div>
 
             <div
-                style={{
-                    display:
-                        displayedModal() === 'CHAT_MODAL' ? 'flex' : 'none',
-                    height: '70vh',
-                }}
-                class="relative w-full flex-col overflow-hidden"
+                class={`${displayedModal() === 'CHAT_MODAL' ? 'flex' : 'hidden'} relative h-[70vh] w-full flex-col overflow-hidden`}
             >
-                <Show when={allMessages.length === 0}>
+                <Show
+                    when={renderedMessages().length === 0 && !isLoadingOlder()}
+                >
                     <div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                         <span class="text-sub/50 text-sm font-bold italic">
                             No messages yet.
@@ -477,87 +448,67 @@ export const BufferChatModal: Component = () => {
                 <div
                     ref={chatContainerRef}
                     onScroll={(e) => {
-                        if (isShifting || isLoadingOlder() || isLoadingNewer())
-                            return
-
                         const target = e.currentTarget
-                        const currentScrollTop = target.scrollTop
                         const dist =
                             target.scrollHeight -
-                            currentScrollTop -
+                            target.scrollTop -
                             target.clientHeight
-
                         setShowScrollBottom(dist > 200)
 
-                        if (currentScrollTop < 200) {
-                            if (windowStart() > 0) shiftWindow(-SHIFT_SIZE)
-                            else if (hasMoreOlder()) fetchOlderMessages()
-                        }
-
-                        if (dist < 200) {
-                            if (windowEnd() < allMessages.length)
-                                shiftWindow(SHIFT_SIZE)
-                            else if (!isAtPresent()) fetchNewerMessages()
-                        }
+                        if (target.scrollTop < 200 && !isLoadingOlder())
+                            fetchOlderMessages()
+                        if (dist < 200 && !isAtPresent() && !isLoadingNewer())
+                            fetchNewerMessages()
                     }}
                     class="h-full w-full flex-1 overflow-y-auto pt-2 pb-4"
                 >
-                    <div
+                    <Sentinel
+                        disabled={renderedMessages().length === 0}
+                        loading={isLoadingOlder()}
                         ref={topSentinelRef}
-                        class="flex h-8 w-full shrink-0 items-center justify-center py-2"
-                    >
-                        <Show when={isLoadingOlder()}>
-                            <i class="fa-solid fa-circle-notch text-highlight animate-spin text-sm"></i>
-                        </Show>
-                    </div>
+                    />
 
-                    <For each={visibleItems()}>
-                        {(msg, localIndex) => {
-                            const globalIndex = () =>
-                                windowStart() + localIndex()
+                    <For each={renderedMessages()}>
+                        {(message: BufferMessage, i) => {
                             const showHeader = () =>
-                                shouldShowHeader(msg, globalIndex())
-                            const isEditing = () => editingId() === msg.id
+                                shouldShowHeader(message, i())
+                            const isEditing = () => editingId() === message.id
 
                             return (
                                 <div
-                                    id={`msg-${msg.id}`}
-                                    class={`group relative flex flex-col px-4 transition-colors hover:bg-white/5 ${showHeader() ? 'gap-1 pt-4' : 'pt-1'}`}
+                                    id={`message-${message.id}`}
+                                    class="group text-sub relative flex flex-col px-4 pt-1 transition-all duration-100 hover:bg-white/5"
                                 >
                                     <Show when={!isEditing()}>
                                         <div class="bg-element-matte border-element-accent absolute top-2 right-4 z-10 hidden gap-1 rounded-lg border p-1 shadow-xl group-hover:flex">
                                             <button
                                                 onClick={() =>
-                                                    startEditing(msg)
+                                                    startEditing(message)
                                                 }
                                                 class="hover:bg-highlight-strong/20 text-sub hover:text-highlight-strong rounded p-1 px-2 transition-all"
-                                                title="Edit Message"
                                             >
                                                 <i class="fa-solid fa-pen-to-square text-xs"></i>
                                             </button>
-
                                             <button
                                                 onClick={() =>
-                                                    confirmDeleteId() === msg.id
-                                                        ? deleteMessage(msg.id)
+                                                    confirmDeleteId() ===
+                                                    message.id
+                                                        ? deleteMessage(
+                                                              message.id,
+                                                          )
                                                         : setConfirmDeleteId(
-                                                              msg.id,
+                                                              message.id,
                                                           )
                                                 }
                                                 onMouseLeave={() =>
                                                     setConfirmDeleteId(null)
                                                 }
-                                                class={`rounded p-1 px-2 transition-all ${confirmDeleteId() === msg.id ? 'bg-red-500/20 text-[10px] font-bold text-red-400' : 'text-sub hover:bg-red-500/20 hover:text-red-400'}`}
-                                                title={
-                                                    confirmDeleteId() === msg.id
-                                                        ? 'Click again to confirm'
-                                                        : 'Delete Message'
-                                                }
+                                                class={`rounded p-1 px-2 transition-all ${confirmDeleteId() === message.id ? 'bg-red-500/20 text-[10px] font-bold text-red-400' : 'text-sub hover:bg-red-500/20 hover:text-red-400'}`}
                                             >
                                                 <Show
                                                     when={
                                                         confirmDeleteId() ===
-                                                        msg.id
+                                                        message.id
                                                     }
                                                     fallback={
                                                         <i class="fa-solid fa-trash text-xs"></i>
@@ -570,12 +521,14 @@ export const BufferChatModal: Component = () => {
                                     </Show>
 
                                     <Show when={showHeader()}>
-                                        <div class="flex items-baseline gap-2">
+                                        <div class="flex items-baseline gap-2 pt-3">
                                             <span class="text-highlight-strong text-sm font-black">
-                                                {msg.author_name}
+                                                {message.author_name}
                                             </span>
                                             <span class="text-sub/50 font-mono text-xs">
-                                                {FormatChatDate(msg.timestamp)}
+                                                {FormatChatDate(
+                                                    message.timestamp,
+                                                )}
                                             </span>
                                         </div>
                                     </Show>
@@ -584,7 +537,7 @@ export const BufferChatModal: Component = () => {
                                         when={isEditing()}
                                         fallback={
                                             <FancyTextRenderer
-                                                content={msg.content}
+                                                content={message.content}
                                                 compact={true}
                                             />
                                         }
@@ -622,20 +575,18 @@ export const BufferChatModal: Component = () => {
                             )
                         }}
                     </For>
-
-                    <div
+                    <Sentinel
+                        disabled={
+                            renderedMessages().length === 0 || isAtPresent()
+                        }
+                        loading={isLoadingNewer()}
                         ref={bottomSentinelRef}
-                        class="flex h-8 w-full shrink-0 items-center justify-center py-2"
-                    >
-                        <Show when={isLoadingNewer()}>
-                            <i class="fa-solid fa-circle-notch text-highlight animate-spin text-sm"></i>
-                        </Show>
-                    </div>
+                    />
                 </div>
 
                 <Show when={showScrollBottom() || !isAtPresent()}>
                     <button
-                        onClick={isAtPresent() ? scrollToBottom : jumpToPresent}
+                        onClick={jumpToPresent}
                         class="bg-highlight-strong text-dark hover:bg-highlight-strongest absolute right-6 bottom-4 z-50 flex items-center justify-center gap-2 rounded-full px-4 py-2 shadow-lg transition-all hover:scale-105 active:scale-95"
                     >
                         <Show
@@ -656,26 +607,65 @@ export const BufferChatModal: Component = () => {
                 <input
                     type="text"
                     placeholder="Your Name"
-                    value={name() ?? ''}
-                    onInput={handleNameChange}
+                    value={name()}
+                    onInput={(e) => {
+                        setName(e.currentTarget.value)
+                        localStorage.setItem(
+                            'athena_chatname',
+                            e.currentTarget.value,
+                        )
+                    }}
                     class="bg-element-matte border-element-accent focus:border-sub/50 text-sub w-full rounded p-2 font-bold transition-all outline-none"
                 />
                 <div class="flex gap-2">
                     <textarea
                         ref={(el) => (chatTextAreaRef = el)}
                         rows="1"
-                        placeholder={`Message ${getActiveLibrary()?.name}`}
+                        placeholder={`Message ${getActiveLibrary()?.name || 'Library'}`}
                         value={content()}
                         onInput={(e) => setContent(e.currentTarget.value)}
-                        onKeyDown={handleKeyDown}
+                        onPaste={(e) => {
+                            const clipboardData = e.clipboardData
+                            if (!clipboardData) return
+
+                            const items = clipboardData.items
+                            const filesToProcess: File[] = []
+
+                            for (let i = 0; i < items.length; i++) {
+                                const item = items[i]
+                                if (item.kind == 'file') {
+                                    const file = item.getAsFile()
+                                    if (file) {
+                                        filesToProcess.push(file)
+                                    }
+                                }
+                            }
+
+                            if (filesToProcess.length > 0) {
+                                processFiles(filesToProcess)
+                                e.preventDefault()
+                            }
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault()
+                                sendMessage()
+                            }
+                        }}
                         class="bg-element-matte border-element-accent focus:border-sub/50 text-sub w-full resize-none rounded p-3 transition-all outline-none"
                     />
                     <button
                         onClick={sendMessage}
-                        disabled={!content().trim()}
+                        disabled={!content().trim() || activeUploadCount() > 0}
                         class="bg-highlight-strong text-dark hover:bg-highlight-strongest rounded px-4 font-bold transition-all disabled:pointer-events-none disabled:opacity-50"
                     >
-                        <i class="fa-solid fa-paper-plane"></i>
+                        <i
+                            class={
+                                activeUploadCount() > 0
+                                    ? 'fa-solid fa-circle-notch animate-spin'
+                                    : 'fa-solid fa-paper-plane'
+                            }
+                        ></i>
                     </button>
                 </div>
             </div>

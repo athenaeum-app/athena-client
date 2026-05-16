@@ -48,9 +48,11 @@ export const InlineReference: Component<
                 <span>{displayTitle}</span>
             </div>
 
-            <Show when={targetMomentData.content}>
+            {/* ✨ FIX: Added optional chaining (?.) so missing references don't crash the app */}
+            <Show when={targetMomentData?.content}>
                 <div class="pointer-events-none relative max-h-48 overflow-hidden opacity-80">
-                    <Moment data={targetMomentData} isPreview={true} />
+                    {/* The non-null assertion (!) is safe here because of the Show wrapper */}
+                    <Moment data={targetMomentData!} isPreview={true} />
                     <div class="from-element-matte absolute right-0 bottom-0 left-0 z-10 h-20 bg-linear-to-t to-transparent"></div>
                 </div>
             </Show>

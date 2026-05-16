@@ -4,7 +4,7 @@ import { ArchivesBar } from './ArchivesBar'
 import { Feed } from './Feed'
 import { FilterBar } from './FilterBar'
 import { LibraryBar } from './LibraryBar'
-import { libraries } from '../modules/store'
+import { getActiveLibrary, libraries } from '../modules/store'
 import { FormatChatDate, setDisplayedModal } from '../modules/globals'
 import { GetLastBufferMessage } from './BufferChatModal'
 
@@ -31,7 +31,7 @@ const Display: Component = () => (
                         <div class="flex flex-col gap-2">
                             <button
                                 onClick={() => setDisplayedModal('CHAT_MODAL')}
-                                class="bg-element border-element-accent hover:border-highlight group flex w-full flex-col gap-3 rounded-xl border p-3 text-left transition-all duration-100 hover:scale-[1.02] hover:cursor-pointer"
+                                class={`${getActiveLibrary()?.type === 'local' ? 'hidden' : ''} bg-element border-element-accent hover:border-highlight group flex w-full flex-col gap-3 rounded-xl border p-3 text-left transition-all duration-100 hover:scale-[1.02] hover:cursor-pointer`}
                             >
                                 <div class="flex w-full items-center justify-between">
                                     <div class="flex items-center gap-2">

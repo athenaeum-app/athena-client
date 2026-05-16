@@ -647,9 +647,21 @@ export const recolourTag = (
 export const saveFileReference = async (
     file: File,
     selection: { Start?: number; End?: number },
+    stateOverrides?: {
+        getContent: () => string
+        setContent: (updater: (prev: string) => string) => void
+        setActiveUploadCount: (updater: (prev: number) => number) => void
+    },
 ) => {
-    const startPos = selection.Start ?? content().length
-    const endPos = selection.End ?? content().length
+    // Determine which state to mutate
+    const getStr = stateOverrides ? stateOverrides.getContent : content
+    const setStr = stateOverrides ? stateOverrides.setContent : setContent
+    const setUploads = stateOverrides
+        ? stateOverrides.setActiveUploadCount
+        : setActiveUploadCount
+
+    const startPos = selection.Start ?? getStr().length
+    const endPos = selection.End ?? getStr().length
 
     const activeLib = libraries().find((l) => l.id === activeLibraryId())
     const token = jwtToken()
@@ -686,8 +698,8 @@ export const saveFileReference = async (
     const fileName = `attachment_${file.name || currentDate}`
     const placeholder = `[Attaching ${fileName}...]`
 
-    setActiveUploadCount((prev) => prev + 1)
-    setContent(
+    setUploads((prev) => prev + 1)
+    setStr(
         (prev) =>
             prev.substring(0, startPos) + placeholder + prev.substring(endPos),
     )
@@ -727,18 +739,18 @@ export const saveFileReference = async (
         }
 
         if (finalUri) {
-            setContent((prev) => prev.replace(placeholder, `${finalUri} `))
+            setStr((prev) => prev.replace(placeholder, `${finalUri} `))
         } else {
             throw new Error('Both Cloud and Local saving failed.')
         }
     } catch (error) {
         console.error('Failed to attach file:', error)
-        setContent((prev) =>
+        setStr((prev) =>
             prev.replace(placeholder, `[ERROR! Failed to attach ${fileName}]`),
         )
         return null
     } finally {
-        setActiveUploadCount((prev) => prev - 1)
+        setUploads((prev) => prev - 1)
     }
 }
 
