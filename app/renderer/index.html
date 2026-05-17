@@ -12,10 +12,10 @@
                 script-src 'self' https://kit.fontawesome.com;
                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
                 font-src 'self' https://fonts.gstatic.com https://ka-f.fontawesome.com;
-                img-src 'self' data: https: athena:;
+                img-src 'self' data: http://localhost:8080 https: athena:;
                 connect-src 'self' https://ka-f.fontawesome.com http://localhost:8080 https:;
-                media-src 'self' https: blob:;
-                frame-src 'self' https: blob:;
+                media-src 'self' http://localhost:8080 https: blob:;
+                frame-src 'self' http://localhost:8080 https: blob:;
                 "
         />
         <title>Athena</title>

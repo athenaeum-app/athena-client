@@ -134,6 +134,7 @@ export const switchToLibraryFromId = async (libId: string) => {
         setSwitchingLibrary(true)
         setCanSave(false)
         const currentLib = getLibraryFromId(libId)
+        console.log(currentLib)
 
         let localCache = allLibraryDataRef()[libId]
         if (!localCache) {
@@ -150,7 +151,9 @@ export const switchToLibraryFromId = async (libId: string) => {
             const url = currentLib.url || 'http://localhost:8080'
             let isOffline = false
             try {
+                console.log('Attempting health check')
                 const res = await fetch(`${url}/api/health`)
+                console.log('Health fetched')
                 if (!res.ok) {
                     isOffline = true
                 }
@@ -166,20 +169,27 @@ export const switchToLibraryFromId = async (libId: string) => {
                 })
             } else {
                 try {
+                    console.log('Attempting fetch')
+
                     const res = await fetch(`${url}/api/library`, {
                         method: 'GET',
                         headers: { Authorization: `Bearer ${jwtToken()}` },
                     })
 
+                    console.log('Fetch completed')
+
                     if (res.ok) {
                         const serverData: LibraryDataSnapshot = await res.json()
 
                         try {
+                            console.log('Attempting buffer fetch')
                             const bufRes = await fetch(`${url}/api/buffer`, {
                                 headers: {
                                     Authorization: `Bearer ${jwtToken()}`,
                                 },
                             })
+
+                            console.log('Buffer fetch completed')
                             serverData.messages = bufRes.ok
                                 ? await bufRes.json()
                                 : localCache.messages || []
@@ -197,6 +207,8 @@ export const switchToLibraryFromId = async (libId: string) => {
                 }
             }
         }
+
+        console.log('Stage 2')
 
         allLibraryDataRef()[libId] = localCache
         const libData = structuredClone(localCache)
@@ -218,6 +230,7 @@ export const switchToLibraryFromId = async (libId: string) => {
             return
         } else {
             batch(() => {
+                console.log('Received data from server', libData)
                 setArchives(newArchives)
                 const moments = libData.moments as Record<string, MomentData>
                 for (const moment of Object.values(moments)) {
@@ -242,6 +255,7 @@ export const switchToLibraryFromId = async (libId: string) => {
 
         setCanSave(true)
     } finally {
+        console.log('Finished swap!')
         setSwitchingLibrary(false)
     }
 }

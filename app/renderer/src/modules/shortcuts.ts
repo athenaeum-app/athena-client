@@ -10,6 +10,7 @@ import {
     isLibraryBarExpanded,
     setIsLibraryBarExpanded,
 } from '../components/LibraryBar'
+import { getActiveLibrary } from './store'
 
 const handleKeyPress = (event: KeyboardEvent) => {
     const activeElement = window.document.activeElement
@@ -28,7 +29,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
     if (isModifier && event.key.toLowerCase() === 'd' && !event.shiftKey) {
         if (displayedModal() === 'CHAT_MODAL') {
             setDisplayedModal('NONE')
-        } else {
+        } else if (getActiveLibrary()?.type === 'server') {
             setDisplayedModal('CHAT_MODAL')
         }
     }

@@ -1,11 +1,12 @@
 // src/components/display.tsx
-import { Match, Switch, type Component } from 'solid-js'
+import { Match, Switch, Show, type Component } from 'solid-js'
 import { ArchivesBar } from './ArchivesBar'
 import { Feed } from './Feed'
 import { FilterBar } from './FilterBar'
 import { LibraryBar } from './LibraryBar'
-import { libraries } from '../modules/store'
-import { setDisplayedModal } from '../modules/globals'
+import { getActiveLibrary, libraries } from '../modules/store'
+import { FormatChatDate, setDisplayedModal } from '../modules/globals'
+import { GetLastBufferMessage } from './BufferChatModal'
 
 const Display: Component = () => (
     <div class="relative flex h-[95%] w-full flex-col items-center justify-between gap-2 overflow-y-auto transition-all duration-100 lg:flex-row lg:overflow-hidden">
@@ -30,13 +31,52 @@ const Display: Component = () => (
                         <div class="flex flex-col gap-2">
                             <button
                                 onClick={() => setDisplayedModal('CHAT_MODAL')}
-                                class="bg-element hover:text-plain flex items-center justify-center gap-2 rounded-xl p-4 text-center font-bold transition-all duration-100 hover:scale-105 hover:cursor-pointer"
+                                class={`${getActiveLibrary()?.type === 'local' ? 'hidden' : ''} bg-element border-element-accent hover:border-highlight group flex w-full flex-col gap-3 rounded-xl border p-3 text-left transition-all duration-100 hover:scale-[1.02] hover:cursor-pointer`}
                             >
-                                <span class="material-symbols-outlined text-xl">
-                                    chat
-                                </span>
-                                <span class="text-sub">Chat</span>
+                                <div class="flex w-full items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-highlight text-xl">
+                                            message
+                                        </span>
+                                        <span class="text-sub text-sm font-bold tracking-widest">
+                                            CHAT
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-element-matte flex w-full flex-col gap-1 rounded-lg p-3 shadow-inner">
+                                    <Show
+                                        when={GetLastBufferMessage()?.content}
+                                        fallback={
+                                            <span class="text-sub/50 text-xs italic">
+                                                No messages yet. Type a quick
+                                                thought!
+                                            </span>
+                                        }
+                                    >
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-highlight-strong line-clamp-1 text-xs font-black">
+                                                {
+                                                    GetLastBufferMessage()
+                                                        .author_name
+                                                }
+                                            </span>
+                                            <span class="text-highlight-strong line-clamp-1 text-xs font-black">
+                                                {FormatChatDate(
+                                                    new Date(
+                                                        GetLastBufferMessage()
+                                                            .timestamp,
+                                                    ),
+                                                )}
+                                            </span>
+                                        </div>
+                                        <span class="text-sub line-clamp-2 text-sm leading-snug wrap-break-word whitespace-pre-wrap">
+                                            {GetLastBufferMessage().content}
+                                        </span>
+                                    </Show>
+                                </div>
                             </button>
+
                             <button
                                 onClick={() =>
                                     setDisplayedModal('APP_MENU_MODAL')

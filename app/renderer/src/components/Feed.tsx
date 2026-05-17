@@ -36,6 +36,9 @@ export const Feed: Component = () => {
             }
         }
     })
+    createEffect(() => {
+        console.log('Switch state:', switchingLibrary())
+    })
     return (
         <div class="bg-element pt flex w-full items-center justify-center gap-2 overflow-x-hidden rounded-xl p-2 lg:p-4">
             <div class={'flex h-full w-[90%] flex-col items-center gap-4'}>

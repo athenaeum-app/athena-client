@@ -102,6 +102,7 @@ const AddLibraryModal: Component = () => {
             token: finalToken,
             role: finalRole,
             syncStatus: type() === 'server' ? 'synced' : undefined,
+            messages: [],
         }
 
         initializeNewLibrary(newLib.id)

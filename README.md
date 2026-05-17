@@ -11,7 +11,7 @@ The official desktop client for Athena. Log your thoughts and ideas in a persona
 * **Markdown Support:** Create and edit moments using standard Markdown syntax.
 * **GitHub Flavored Markdown (GFM):** Use enhanced Markdown rendering with GFM support for tables, task lists, and more.
 * **Syntax Highlighting:** Code blocks within your moments will be highlighted using highlight.js for improved readability.
-* **Chat:** Send and receive chat messages per library. Also available for offline libraries, for short and quick logging. No logging in is required.
+* **Chat:** Send and receive chat messages with other members per library. No logging in is required. Online libraries only.
 
 ---
 ## Images

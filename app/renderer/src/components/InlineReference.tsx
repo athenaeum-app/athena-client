@@ -48,9 +48,9 @@ export const InlineReference: Component<
                 <span>{displayTitle}</span>
             </div>
 
-            <Show when={targetMomentData.content}>
+            <Show when={targetMomentData?.content}>
                 <div class="pointer-events-none relative max-h-48 overflow-hidden opacity-80">
-                    <Moment data={targetMomentData} isPreview={true} />
+                    <Moment data={targetMomentData!} isPreview={true} />
                     <div class="from-element-matte absolute right-0 bottom-0 left-0 z-10 h-20 bg-linear-to-t to-transparent"></div>
                 </div>
             </Show>

@@ -3,8 +3,10 @@ import { createMemo, createSignal, type Accessor } from 'solid-js'
 import {
     allMoments,
     allTags,
+    BeginningOfTime,
     dateFilter,
     defaultArchiveId,
+    EndOfTime,
     mediaFilters,
     searchQuery,
     selectedArchiveId,
@@ -349,6 +351,53 @@ export const loadSystemFonts = async () => {
 }
 
 // Helpers
+export const FormatChatDate = (timestamp: string | number | Date) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+
+    const timeString = date.toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+    })
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const targetDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+    )
+
+    if (targetDate.getTime() === today.getTime()) {
+        return `Today at ${timeString}`
+    } else if (targetDate.getTime() === yesterday.getTime()) {
+        return `Yesterday at ${timeString}`
+    } else {
+        const dateString = date.toLocaleDateString([], {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        })
+        return `${dateString} ${timeString}`
+    }
+}
+
+export const FormatDate = (date: Date) => {
+    if (
+        date.getTime() == BeginningOfTime.getTime() ||
+        date.getTime() == EndOfTime.getTime()
+    ) {
+        return ''
+    } else {
+        const year = date.getFullYear()
+        const month = `${date.getMonth()}`.padStart(2, '0')
+        const day = `${date.getDate()}`.padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+}
+
 export const GetContrastingColourForHSL = (hslColour: string) => {
     const match = hslColour.match(/\d+/g)
 
