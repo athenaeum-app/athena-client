@@ -17,7 +17,7 @@ import {
 import { displayedModal, FormatChatDate } from '../modules/globals'
 import { FancyTextRenderer } from './FancyTextRenderer'
 import { saveFileReference } from '../modules/data'
-import { queueAction } from '../modules/actions'
+import { flushActionQueue, queueAction } from '../modules/actions'
 
 const BATCH_SIZE = 250
 const MAX_RENDER_COUNT = 500
@@ -156,18 +156,12 @@ export const BufferChatModal = () => {
                     const merged = new Map<string, BufferMessage>()
 
                     let serverBoundary = Infinity
-                    if (data.length > 0) {
-                        serverBoundary = new Date(data[0].timestamp).getTime()
+                    if (data && data.length > 0) {
+                        serverBoundary =
+                            new Date(data[0].timestamp).getTime() || Infinity
                     } else {
                         serverBoundary = 0
                     }
-
-                    prevMsgs.forEach((m) => {
-                        const t = new Date(m.timestamp).getTime()
-                        if (t < serverBoundary) {
-                            merged.set(m.id, m)
-                        }
-                    })
 
                     data.forEach((m) => {
                         const existing = prevMsgs.find((p) => p.id === m.id)
@@ -181,10 +175,14 @@ export const BufferChatModal = () => {
 
                     prevMsgs.forEach((m) => {
                         if (!merged.has(m.id)) {
-                            const age = Math.abs(
-                                Date.now() - new Date(m.timestamp).getTime(),
-                            )
-                            if (age < 15000) merged.set(m.id, m)
+                            const t = new Date(m.timestamp).getTime() || 0
+                            const age = Date.now() - t
+
+                            if (age > -5000 && age < 15000) {
+                                merged.set(m.id, m)
+                            } else if (t < serverBoundary) {
+                                merged.set(m.id, m)
+                            }
                         }
                     })
 
@@ -319,6 +317,7 @@ export const BufferChatModal = () => {
             target_id: newMsg.id,
             body: newMsg,
         })
+        flushActionQueue()
     }
 
     const deleteMessage = (id: string) => {
@@ -332,6 +331,7 @@ export const BufferChatModal = () => {
             target_id: id,
             body: {},
         })
+        flushActionQueue()
     }
 
     const startEditing = (msg: BufferMessage) => {
@@ -362,6 +362,7 @@ export const BufferChatModal = () => {
             target_id: id,
             body: updatedMsg,
         })
+        flushActionQueue()
     }
 
     let lastID: string
