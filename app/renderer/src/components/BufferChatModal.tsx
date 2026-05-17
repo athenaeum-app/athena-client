@@ -22,7 +22,11 @@ import { flushActionQueue, queueAction } from '../modules/actions'
 const BATCH_SIZE = 250
 const MAX_RENDER_COUNT = 500
 
-export const GetLastBufferMessage = () => allMessages[allMessages.length - 1]
+const [renderedMessages, setRenderedMessages] = createSignal<
+    Array<BufferMessage>
+>([])
+export const GetLastBufferMessage = () =>
+    renderedMessages()[renderedMessages().length - 1]
 
 const Sentinel: Component<
     {
@@ -51,9 +55,6 @@ export const BufferChatModal = () => {
     const [name, setName] = createSignal(
         localStorage.getItem(`${getActiveLibrary()?.id}_chatname`) || '',
     )
-    const [renderedMessages, setRenderedMessages] = createSignal<
-        Array<BufferMessage>
-    >([])
 
     const [content, setContent] = createSignal('')
     const [isLoadingOlder, setIsLoadingOlder] = createSignal(false)
@@ -176,12 +177,14 @@ export const BufferChatModal = () => {
 
                     data.forEach((m) => {
                         const existing = prevMsgs.find((p) => p.id === m.id)
-                        merged.set(
-                            m.id,
-                            existing && existing.content === m.content
-                                ? existing
-                                : m,
-                        )
+
+                        if (existing && existing.content === m.content) {
+                            existing.timestamp = m.timestamp
+
+                            merged.set(m.id, existing)
+                        } else {
+                            merged.set(m.id, m)
+                        }
                     })
 
                     prevMsgs.forEach((m) => {
@@ -392,9 +395,9 @@ export const BufferChatModal = () => {
             setContent('')
             setShowScrollBottom(false)
 
-            if (displayedModal() === 'CHAT_MODAL') {
-                syncLiveChat().then(() => scrollToBottom())
-            }
+            syncLiveChat().then(() => {
+                if (displayedModal() === 'CHAT_MODAL') scrollToBottom()
+            })
         })
     })
 
@@ -434,8 +437,7 @@ export const BufferChatModal = () => {
 
     onMount(() => {
         const interval = setInterval(() => {
-            if (displayedModal() === 'CHAT_MODAL' && isAtPresent())
-                syncLiveChat()
+            if (isAtPresent()) syncLiveChat()
         }, 1000)
         onCleanup(() => clearInterval(interval))
     })
