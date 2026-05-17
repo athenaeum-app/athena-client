@@ -49,7 +49,7 @@ export const BufferChatModal = () => {
     let editTextArea: HTMLTextAreaElement | undefined
 
     const [name, setName] = createSignal(
-        localStorage.getItem('athena_chatname') || '',
+        localStorage.getItem(`${getActiveLibrary()?.id}_chatname`) || '',
     )
     const [renderedMessages, setRenderedMessages] = createSignal<
         Array<BufferMessage>
@@ -382,6 +382,7 @@ export const BufferChatModal = () => {
         if (!lib) return
         const id = lib.id
         if (lastID != id) {
+            setName(localStorage.getItem(`${id}_chatname`) || '')
             lastID = id
         } else return
 
@@ -681,7 +682,7 @@ export const BufferChatModal = () => {
                     onInput={(e) => {
                         setName(e.currentTarget.value)
                         localStorage.setItem(
-                            'athena_chatname',
+                            `${getActiveLibrary()?.id}_chatname`,
                             e.currentTarget.value,
                         )
                     }}
