@@ -17,6 +17,7 @@ import {
 import { displayedModal, FormatChatDate } from '../modules/globals'
 import { FancyTextRenderer } from './FancyTextRenderer'
 import { saveFileReference } from '../modules/data'
+import { queueAction } from '../modules/actions'
 
 const BATCH_SIZE = 250
 const MAX_RENDER_COUNT = 500
@@ -58,13 +59,9 @@ export const BufferChatModal = () => {
     const [isLoadingOlder, setIsLoadingOlder] = createSignal(false)
     const [isLoadingNewer, setIsLoadingNewer] = createSignal(false)
     const [activeUploadCount, setActiveUploadCount] = createSignal(0)
+    const [lastMutationTime, setLastMutationTime] = createSignal(0)
 
     const [isAtPresent, setIsAtPresent] = createSignal(true)
-
-    const [lastSyncTime, setLastSyncTime] = createSignal(
-        new Date(0).toISOString(),
-    )
-
     const [showScrollBottom, setShowScrollBottom] = createSignal(false)
     const [editingId, setEditingId] = createSignal<string | null>(null)
     const [editContent, setEditContent] = createSignal('')
@@ -134,21 +131,81 @@ export const BufferChatModal = () => {
         }, 50)
     }
 
+    const syncLiveChat = async () => {
+        const lib = getActiveLibrary()
+        if (!lib || lib.type !== 'server') return
+
+        if (Date.now() - lastMutationTime() < 2500) return
+
+        try {
+            const wasAtBottom =
+                chatContainerRef &&
+                chatContainerRef.scrollHeight -
+                    chatContainerRef.scrollTop -
+                    chatContainerRef.clientHeight <
+                    100
+
+            const res = await fetch(`${lib.url}/api/buffer`, {
+                headers: { Authorization: `Bearer ${lib.token}` },
+            })
+
+            if (res.ok) {
+                const data: BufferMessage[] = await res.json()
+
+                setRenderedMessages((prevMsgs) => {
+                    const merged = new Map<string, BufferMessage>()
+
+                    let serverBoundary = Infinity
+                    if (data.length > 0) {
+                        serverBoundary = new Date(data[0].timestamp).getTime()
+                    } else {
+                        serverBoundary = 0
+                    }
+
+                    prevMsgs.forEach((m) => {
+                        const t = new Date(m.timestamp).getTime()
+                        if (t < serverBoundary) {
+                            merged.set(m.id, m)
+                        }
+                    })
+
+                    data.forEach((m) => {
+                        const existing = prevMsgs.find((p) => p.id === m.id)
+                        merged.set(
+                            m.id,
+                            existing && existing.content === m.content
+                                ? existing
+                                : m,
+                        )
+                    })
+
+                    prevMsgs.forEach((m) => {
+                        if (!merged.has(m.id)) {
+                            const age = Math.abs(
+                                Date.now() - new Date(m.timestamp).getTime(),
+                            )
+                            if (age < 15000) merged.set(m.id, m)
+                        }
+                    })
+
+                    return Array.from(merged.values()).sort(
+                        (a, b) =>
+                            new Date(a.timestamp).getTime() -
+                            new Date(b.timestamp).getTime(),
+                    )
+                })
+
+                if (wasAtBottom) scrollToBottom()
+            }
+        } catch (err) {}
+    }
+
     const jumpToPresent = async () => {
         const lib = getActiveLibrary()
         if (!lib || lib.type !== 'server') return
         setIsAtPresent(true)
-
-        try {
-            const res = await fetch(`${lib.url}/api/buffer`, {
-                headers: { Authorization: `Bearer ${lib.token}` },
-            })
-            if (res.ok) {
-                const data = await res.json()
-                setRenderedMessages(data)
-                scrollToBottom()
-            }
-        } catch (err) {}
+        await syncLiveChat()
+        scrollToBottom()
     }
 
     const fetchOlderMessages = async () => {
@@ -229,140 +286,52 @@ export const BufferChatModal = () => {
         }
     }
 
-    const fetchMessagesInWindow = async () => {
-        const lib = getActiveLibrary()
-        if (!lib || lib.type !== 'server') return
-
-        const currentMsgs = renderedMessages()
-        const latestMsg = currentMsgs[currentMsgs.length - 1]
-        const url = latestMsg
-            ? `${lib.url}/api/buffer?after=${encodeURIComponent(latestMsg.timestamp)}`
-            : `${lib.url}/api/buffer`
-
-        try {
-            const res = await fetch(url, {
-                headers: { Authorization: `Bearer ${lib.token}` },
-            })
-            if (res.ok) {
-                const data: BufferMessage[] = await res.json()
-                if (data && data.length > 0) {
-                    setRenderedMessages((prevMsgs) => {
-                        const msgMap = new Map<string, BufferMessage>()
-                        prevMsgs.forEach((m) => msgMap.set(m.id, m))
-
-                        data.forEach((incomingMsg) => {
-                            if (incomingMsg.deleted) {
-                                msgMap.delete(incomingMsg.id)
-                                return
-                            }
-
-                            if (!incomingMsg.id.startsWith('temp-')) {
-                                for (const [key, val] of msgMap.entries()) {
-                                    if (
-                                        key.startsWith('temp-') &&
-                                        val.content === incomingMsg.content
-                                    ) {
-                                        msgMap.delete(key)
-                                    }
-                                }
-                            }
-
-                            const current = msgMap.get(incomingMsg.id)
-                            if (current) {
-                                if (
-                                    current.content !== incomingMsg.content ||
-                                    current.updated_at !==
-                                        incomingMsg.updated_at
-                                ) {
-                                    msgMap.set(incomingMsg.id, incomingMsg)
-                                }
-                            } else {
-                                msgMap.set(incomingMsg.id, incomingMsg)
-                            }
-                        })
-
-                        return Array.from(msgMap.values()).sort(
-                            (a, b) =>
-                                new Date(a.timestamp).getTime() -
-                                new Date(b.timestamp).getTime(),
-                        )
-                    })
-
-                    if (!latestMsg) scrollToBottom()
-                }
-            }
-        } catch (err) {}
-    }
-
     const sendMessage = async () => {
         if (!content().trim()) return
         const lib = getActiveLibrary()
         if (!lib || lib.type !== 'server') return
 
-        const payload = {
-            author_name: name()?.trim() || 'Anonymous',
-            content: content().trim(),
-        }
-
-        const tempId = 'temp-' + Date.now()
-        const newMsg: BufferMessage = {
-            id: tempId,
-            author_name: payload.author_name,
-            content: payload.content,
-            timestamp: new Date().toISOString(),
-        }
-
         if (!isAtPresent()) {
             await jumpToPresent()
         }
 
-        setRenderedMessages((prev) => [...prev, newMsg])
+        setLastMutationTime(Date.now())
+
+        const newMsg: BufferMessage = {
+            id: 'msg_' + crypto.randomUUID(),
+            author_name: name()?.trim() || 'Anonymous',
+            content: content().trim(),
+            timestamp: new Date().toISOString(),
+        }
+
+        setRenderedMessages((prev) => {
+            let combined = [...prev, newMsg]
+            if (combined.length > MAX_RENDER_COUNT)
+                combined = combined.slice(combined.length - MAX_RENDER_COUNT)
+            return combined
+        })
         setContent('')
         scrollToBottom()
 
-        try {
-            const res = await fetch(`${lib.url}/api/buffer`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${lib.token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            })
-
-            if (res.ok) {
-                const officialMsg: BufferMessage = await res.json()
-
-                const msgTime = new Date(
-                    officialMsg.updated_at || officialMsg.timestamp,
-                ).getTime()
-                if (msgTime > new Date(lastSyncTime()).getTime()) {
-                    setLastSyncTime(new Date(msgTime).toISOString())
-                }
-
-                setRenderedMessages((prev) =>
-                    prev.map((m) => (m.id === tempId ? officialMsg : m)),
-                )
-            }
-        } catch (err) {}
+        queueAction({
+            type: 'CREATE',
+            target: 'BUFFER_MESSAGE',
+            target_id: newMsg.id,
+            body: newMsg,
+        })
     }
 
-    const deleteMessage = async (id: string) => {
-        const lib = getActiveLibrary()
-        if (!lib || lib.type !== 'server') return
+    const deleteMessage = (id: string) => {
+        setLastMutationTime(Date.now())
+        setRenderedMessages(renderedMessages().filter((m) => m.id !== id))
+        setConfirmDeleteId(null)
 
-        try {
-            const res = await fetch(`${lib.url}/api/buffer/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${lib.token}` },
-            })
-            if (res.ok) {
-                setRenderedMessages(
-                    renderedMessages().filter((m) => m.id !== id),
-                )
-                setConfirmDeleteId(null)
-            }
-        } catch (err) {}
+        queueAction({
+            type: 'DELETE',
+            target: 'BUFFER_MESSAGE',
+            target_id: id,
+            body: {},
+        })
     }
 
     const startEditing = (msg: BufferMessage) => {
@@ -371,97 +340,61 @@ export const BufferChatModal = () => {
         editTextArea?.focus()
     }
 
-    const saveEdit = async () => {
+    const saveEdit = () => {
         const id = editingId()
         if (!id) return
-        const lib = getActiveLibrary()
-        if (!lib || lib.type !== 'server') return
+        setLastMutationTime(Date.now())
 
-        try {
-            const res = await fetch(`${lib.url}/api/buffer/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    Authorization: `Bearer ${lib.token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ content: editContent() }),
-            })
-            if (res.ok) {
-                setRenderedMessages(
-                    renderedMessages().map((m) =>
-                        m.id === id ? { ...m, content: editContent() } : m,
-                    ),
-                )
-                setEditingId(null)
-            }
-        } catch (err) {}
+        const updatedMsg = {
+            ...renderedMessages().find((m) => m.id === id)!,
+            content: editContent(),
+            updated_at: new Date().toISOString(),
+        }
+
+        setRenderedMessages(
+            renderedMessages().map((m) => (m.id === id ? updatedMsg : m)),
+        )
+        setEditingId(null)
+
+        queueAction({
+            type: 'UPDATE',
+            target: 'BUFFER_MESSAGE',
+            target_id: id,
+            body: updatedMsg,
+        })
     }
 
+    let lastID: string
     createEffect(() => {
-        setRenderedMessages([])
-        setIsAtPresent(true)
-        setContent('')
-        setShowScrollBottom(false)
-        setLastSyncTime(new Date(0).toISOString())
+        const lib = getActiveLibrary()
+        if (!lib) return
+        const id = lib.id
+        if (lastID != id) {
+            lastID = id
+        } else return
 
-        if (displayedModal() === 'CHAT_MODAL') {
-            untrack(() => {
-                fetchMessagesInWindow()
-                scrollToBottom()
-            })
-        }
+        untrack(() => {
+            setRenderedMessages([])
+            setIsAtPresent(true)
+            setContent('')
+            setShowScrollBottom(false)
+
+            if (displayedModal() === 'CHAT_MODAL') {
+                syncLiveChat().then(() => scrollToBottom())
+            }
+        })
     })
 
-    const syncLiveChat = async () => {
-        const lib = getActiveLibrary()
-        if (!lib || lib.type !== 'server') return
-
-        try {
-            const url = `${lib.url}/api/buffer?updated_after=${encodeURIComponent(lastSyncTime())}`
-            const res = await fetch(url, {
-                headers: { Authorization: `Bearer ${lib.token}` },
+    createEffect(() => {
+        const isOpen = displayedModal() === 'CHAT_MODAL'
+        if (isOpen) {
+            untrack(() => {
+                syncLiveChat().then(() => {
+                    if (chatTextAreaRef) chatTextAreaRef.focus()
+                    scrollToBottom()
+                })
             })
-            if (res.ok) {
-                const data: BufferMessage[] = await res.json()
-                if (data && data.length > 0) {
-                    let highestTime = new Date(lastSyncTime()).getTime()
-                    data.forEach((m) => {
-                        const msgTime = new Date(
-                            m.updated_at || m.timestamp,
-                        ).getTime()
-                        if (msgTime > highestTime) highestTime = msgTime
-                    })
-                    setLastSyncTime(new Date(highestTime).toISOString())
-
-                    setRenderedMessages((prevMsgs) => {
-                        const msgMap = new Map<string, BufferMessage>()
-                        prevMsgs.forEach((m) => msgMap.set(m.id, m))
-
-                        data.forEach((incomingMsg) => {
-                            if (incomingMsg.deleted) {
-                                msgMap.delete(incomingMsg.id)
-                                return
-                            }
-                            msgMap.set(incomingMsg.id, incomingMsg)
-                        })
-
-                        return Array.from(msgMap.values()).sort(
-                            (a, b) =>
-                                new Date(a.timestamp).getTime() -
-                                new Date(b.timestamp).getTime(),
-                        )
-                    })
-                }
-            }
-        } catch (err) {}
-    }
-
-    onMount(() => {
-        const interval = setInterval(() => {
-            if (displayedModal() === 'CHAT_MODAL' && isAtPresent())
-                syncLiveChat()
-        }, 5000)
-        onCleanup(() => clearInterval(interval))
+        }
     })
 
     createEffect(() => {
@@ -486,21 +419,11 @@ export const BufferChatModal = () => {
         })
     })
 
-    createEffect(() => {
-        const isOpen = displayedModal() === 'CHAT_MODAL'
-        if (isOpen) {
-            untrack(() => {
-                fetchMessagesInWindow()
-                if (chatTextAreaRef) chatTextAreaRef.focus()
-            })
-        }
-    })
-
     onMount(() => {
         const interval = setInterval(() => {
             if (displayedModal() === 'CHAT_MODAL' && isAtPresent())
-                fetchMessagesInWindow()
-        }, 5000)
+                syncLiveChat()
+        }, 1000)
         onCleanup(() => clearInterval(interval))
     })
 

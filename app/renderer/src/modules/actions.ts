@@ -48,7 +48,7 @@ import type { AppSettings } from './settings'
 
 // Action Queue
 export type ActionType = 'CREATE' | 'UPDATE' | 'DELETE'
-export type ActionTarget = 'ARCHIVE' | 'MOMENT' | 'TAG'
+export type ActionTarget = 'ARCHIVE' | 'MOMENT' | 'TAG' | 'BUFFER_MESSAGE'
 
 export const uploadAttachment = async (
     targetUrl: string,
@@ -178,7 +178,7 @@ export const flushActionQueue = async () => {
     }
 }
 
-const queueAction = (action: ServerAction) => {
+export const queueAction = (action: ServerAction) => {
     const activeId = activeLibraryId()
     const activeLib = libraries().find((l) => l.id === activeId)
 
