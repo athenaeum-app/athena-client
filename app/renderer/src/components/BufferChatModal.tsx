@@ -60,6 +60,7 @@ export const BufferChatModal = () => {
     const [isLoadingNewer, setIsLoadingNewer] = createSignal(false)
     const [activeUploadCount, setActiveUploadCount] = createSignal(0)
     const [lastMutationTime, setLastMutationTime] = createSignal(0)
+    const [pendingIds, setPendingIds] = createSignal<Set<string>>(new Set())
 
     const [isAtPresent, setIsAtPresent] = createSignal(true)
     const [showScrollBottom, setShowScrollBottom] = createSignal(false)
@@ -152,16 +153,26 @@ export const BufferChatModal = () => {
             if (res.ok) {
                 const data: BufferMessage[] = await res.json()
 
+                setPendingIds((prev) => {
+                    const next = new Set(prev)
+                    data.forEach((d) => next.delete(d.id))
+                    return next
+                })
+
                 setRenderedMessages((prevMsgs) => {
                     const merged = new Map<string, BufferMessage>()
 
                     let serverBoundary = Infinity
-                    if (data && data.length > 0) {
-                        serverBoundary =
-                            new Date(data[0].timestamp).getTime() || Infinity
+                    if (data.length >= 50) {
+                        serverBoundary = new Date(data[0].timestamp).getTime()
                     } else {
                         serverBoundary = 0
                     }
+
+                    prevMsgs.forEach((m) => {
+                        const t = new Date(m.timestamp).getTime()
+                        if (t < serverBoundary) merged.set(m.id, m)
+                    })
 
                     data.forEach((m) => {
                         const existing = prevMsgs.find((p) => p.id === m.id)
@@ -174,15 +185,8 @@ export const BufferChatModal = () => {
                     })
 
                     prevMsgs.forEach((m) => {
-                        if (!merged.has(m.id)) {
-                            const t = new Date(m.timestamp).getTime() || 0
-                            const age = Date.now() - t
-
-                            if (age > -5000 && age < 15000) {
-                                merged.set(m.id, m)
-                            } else if (t < serverBoundary) {
-                                merged.set(m.id, m)
-                            }
+                        if (!merged.has(m.id) && pendingIds().has(m.id)) {
+                            merged.set(m.id, m)
                         }
                     })
 
@@ -302,6 +306,8 @@ export const BufferChatModal = () => {
             timestamp: new Date().toISOString(),
         }
 
+        setPendingIds((prev) => new Set(prev).add(newMsg.id))
+
         setRenderedMessages((prev) => {
             let combined = [...prev, newMsg]
             if (combined.length > MAX_RENDER_COUNT)
@@ -322,7 +328,8 @@ export const BufferChatModal = () => {
 
     const deleteMessage = (id: string) => {
         setLastMutationTime(Date.now())
-        setRenderedMessages(renderedMessages().filter((m) => m.id !== id))
+        setRenderedMessages((prev) => prev.filter((m) => m.id !== id))
+
         setConfirmDeleteId(null)
 
         queueAction({
@@ -345,24 +352,28 @@ export const BufferChatModal = () => {
         if (!id) return
         setLastMutationTime(Date.now())
 
-        const updatedMsg = {
-            ...renderedMessages().find((m) => m.id === id)!,
-            content: editContent(),
-            updated_at: new Date().toISOString(),
-        }
+        setRenderedMessages((prev) => {
+            const existing = prev.find((m) => m.id === id)
+            if (!existing) return prev
 
-        setRenderedMessages(
-            renderedMessages().map((m) => (m.id === id ? updatedMsg : m)),
-        )
-        setEditingId(null)
+            const updatedMsg = {
+                ...existing,
+                content: editContent(),
+                updated_at: new Date().toISOString(),
+            }
 
-        queueAction({
-            type: 'UPDATE',
-            target: 'BUFFER_MESSAGE',
-            target_id: id,
-            body: updatedMsg,
+            queueAction({
+                type: 'UPDATE',
+                target: 'BUFFER_MESSAGE',
+                target_id: id,
+                body: updatedMsg,
+            })
+            flushActionQueue()
+
+            return prev.map((m) => (m.id === id ? updatedMsg : m))
         })
-        flushActionQueue()
+
+        setEditingId(null)
     }
 
     let lastID: string
